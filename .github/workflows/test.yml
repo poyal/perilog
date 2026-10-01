@@ -21,6 +21,10 @@ jobs:
   verify:
     runs-on: ubuntu-24.04
     timeout-minutes: 35
+    env:
+      ANDROID_USER_HOME: ${{ runner.temp }}/perilog-android
+      ANDROID_EMULATOR_HOME: ${{ runner.temp }}/perilog-android
+      ANDROID_AVD_HOME: ${{ runner.temp }}/perilog-android/avd
     steps:
       - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
@@ -43,7 +47,10 @@ jobs:
       - name: Create Android emulator
         timeout-minutes: 2
         run: |
-          echo no | avdmanager create avd --name perilog-e2e --package "system-images;android-35;google_apis;x86_64" --device pixel_7 --force
+          mkdir -p "$ANDROID_AVD_HOME"
+          echo no | avdmanager create avd --name perilog-e2e --path "$ANDROID_AVD_HOME/perilog-e2e.avd" --package "system-images;android-35;google_apis;x86_64" --device pixel_7 --force
+          test -s "$ANDROID_AVD_HOME/perilog-e2e.ini"
+          "$ANDROID_HOME/emulator/emulator" -list-avds | grep -Fx perilog-e2e
       - name: Boot Android emulator
         timeout-minutes: 4
         run: |

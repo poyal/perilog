@@ -36,16 +36,46 @@ jobs:
         with:
           packages: 'platform-tools emulator'
           log-accepted-android-sdk-licenses: false
-      - name: Prepare Android emulator
+      - name: Install Android platform and emulator image
         timeout-minutes: 8
         run: |
-          trap 'echo "::error::Android emulator setup failed at line $LINENO: $BASH_COMMAND"' ERR
           sdkmanager "platforms;android-36" "build-tools;36.0.0" "system-images;android-35;google_apis;x86_64"
+      - name: Create Android emulator
+        timeout-minutes: 2
+        run: |
           echo no | avdmanager create avd --name perilog-e2e --package "system-images;android-35;google_apis;x86_64" --device pixel_7 --force
+      - name: Boot Android emulator
+        timeout-minutes: 4
+        run: |
           "$ANDROID_HOME/emulator/emulator" -avd perilog-e2e -port 5554 -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > /tmp/perilog-emulator.log 2>&1 &
-          adb -s emulator-5554 wait-for-device
-          timeout 180 bash -c 'until adb -s emulator-5554 shell getprop sys.boot_completed | tr -d "\r" | grep -q 1; do sleep 2; done'
-          adb -s emulator-5554 shell input keyevent 82
+          perilog_emulator_pid=$!
+          perilog_boot_deadline=$((SECONDS + 180))
+          while (( SECONDS < perilog_boot_deadline )); do
+            if ! kill -0 "$perilog_emulator_pid" 2>/dev/null; then
+              echo '::error::Android emulator exited before boot completed.'
+              tail -n 80 /tmp/perilog-emulator.log
+              exit 1
+            fi
+            if timeout 5 adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' | grep -qx 1; then
+              adb -s emulator-5554 shell input keyevent 82
+              exit 0
+            fi
+            sleep 2
+          done
+          echo '::error::Android emulator did not boot within 180 seconds.'
+          tail -n 80 /tmp/perilog-emulator.log
+          exit 1
+      - name: Show emulator startup failure
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          log = Path('/tmp/perilog-emulator.log')
+          if log.exists():
+              message = '\n'.join(log.read_text(errors='replace').splitlines()[-30:])
+              message = message.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+              print('::error title=Android emulator startup log::' + message)
+          PY
       - name: Unit tests and lint
         run: ./scripts/build.sh :app:testDebugUnitTest :app:lintDebug
       - name: Offline E2E with normal and large text

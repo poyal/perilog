@@ -1,10 +1,12 @@
 package com.poyal.perilog
 
+import android.app.KeyguardManager
 import android.content.Context
 import android.content.res.Configuration
 import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.PowerManager
 import android.view.inputmethod.InputMethodManager
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -45,7 +47,12 @@ class AppFlowTest {
     }
     private fun await(description:String="Expected application state",timeoutMs:Long=10000,condition:()->Boolean) {
         try {compose.waitUntil(timeoutMs,condition)}
-        catch(error:ComposeTimeoutException){throw AssertionError("$description was not ready after $timeoutMs ms",error)}
+        catch(error:ComposeTimeoutException){
+            val interactive=app.getSystemService(PowerManager::class.java).isInteractive
+            val locked=app.getSystemService(KeyguardManager::class.java).isKeyguardLocked
+            val focused=runCatching{compose.activity.hasWindowFocus()}.getOrNull()
+            throw AssertionError("$description was not ready after $timeoutMs ms (interactive=$interactive, keyguardLocked=$locked, windowFocused=$focused)",error)
+        }
     }
     private fun node(text:String)=compose.onNodeWithText(text)
     private fun show(n:SemanticsNodeInteraction):SemanticsNodeInteraction {val parents=n.onAncestors().filter(hasScrollAction())

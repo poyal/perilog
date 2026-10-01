@@ -78,8 +78,16 @@ def tap(text):
     adb('shell', 'input', 'tap', *map(str, point))
 
 
-stage = 'open_product_form'
+power_settings = [('system', 'screen_off_timeout'), ('global', 'stay_on_while_plugged_in')]
+original_power_settings = [(namespace, name, adb('shell', 'settings', 'get', namespace, name))
+                           for namespace, name in power_settings]
+stage = 'prepare_emulator'
 try:
+    adb('shell', 'settings', 'put', 'system', 'screen_off_timeout', '2147483647')
+    adb('shell', 'svc', 'power', 'stayon', 'true')
+    adb('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP')
+    adb('shell', 'wm', 'dismiss-keyguard')
+    stage = 'open_product_form'
     adb('shell', 'am', 'force-stop', PACKAGE)
     adb('shell', 'am', 'start', '-W', '-n', PACKAGE + '/com.poyal.perilog.MainActivity')
     wait_until(lambda: find('재고'), 'App navigation did not appear')
@@ -142,3 +150,9 @@ except Exception as error:
     except Exception:
         print('Failure capture unavailable; preserving the original error.', flush=True)
     raise
+finally:
+    for namespace, name, value in original_power_settings:
+        if value == 'null':
+            adb('shell', 'settings', 'delete', namespace, name)
+        else:
+            adb('shell', 'settings', 'put', namespace, name, value)

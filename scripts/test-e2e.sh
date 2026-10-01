@@ -15,10 +15,14 @@ adb_device get-state >/dev/null
 PERILOG_FONT=$(adb_device shell settings get system font_scale | tr -d '\r')
 PERILOG_AIRPLANE=$(adb_device shell settings get global airplane_mode_on | tr -d '\r')
 PERILOG_HARD_KEYBOARD_IME=$(adb_device shell settings get secure show_ime_with_hard_keyboard | tr -d '\r')
+PERILOG_SCREEN_TIMEOUT=$(adb_device shell settings get system screen_off_timeout | tr -d '\r')
+PERILOG_STAY_ON=$(adb_device shell settings get global stay_on_while_plugged_in | tr -d '\r')
 cleanup() {
   if [ "$PERILOG_FONT" = null ]; then adb_device shell settings delete system font_scale >/dev/null; else adb_device shell settings put system font_scale "$PERILOG_FONT" >/dev/null; fi
   if [ "$PERILOG_AIRPLANE" = 1 ]; then adb_device shell cmd connectivity airplane-mode enable; else adb_device shell cmd connectivity airplane-mode disable; fi
   if [ "$PERILOG_HARD_KEYBOARD_IME" = null ]; then adb_device shell settings delete secure show_ime_with_hard_keyboard >/dev/null; else adb_device shell settings put secure show_ime_with_hard_keyboard "$PERILOG_HARD_KEYBOARD_IME" >/dev/null; fi
+  if [ "$PERILOG_SCREEN_TIMEOUT" = null ]; then adb_device shell settings delete system screen_off_timeout >/dev/null; else adb_device shell settings put system screen_off_timeout "$PERILOG_SCREEN_TIMEOUT" >/dev/null; fi
+  if [ "$PERILOG_STAY_ON" = null ]; then adb_device shell settings delete global stay_on_while_plugged_in >/dev/null; else adb_device shell settings put global stay_on_while_plugged_in "$PERILOG_STAY_ON" >/dev/null; fi
 }
 trap cleanup EXIT HUP INT TERM
 run_profile() {
@@ -27,6 +31,12 @@ run_profile() {
   mkdir -p "$output"
   rm -rf "$output/report" "$output/results"
   rm -f "$output"/failure-*.png
+  # Compose semantics can still work behind a keyguard, but real window focus
+  # and the software keyboard require an awake, unlocked device.
+  adb_device shell settings put system screen_off_timeout 2147483647
+  adb_device shell svc power stayon true
+  adb_device shell input keyevent KEYCODE_WAKEUP
+  adb_device shell wm dismiss-keyguard
   adb_device shell am force-stop com.poyal.perilog.debug
   if [ -n "$(adb_device shell pm path com.poyal.perilog.debug)" ]; then adb_device shell pm clear com.poyal.perilog.debug >/dev/null; fi
   if [ "$profile" = large ]; then adb_device shell settings put system font_scale 1.5; else adb_device shell settings put system font_scale 1.0; fi

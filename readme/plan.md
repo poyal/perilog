@@ -1960,3 +1960,9 @@ Keep inventory cards clear and practical, airy margins, strong quantity typograp
 - 사용자 요청에 따라 최종 신규 UI의 실제 에뮬레이터 스크린샷 23장을 다시 촬영하고 README를 갱신한다.
 - 동일 서명 APK·최신 스크린샷 ZIP·체크섬을 v1.0.1 GitHub 릴리즈에 게시한다. main에는 소스·문서만, 릴리즈 태그에는 별도 배포 산출물 커밋을 포함한다.
 - 게시 후 공개 파일을 다시 다운로드해 SHA-256과 ZIP 내용, README 렌더링을 확인한다.
+
+### v1.0.1 게시 및 공개 파일 확인 완료 (2026-10-01)
+
+- 신규 UI 23장으로 README와 스크린샷 ZIP을 갱신했다. 서명 APK·ZIP·체크섬을 v1.0.1 정식 릴리즈에 게시했다.
+- 공개 파일 3개의 원본 일치와 ZIP 23장, GitHub README 이미지·다운로드 링크를 확인했다.
+- 원격 CI 최초 실행은 에뮬레이터 준비에서 `sdkmanager: command not found`(종료 코드 127)로 중단됐다. Android SDK 도구 설치와 PATH 설정을 명시하고 다시 검증한다. 문서만 바뀌는 push는 테스트를 중복 실행하지 않도록 제외한다.

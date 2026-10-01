@@ -4,6 +4,10 @@ on:
   pull_request:
   push:
     branches: [main]
+    paths-ignore:
+      - 'README.md'
+      - 'readme/**'
+      - 'design/**'
   workflow_dispatch:
 
 permissions:
@@ -27,8 +31,15 @@ jobs:
           java-version: '17'
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
+      - name: Set up Android SDK tools
+        uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+        with:
+          packages: 'platform-tools emulator'
+          log-accepted-android-sdk-licenses: false
       - name: Prepare Android emulator
+        timeout-minutes: 8
         run: |
+          trap 'echo "::error::Android emulator setup failed at line $LINENO: $BASH_COMMAND"' ERR
           sdkmanager "platforms;android-36" "build-tools;36.0.0" "system-images;android-35;google_apis;x86_64"
           echo no | avdmanager create avd --name perilog-e2e --package "system-images;android-35;google_apis;x86_64" --device pixel_7 --force
           "$ANDROID_HOME/emulator/emulator" -avd perilog-e2e -port 5554 -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > /tmp/perilog-emulator.log 2>&1 &

@@ -6,20 +6,24 @@ PERILOG_SERIAL="${PERILOG_SERIAL:-emulator-5554}"
 case "$PERILOG_SERIAL" in emulator-*) ;; *) echo 'PERILOG_SERIAL must be a development emulator.' >&2; exit 1;; esac
 PERILOG_PROFILE="${1:-normal}"
 case "$PERILOG_PROFILE" in normal|large|all) ;; *) echo 'Usage: test-e2e.sh [normal|large|all]' >&2; exit 1;; esac
+PERILOG_TEST_TARGET="${PERILOG_TEST_TARGET:-com.poyal.perilog.AppFlowTest}"
+PERILOG_RESULTS_DIR="${PERILOG_RESULTS_DIR:-$PWD/.tools/e2e-results}"
 export ANDROID_SERIAL="$PERILOG_SERIAL"
 PERILOG_ADB="${ANDROID_HOME:-$PWD/.tools/android-sdk}/platform-tools/adb"
 adb_device() { "$PERILOG_ADB" -s "$PERILOG_SERIAL" "$@"; }
 adb_device get-state >/dev/null
 PERILOG_FONT=$(adb_device shell settings get system font_scale | tr -d '\r')
 PERILOG_AIRPLANE=$(adb_device shell settings get global airplane_mode_on | tr -d '\r')
+PERILOG_HARD_KEYBOARD_IME=$(adb_device shell settings get secure show_ime_with_hard_keyboard | tr -d '\r')
 cleanup() {
   if [ "$PERILOG_FONT" = null ]; then adb_device shell settings delete system font_scale >/dev/null; else adb_device shell settings put system font_scale "$PERILOG_FONT" >/dev/null; fi
   if [ "$PERILOG_AIRPLANE" = 1 ]; then adb_device shell cmd connectivity airplane-mode enable; else adb_device shell cmd connectivity airplane-mode disable; fi
+  if [ "$PERILOG_HARD_KEYBOARD_IME" = null ]; then adb_device shell settings delete secure show_ime_with_hard_keyboard >/dev/null; else adb_device shell settings put secure show_ime_with_hard_keyboard "$PERILOG_HARD_KEYBOARD_IME" >/dev/null; fi
 }
 trap cleanup EXIT HUP INT TERM
 run_profile() {
   profile="$1"
-  output="$PWD/.tools/e2e-results/$profile"
+  output="$PERILOG_RESULTS_DIR/$profile"
   mkdir -p "$output"
   rm -rf "$output/report" "$output/results"
   rm -f "$output"/failure-*.png
@@ -27,9 +31,10 @@ run_profile() {
   if [ -n "$(adb_device shell pm path com.poyal.perilog.debug)" ]; then adb_device shell pm clear com.poyal.perilog.debug >/dev/null; fi
   if [ "$profile" = large ]; then adb_device shell settings put system font_scale 1.5; else adb_device shell settings put system font_scale 1.0; fi
   adb_device shell cmd connectivity airplane-mode enable
+  adb_device shell settings put secure show_ime_with_hard_keyboard 1
   perilog_test_status=0
   ./scripts/build.sh :app:connectedDebugAndroidTest \
-    -Pandroid.testInstrumentationRunnerArguments.class=com.poyal.perilog.AppFlowTest \
+    "-Pandroid.testInstrumentationRunnerArguments.class=$PERILOG_TEST_TARGET" \
     -Pandroid.testInstrumentationRunnerArguments.timeout_msec=120000 \
     -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true > "$output/run.log" 2>&1 || perilog_test_status=$?
   if [ -d app/build/reports/androidTests/connected ]; then cp -R app/build/reports/androidTests/connected "$output/report"; fi

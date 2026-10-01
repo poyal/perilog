@@ -86,8 +86,10 @@ jobs:
       - name: Unit tests and lint
         run: ./scripts/build.sh :app:testDebugUnitTest :app:lintDebug
       - name: Offline E2E with normal and large text
+        id: e2e
         run: ./scripts/test-e2e.sh all
       - name: Recover an unsaved form after process death
+        if: ${{ !cancelled() && steps.e2e.outcome != 'skipped' }}
         timeout-minutes: 5
         run: ./scripts/test-process-restore.py
       - name: Upload test reports and failure captures

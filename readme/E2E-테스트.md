@@ -19,7 +19,7 @@ PERILOG_SERIAL=emulator-5554 ./scripts/test-e2e.sh all
 PERILOG_SERIAL=emulator-5554 ./scripts/test-process-restore.py
 ```
 
-스크립트는 개인 기기 연결을 거부하고 `emulator-*`만 허용합니다. 실행마다 개발용 앱 자료를 초기화하고 비행기 모드를 켭니다. 종료 시 원래 글자 크기·비행기 모드를 복구합니다. 사용 중인 개발용 자료가 있으면 먼저 별도 보관하세요. 테스트 실행 중 에뮬레이터를 직접 조작하거나 다른 앱을 실행하지 않습니다.
+스크립트는 개인 기기 연결을 거부하고 `emulator-*`만 허용합니다. 실행마다 개발용 앱 자료를 초기화하고 비행기 모드를 켭니다. 가상 하드웨어 키보드가 연결돼 있어도 화면 키보드를 표시하도록 설정하고, 종료 시 원래 글자 크기·비행기 모드·키보드 설정을 복구합니다. 사용 중인 개발용 자료가 있으면 먼저 별도 보관하세요. 테스트 실행 중 에뮬레이터를 직접 조작하거나 다른 앱을 실행하지 않습니다.
 
 ## 검증 범위
 
@@ -47,3 +47,13 @@ GitHub에서의 실제 실행 여부는 로컬 통과와 구분해 기록합니�
 CI는 Android SDK 도구를 설치한 뒤 플랫폼·시스템 이미지 설치, AVD 생성, 부팅을 나눠 실행합니다. `ANDROID_USER_HOME`·`ANDROID_EMULATOR_HOME`·`ANDROID_AVD_HOME`을 러너 임시 디렉터리로 통일해 생성한 기기를 같은 경로에서 찾습니다. 부팅은 180초로 제한하고, 프로세스가 종료되면 즉시 실패합니다. 실패 로그 마지막 30줄은 Actions 요약에도 남깁니다. 환경변수 역할은 [Android 공식 문서](https://developer.android.com/tools/variables)를 참고하세요.
 
 `am kill`은 Android가 종료해도 된다고 판단하는 프로세스만 대상으로 하므로 호출 직후 종료를 보장하지 않습니다([공식 설명](https://developer.android.com/tools/adb#am)). 복구 검사는 저장된 task를 유지한 실제 프로세스 사망을 재현하며, 종료 성공·새 PID·미저장 입력 복구를 각각 확인합니다. 실패 시 고정된 단계 이름과 오류 종류만 CI annotation에 표시하고, 화면 자료 수집 실패가 원래 오류를 덮지 않도록 했습니다.
+
+회전·키보드 검사는 Activity 창 포커스를 기다리고 화면 키보드를 요청한 뒤 실제 IME inset 표시를 확인합니다. 회전·키보드 같은 OS 전환은 최대 30초 동안 기다리며 조건 이름을 오류에 남깁니다. 입력칸의 95% 이상 표시, 저장 버튼, 61.5 값 보존과 재고 불변을 계속 검사합니다. 회전 후 원래 방향 설정도 복구합니다.
+
+특정 검사만 재현할 때는 전체 결과를 덮지 않도록 별도 결과 폴더를 지정할 수 있습니다. 기본 실행과 CI는 전체 15개 검사를 실행합니다.
+
+```sh
+PERILOG_TEST_TARGET='com.poyal.perilog.AppFlowTest#typedDraftSurvivesActivityRecreationRotationAndDoesNotConsumeStock' \
+PERILOG_RESULTS_DIR="$PWD/.tools/e2e-ime-check" \
+./scripts/test-e2e.sh all
+```

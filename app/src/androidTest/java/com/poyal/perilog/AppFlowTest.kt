@@ -2,13 +2,15 @@ package com.poyal.perilog
 
 import android.content.Context
 import android.content.res.Configuration
-import android.os.SystemClock
 import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
 import android.net.Uri
 import android.view.inputmethod.InputMethodManager
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -39,9 +41,12 @@ class AppFlowTest {
             preferences=Preferences(darkMode="LIGHT",celebrate=false),
             templates=listOf(UsageTemplate(id="night",name="밤 구성",items=listOf(Item(p.id,p.name,2)))),
             receipts=listOf(Receipt(date=LocalDate.now().minusDays(10).toString(),createdAt=1,lines=listOf(ReceiptLine(productId=p.id,quantity=10))))))}
-        await{compose.onAllNodesWithText("오늘 기록 시작").fetchSemanticsNodes().isNotEmpty()}
+        await("Home after fixture restore"){compose.onAllNodesWithText("오늘 기록 시작").fetchSemanticsNodes().isNotEmpty()}
     }
-    private fun await(condition:()->Boolean)=compose.waitUntil(10000,condition)
+    private fun await(description:String="Expected application state",timeoutMs:Long=10000,condition:()->Boolean) {
+        try {compose.waitUntil(timeoutMs,condition)}
+        catch(error:ComposeTimeoutException){throw AssertionError("$description was not ready after $timeoutMs ms",error)}
+    }
     private fun node(text:String)=compose.onNodeWithText(text)
     private fun show(n:SemanticsNodeInteraction):SemanticsNodeInteraction {val parents=n.onAncestors().filter(hasScrollAction())
         for(index in parents.fetchSemanticsNodes().indices.reversed())runCatching{parents[index].performScrollTo()}
@@ -53,6 +58,20 @@ class AppFlowTest {
     private fun input(label:String,value:String) {show(field(label)).performTextReplacement(value)}
     private fun back() {compose.onNodeWithContentDescription("뒤로").performClick()}
     private fun hideKeyboard() {compose.runOnIdle{(compose.activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(compose.activity.window.decorView.windowToken,0)};compose.waitForIdle()}
+    private fun showKeyboard(label:String,phase:String) {
+        await("$phase window focus",30000){compose.activity.hasWindowFocus()}
+        show(field(label)).performClick()
+        compose.runOnIdle {
+            val activity=compose.activity
+            WindowCompat.getInsetsController(activity.window,activity.window.decorView).show(WindowInsetsCompat.Type.ime())
+        }
+        await("$phase software keyboard visible",30000) {
+            ViewCompat.getRootWindowInsets(compose.activity.window.decorView)?.isVisible(WindowInsetsCompat.Type.ime())==true
+        }
+        await("$phase navigation hidden above keyboard",30000) {
+            compose.onAllNodesWithText("재고",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()
+        }
+    }
     private fun stock(q:Int) {assertEquals(q,inventory(snapshot()).products.getValue(p.id).balance)}
     private fun openTemplates(){compose.onNodeWithContentDescription("설정").performClick();click("사용 구성 관리")}
     private fun beforeAndTemplate() {
@@ -213,21 +232,28 @@ class AppFlowTest {
     @Test fun typedDraftSurvivesActivityRecreationRotationAndDoesNotConsumeStock() {
         click("오늘 기록 시작");input("몸무게","61.5")
         compose.activityRule.scenario.recreate()
-        await{compose.onAllNodes(hasSetTextAction() and hasText("61.5")).fetchSemanticsNodes().isNotEmpty()}
+        await("Draft text after activity recreation",30000){compose.onAllNodes(hasSetTextAction() and hasText("61.5")).fetchSemanticsNodes().isNotEmpty()}
         stock(10)
-        show(field("몸무게")).performClick()
-        await{compose.onAllNodesWithText("재고",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()}
-        compose.activityRule.scenario.onActivity{it.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE}
-        await{compose.activity.resources.configuration.orientation==Configuration.ORIENTATION_LANDSCAPE}
-        compose.waitForIdle();show(field("몸무게")).performClick()
-        await{compose.onAllNodesWithText("재고",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()}
-        SystemClock.sleep(500)
-        field("몸무게").assertTextContains("61.5").assertIsDisplayed()
-        val visible=field("몸무게").getBoundsInRoot().let{it.bottom-it.top}
-        val full=field("몸무게").getUnclippedBoundsInRoot().let{it.bottom-it.top}
-        assertTrue("Focused input must remain fully visible above keyboard",visible>=full*.95f)
-        node("기록 저장").assertIsDisplayed();screenshot("landscape-keyboard.png")
-        compose.activityRule.scenario.onActivity{it.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED}
+        val originalOrientation=compose.activity.requestedOrientation
+        try {
+            showKeyboard("몸무게","Portrait")
+            compose.activityRule.scenario.onActivity{it.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE}
+            await("Landscape configuration",30000){compose.activity.resources.configuration.orientation==Configuration.ORIENTATION_LANDSCAPE}
+            await("Draft text after rotation",30000){compose.onAllNodes(hasSetTextAction() and hasText("61.5")).fetchSemanticsNodes().isNotEmpty()}
+            showKeyboard("몸무게","Landscape")
+            await("Landscape input fully visible above keyboard",30000) {
+                val visible=field("몸무게").getBoundsInRoot().let{it.bottom-it.top}
+                val full=field("몸무게").getUnclippedBoundsInRoot().let{it.bottom-it.top}
+                full.value>0f && visible>=full*.95f
+            }
+            field("몸무게").assertTextContains("61.5").assertIsDisplayed()
+            node("기록 저장").assertIsDisplayed();screenshot("landscape-keyboard.png")
+            stock(10)
+        } catch(error:Throwable) {
+            runCatching{screenshot("failure-rotation-keyboard.png")};throw error
+        } finally {
+            compose.activityRule.scenario.onActivity{it.requestedOrientation=originalOrientation}
+        }
     }
     @Test fun settingsUnsavedChangesSurviveRecreationAndDarkThemeCanBeSaved() {
         compose.onNodeWithContentDescription("설정").performClick();click("어둡게");node("어둡게").assertIsSelected()

@@ -88,6 +88,7 @@ jobs:
       - name: Offline E2E with normal and large text
         run: ./scripts/test-e2e.sh all
       - name: Recover an unsaved form after process death
+        timeout-minutes: 5
         run: ./scripts/test-process-restore.py
       - name: Upload test reports and failure captures
         if: always()

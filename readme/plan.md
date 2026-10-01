@@ -1966,3 +1966,9 @@ Keep inventory cards clear and practical, airy margins, strong quantity typograp
 - 신규 UI 23장으로 README와 스크린샷 ZIP을 갱신했다. 서명 APK·ZIP·체크섬을 v1.0.1 정식 릴리즈에 게시했다.
 - 공개 파일 3개의 원본 일치와 ZIP 23장, GitHub README 이미지·다운로드 링크를 확인했다.
 - 원격 CI 최초 실행은 에뮬레이터 준비에서 `sdkmanager: command not found`(종료 코드 127)로 중단됐다. Android SDK 도구 설치와 PATH 설정을 명시하고 다시 검증한다. 문서만 바뀌는 push는 테스트를 중복 실행하지 않도록 제외한다.
+
+### 원격 CI 프로세스 복구 검사 보완 (2026-10-01)
+
+- SDK 도구 설치와 AVD 경로를 통일한 원격 실행에서 단위·Lint·기본/큰 글씨 E2E가 통과했다.
+- 사용자 공유 오류에서 복구 확인 전에 `am kill` 직후 PID 생존 검사로 실패한 것을 확인했다. Activity 중지·상태 저장을 기다린 뒤 개발용 앱 UID로 해당 PID만 종료하고, 종료와 새 PID·입력 복구를 각각 확인하도록 변경한다.
+- 오류 자료 수집이 원래 오류를 가리지 않게 하고, 공개 CI annotation에는 고정 단계 이름·오류 종류만 표시한다. 앱 기능과 v1.0.1 APK의 변경은 없다.

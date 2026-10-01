@@ -40,6 +40,10 @@ PERILOG_SERIAL=emulator-5554 ./scripts/test-process-restore.py
 
 각 실행의 HTML/XML 결과, 전체 실행 로그, Android 로그와 실패 화면은 `.tools/e2e-results/normal/` 또는 `large/`에 저장됩니다. Git에는 예시 사용자 자료를 담은 보고서를 커밋하지 않습니다.
 
-`.github/workflows/test.yml`은 PR·main 푸시·수동 실행에서 단위 검사·Lint·API 35 에뮬레이터의 두 가지 E2E를 실행하고 보고서를 14일 보관합니다. 로컬 검증 장치는 API 36입니다. 이 작업은 APK를 배포하거나 릴리즈를 게시하지 않습니다. 프로세스 복구 스크립트는 새 품목 폼에 임시 이름을 입력하고 홈으로 이동한 뒤 `am kill`로 프로세스를 종료합니다. 새 PID에서 미저장 내용을 확인한 뒤 버리므로 품목을 저장하지 않습니다. 결과는 `.tools/e2e-results/process/`에 남습니다.
+`.github/workflows/test.yml`은 PR·main 푸시·수동 실행에서 단위 검사·Lint·API 35 에뮬레이터의 두 가지 E2E를 실행하고 보고서를 14일 보관합니다. README·readme·design 파일만 바뀐 main 푸시는 중복 실행하지 않습니다. 로컬 검증 장치는 API 36입니다. 이 작업은 APK를 배포하거나 릴리즈를 게시하지 않습니다. 프로세스 복구 스크립트는 새 품목 폼에 임시 이름을 입력하고 홈으로 이동합니다. Activity가 `STOPPED`이며 Android가 상태를 저장한 것을 확인한 뒤, 개발용 앱 UID의 `run-as`로 해당 PID만 종료합니다. 기존 PID가 사라질 때까지 제한 시간 안에서 확인합니다. 새 PID에서 미저장 내용을 확인한 뒤 버리므로 품목을 저장하지 않습니다. 결과는 `.tools/e2e-results/process/`에 남습니다.
 
 GitHub에서의 실제 실행 여부는 로컬 통과와 구분해 기록합니다.
+
+CI는 Android SDK 도구를 설치한 뒤 플랫폼·시스템 이미지 설치, AVD 생성, 부팅을 나눠 실행합니다. `ANDROID_USER_HOME`·`ANDROID_EMULATOR_HOME`·`ANDROID_AVD_HOME`을 러너 임시 디렉터리로 통일해 생성한 기기를 같은 경로에서 찾습니다. 부팅은 180초로 제한하고, 프로세스가 종료되면 즉시 실패합니다. 실패 로그 마지막 30줄은 Actions 요약에도 남깁니다. 환경변수 역할은 [Android 공식 문서](https://developer.android.com/tools/variables)를 참고하세요.
+
+`am kill`은 Android가 종료해도 된다고 판단하는 프로세스만 대상으로 하므로 호출 직후 종료를 보장하지 않습니다([공식 설명](https://developer.android.com/tools/adb#am)). 복구 검사는 저장된 task를 유지한 실제 프로세스 사망을 재현하며, 종료 성공·새 PID·미저장 입력 복구를 각각 확인합니다. 실패 시 고정된 단계 이름과 오류 종류만 CI annotation에 표시하고, 화면 자료 수집 실패가 원래 오류를 덮지 않도록 했습니다.

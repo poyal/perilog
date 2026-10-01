@@ -113,16 +113,7 @@ import java.util.Locale
         }
         Paper {
             Section("품목 색상")
-            FlowRow(horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                (s.preferences.palette+p.color).distinct().forEach{color->
-                    val hex=String.format(Locale.US,"#%06X",color and 0xFFFFFF)
-                    Box(Modifier.size(48.dp).background(Color(color),MaterialTheme.shapes.small)
-                        .border(if(p.color==color)3.dp else 1.dp,if(p.color==color)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,MaterialTheme.shapes.small)
-                        .clickable{p=p.copy(color=color)}.semantics{contentDescription="색상 $hex";selected=p.color==color},contentAlignment=Alignment.Center){
-                        if(p.color==color)Icon(Icons.Outlined.Check,null,tint=if(androidx.core.graphics.ColorUtils.calculateLuminance(color.toInt())>.4)Color.Black else Color.White)
-                    }
-                }
-            }
+            ColorPalette(s.preferences.palette,p.color){p=p.copy(color=it)}
             TextButton(onClick={colorPicker=!colorPicker}){Text(if(colorPicker)"컬러 피커 접기"else"컬러 피커 · 색 추가")}
             if(colorPicker)InlineColorPicker(p.color){p=p.copy(color=it)}
             Hint("이 색상은 재고와 모든 사용 구성에 함께 표시돼요.")
@@ -134,6 +125,18 @@ import java.util.Locale
             OutlinedTextField(p.memo,{p=p.copy(memo=it)},label={Text("메모")},modifier=Modifier.fillMaxWidth())
             Row(verticalAlignment=Alignment.CenterVertically){Switch(p.active,{p=p.copy(active=it)});Spacer(Modifier.width(8.dp));Text("현재 사용하는 품목",Modifier.weight(1f))}
             Hint("품목을 보관해도 이전 기록과 재고 이력은 유지돼요.")
+        }
+    }
+}
+@Composable private fun ColorPalette(palette:List<Long>,selectedColor:Long,onColor:(Long)->Unit) {
+    FlowRow(horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+        (palette+selectedColor).distinct().forEach{color->
+            val hex=String.format(Locale.US,"#%06X",color and 0xFFFFFF)
+            Box(Modifier.size(48.dp).background(Color(color),MaterialTheme.shapes.small)
+                .border(if(selectedColor==color)3.dp else 1.dp,if(selectedColor==color)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,MaterialTheme.shapes.small)
+                .clickable{onColor(color)}.semantics{contentDescription="색상 $hex";selected=selectedColor==color},contentAlignment=Alignment.Center){
+                if(selectedColor==color)Icon(Icons.Outlined.Check,null,tint=if(androidx.core.graphics.ColorUtils.calculateLuminance(color.toInt())>.4)Color.Black else Color.White)
+            }
         }
     }
 }
@@ -157,7 +160,9 @@ import java.util.Locale
         Action("+ 구성 만들기",{navigate("template/new")})
         if(s.templates.isEmpty())Paper{Hint("밤 투석·추가투석처럼 자주 쓰는 조합을 만들어 보세요.")}
         s.templates.forEach{t->Paper {
-            Section(t.name)
+            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                ColorDot(t.color,22,"${t.name} 대표");Text(t.name,Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
+            }
             t.items.forEach{ProductLine(s,it)}
             Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
                 TextButton(onClick={navigate("template/${t.id}")}){Text("수정")}
@@ -170,10 +175,18 @@ import java.util.Locale
 @Composable fun TemplateEditor(s:Snapshot,vm:JournalViewModel,id:String,back:()->Unit) {
     var t by rememberJsonState("template:$id"){s.templates.find{it.id==id} ?: UsageTemplate(name="",items=emptyList())}
     val original=rememberSaveable(id){codec.encodeToString(t)}
-    EditorPage(if(id=="new")"사용 구성 만들기"else"사용 구성 수정","품목별 사용 수량을 한 번에 설정해요",codec.encodeToString(t)!=original,back,{
+    var colorPicker by rememberSaveable(id){mutableStateOf(false)}
+    EditorPage(if(id=="new")"사용 구성 만들기"else"사용 구성 수정","품목별 수량과 대표 색상을 설정해요",codec.encodeToString(t)!=original,back,{
         vm.act("구성을 저장했어요"){vm.repository.template(t.copy(name=t.name.trim(),items=t.items.map{it.copy(batchId=null)}));back()}
     },t.name.isNotBlank() && t.items.isNotEmpty(),busy=vm.busy.collectAsState().value) {
         Paper{OutlinedTextField(t.name,{t=t.copy(name=it)},label={Text("구성 이름")},placeholder={Text("예: 밤 투석 · 1.5 + 2.5")},modifier=Modifier.fillMaxWidth());Hint("기록에서 이 구성을 고르면 저장한 품목·수량이 함께 적용돼요.")}
+        Paper {
+            Section("대표 색상")
+            ColorPalette(s.preferences.palette,t.color){t=t.copy(color=it)}
+            TextButton(onClick={colorPicker=!colorPicker}){Text(if(colorPicker)"컬러 피커 접기"else"컬러 피커 · 색 추가")}
+            if(colorPicker)InlineColorPicker(t.color){t=t.copy(color=it)}
+            Hint("구성 선택과 기록의 구성 이름 옆에 함께 표시돼요.")
+        }
         if(s.products.isEmpty())Paper{Hint("품목 관리에서 사용하는 물품을 먼저 등록해 주세요.")}
         ItemQuantityEditor(s,t.items,{t=t.copy(items=it)},batches=false)
     }
@@ -191,7 +204,7 @@ import java.util.Locale
                 Checkbox(selected,{checked->selected=checked;onChange(items.filterNot{it.productId==p.id}+if(checked)listOf(Item(p.id,p.name,1))else emptyList())},Modifier.semantics{contentDescription="${p.name} 사용"})
             }
             if(selected) {
-                NumberInput("${p.name} 수량",item?.quantity,{q->onChange(items.filterNot{it.productId==p.id}+if(q!=null && q>0)listOf((item ?: Item(p.id,p.name,1)).copy(quantity=q))else emptyList())},"EA",steps=listOf(1))
+                NumberInput("${p.name} 수량",item?.quantity,{q->onChange(items.filterNot{it.productId==p.id}+if(q!=null && q>0)listOf((item ?: Item(p.id,p.name,1)).copy(quantity=q))else emptyList())},"EA")
                 if(item==null)Hint("빈 수량과 0EA는 사용에서 제외해요.")
                 if(batches && item!=null) {
                     var expanded by rememberSaveable{mutableStateOf(false)}

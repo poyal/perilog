@@ -1,6 +1,7 @@
 package com.poyal.perilog.data
 
 import androidx.room.Entity
+import androidx.room.ColumnInfo
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -20,7 +21,8 @@ data class Product(@PrimaryKey val id: String = newId(), val name: String, val k
     val vendor: String = "벤티브", val memo: String = "")
 
 @Entity(tableName = "templates") @Serializable
-data class UsageTemplate(@PrimaryKey val id: String = newId(), val name: String, val items: List<Item>)
+data class UsageTemplate(@PrimaryKey val id: String = newId(), val name: String, val items: List<Item>,
+    @ColumnInfo(defaultValue="4280379320") val color: Long = 0xFF2167B8)
 
 @Entity(tableName = "treatments") @Serializable
 data class Treatment(@PrimaryKey val id: String = newId(), val date: String = today(), val kind: String = "MACHINE",
@@ -30,7 +32,8 @@ data class Treatment(@PrimaryKey val id: String = newId(), val date: String = to
     val previousFill: Int? = null, val items: List<Item> = emptyList(), val usageConfirmed: Boolean = false,
     val saved: Boolean = false, val memo: String = "", val sourceDate: String? = null,
     val startTime: String = "", val endTime: String = "", val interrupted: Boolean = false,
-    val createdAt: Long = System.currentTimeMillis(), val updatedAt: Long = createdAt)
+    val createdAt: Long = System.currentTimeMillis(), val updatedAt: Long = createdAt,
+    val usageTemplateId: String? = null, val usageTemplateName: String? = null, val usageTemplateColor: Long? = null)
 
 @Entity(tableName = "usages") @Serializable
 data class Usage(@PrimaryKey val id: String, val date: String, val items: List<Item>, val kind: String,

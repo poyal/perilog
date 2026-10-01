@@ -46,7 +46,7 @@ class JournalViewModel(application: Application,private val savedState:SavedStat
     fun edit(id: String?=null,kind: String="MACHINE",date: String=today()) {
         draftJob?.cancel()
         val s=state.value
-        editor.value=s.drafts.find{it.id==id}?.treatment ?: s.treatments.find{it.id==id} ?: newTreatment(s,kind,date)
+        editor.value=(s.drafts.find{it.id==id}?.treatment ?: s.treatments.find{it.id==id} ?: newTreatment(s,kind,date)).withUsageTemplate(s)
         savedState["editor"]=codec.encodeToString(editor.value!!)
     }
     fun change(t: Treatment) {
@@ -60,11 +60,15 @@ class JournalViewModel(application: Application,private val savedState:SavedStat
         if(t.saved) { change(t.copy(date=date)); return }
         val old=newTreatment(state.value,t.kind,t.date)
         val fresh=newTreatment(state.value,t.kind,date)
+        val usingPrevious=t.items==old.items && t.usageTemplateId==old.usageTemplateId
         change(t.copy(date=date,basisMl=fresh.basisMl,
             weightGrams=if(t.weightGrams==old.weightGrams)fresh.weightGrams else t.weightGrams,
             systolic=if(t.systolic==old.systolic)fresh.systolic else t.systolic,
             diastolic=if(t.diastolic==old.diastolic)fresh.diastolic else t.diastolic,
-            items=if(t.items==old.items)fresh.items else t.items,sourceDate=fresh.sourceDate))
+            items=if(usingPrevious)fresh.items else t.items,
+            usageTemplateId=if(usingPrevious)fresh.usageTemplateId else t.usageTemplateId,
+            usageTemplateName=if(usingPrevious)fresh.usageTemplateName else t.usageTemplateName,
+            usageTemplateColor=if(usingPrevious)fresh.usageTemplateColor else t.usageTemplateColor,sourceDate=fresh.sourceDate))
     }
     fun discard(id: String,done: ()->Unit) { draftJob?.cancel(); act { repository.discardDraft(id);editor.value=null;savedState.remove<String>("editor");done() } }
     fun save(confirm: Boolean,onSaved: () -> Unit) {
@@ -89,7 +93,6 @@ class RecordFilters {
     val period=mutableStateOf(false)
 }
 class StatsFilters {
-    val selected=mutableStateOf(0)
     val range=mutableStateOf("7D")
     val from=mutableStateOf(java.time.LocalDate.now().minusDays(6).toString())
     val to=mutableStateOf(today())

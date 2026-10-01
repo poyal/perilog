@@ -36,6 +36,7 @@ class RulesTest {
         validate(s)
         assertEquals("1.0.0",s.appVersion)
         assertEquals(2,s.templates.single().items.single().quantity)
+        assertEquals(0xFF2167B8,s.templates.single().color)
         assertEquals(2000,s.preferences.basisOn("2026-10-01"))
     }
     @Test fun expiryAlertBoundariesRespectZeroAndUndated() {
@@ -71,6 +72,34 @@ class RulesTest {
         assertTrue(newTreatment(s,"MACHINE","2026-09-28").items.isEmpty())
         assertNull(newTreatment(s,"MACHINE","2026-09-30").initialDrain)
         assertEquals(manual.items,newTreatment(s,"MANUAL","2026-09-30").items)
+    }
+    @Test fun chosenCompositionSurvivesQuantityChangesDuplicateTemplatesAndBackup() {
+        val first=UsageTemplate(id="first",name="첫 구성",items=listOf(Item(p.id,p.name,2)))
+        val chosen=first.copy(id="chosen",name="밤 구성",color=0xFF8772B5)
+        val t=Treatment(date="2026-09-30",saved=true,usageConfirmed=true,
+            items=listOf(Item(p.id,p.name,3)),usageTemplateId=chosen.id,usageTemplateName=chosen.name,usageTemplateColor=chosen.color)
+        val s=Snapshot(templates=listOf(first,chosen),treatments=listOf(t))
+        assertEquals(chosen.name,t.compositionName(s))
+        assertEquals(chosen.color,t.compositionColor(s))
+        val next=newTreatment(s,"MACHINE","2026-10-01")
+        assertEquals(chosen.id,next.usageTemplateId)
+        assertEquals(chosen.color,next.usageTemplateColor)
+        assertEquals(3,next.items.single().quantity)
+        assertEquals(chosen.name,t.compositionName(Snapshot()))
+        assertEquals(chosen.color,t.compositionColor(Snapshot()))
+        assertEquals("새 이름",t.compositionName(s.copy(templates=listOf(chosen.copy(name="새 이름")))))
+        assertEquals(0xFF47956E,t.compositionColor(s.copy(templates=listOf(chosen.copy(color=0xFF47956E)))))
+        assertEquals(t,codec.decodeFromString<Treatment>(codec.encodeToString(t)))
+    }
+    @Test fun legacyCompositionMatchesProductQuantitiesWithoutNamesOrderOrLots() {
+        val t=codec.decodeFromString<Treatment>("""{"id":"legacy","items":[{"productId":"p","name":"옛 이름","quantity":2,"batchId":"lot"},{"productId":"q","name":"카세트","quantity":1}]}""")
+        val template=UsageTemplate(id="night",name="밤 구성",items=listOf(Item("q","카세트",1),Item(p.id,p.name,2)))
+        val s=Snapshot(templates=listOf(template))
+        assertEquals(template.name,t.compositionName(s))
+        assertEquals(template.color,t.compositionColor(s))
+        assertEquals(template.id,t.withUsageTemplate(s).usageTemplateId)
+        assertEquals("개별 사용 구성",t.copy(items=listOf(Item(p.id,p.name,1))).compositionName(s))
+        assertEquals("사용 없음",t.copy(items=emptyList()).compositionName(s))
     }
     @Test fun fefoExcludesExpiredAndKeepsUndatedLast() {
         val r=Receipt(date="2026-09-01",createdAt=1,lines=listOf(

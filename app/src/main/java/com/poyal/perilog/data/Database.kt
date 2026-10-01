@@ -2,6 +2,8 @@ package com.poyal.perilog.data
 
 import android.content.Context
 import androidx.room.*
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
@@ -49,11 +51,25 @@ class Converters {
 }
 
 @Database(entities=[Product::class,UsageTemplate::class,Treatment::class,Usage::class,Receipt::class,
-    StockCount::class,Audit::class,Draft::class,SettingsRow::class],version=1,exportSchema=true)
+    StockCount::class,Audit::class,Draft::class,SettingsRow::class],version=3,exportSchema=true)
 @TypeConverters(Converters::class)
 abstract class JournalDb : RoomDatabase() {
     abstract fun dao(): JournalDao
-    companion object { fun open(context: Context) = Room.databaseBuilder(context,JournalDb::class.java,"perilog.db").build() }
+    companion object {
+        val MIGRATION_1_2=object:Migration(1,2) {
+            override fun migrate(db:SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE treatments ADD COLUMN usageTemplateId TEXT")
+                db.execSQL("ALTER TABLE treatments ADD COLUMN usageTemplateName TEXT")
+            }
+        }
+        val MIGRATION_2_3=object:Migration(2,3) {
+            override fun migrate(db:SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE templates ADD COLUMN color INTEGER NOT NULL DEFAULT 4280379320")
+                db.execSQL("ALTER TABLE treatments ADD COLUMN usageTemplateColor INTEGER")
+            }
+        }
+        fun open(context: Context) = Room.databaseBuilder(context,JournalDb::class.java,"perilog.db").addMigrations(MIGRATION_1_2,MIGRATION_2_3).build()
+    }
 }
 
 class Repository(val db: JournalDb) {
@@ -103,7 +119,10 @@ class Repository(val db: JournalDb) {
         val p=read().preferences
         if(date !in p.celebratedDates)d.put(SettingsRow(payload=codec.encodeToString(p.copy(celebratedDates=p.celebratedDates+date))))
     }
-    suspend fun template(t: UsageTemplate) = db.withTransaction { val s=read(); validate(s.copy(templates=s.templates.filterNot{it.id==t.id}+t)); d.put(t) }
+    suspend fun template(t: UsageTemplate) = db.withTransaction {
+        val s=read();validate(s.copy(templates=s.templates.filterNot{it.id==t.id}+t));d.put(t)
+        d.put(SettingsRow(payload=codec.encodeToString(s.preferences.copy(palette=(s.preferences.palette+t.color).distinct()))))
+    }
     suspend fun deleteTemplate(id: String) = d.deleteTemplate(id)
     suspend fun receipt(r: Receipt) = db.withTransaction {
         val s=read(); validate(s.copy(receipts=s.receipts.filterNot{it.id==r.id}+r))

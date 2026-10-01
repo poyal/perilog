@@ -10,6 +10,7 @@ import android.os.PowerManager
 import android.view.inputmethod.InputMethodManager
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -60,6 +61,8 @@ class AppFlowTest {
         runCatching{n.performScrollTo()}
         return n}
     private fun click(text:String) {show(node(text)).performClick()}
+    private fun select(label:String,value:String) {show(compose.onNodeWithContentDescription(label)).performClick();click(value)}
+    private fun selectedValue(label:String,value:String) {compose.onNodeWithContentDescription(label).assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription,value))}
     private fun tab(text:String) {compose.onNodeWithText(text,useUnmergedTree=true).performClick()}
     private fun field(label:String)=compose.onNode(hasSetTextAction() and (hasText(label) or hasContentDescription(label)))
     private fun input(label:String,value:String) {show(field(label)).performTextReplacement(value)}
@@ -89,6 +92,14 @@ class AppFlowTest {
         click("오늘 기록 시작");beforeAndTemplate()
         input("초기배액량","2300");input("기계 제수량","600")
         show(node("900 mL")).assertIsDisplayed()
+        node("초기배액량 − 이전 최종 주입 설정값 + 기계 제수량").assertDoesNotExist()
+        show(compose.onNodeWithContentDescription("제수량 도움말")).performClick()
+        node("초기배액량 − 이전 최종 주입 설정값 + 기계 제수량").assertIsDisplayed()
+        input("이 기록의 이전 주입 기준","2100");click("닫기")
+        show(node("800 mL")).assertIsDisplayed()
+        show(compose.onNodeWithContentDescription("제수량 도움말")).performClick()
+        input("이 기록의 이전 주입 기준","2000");click("닫기")
+        show(node("900 mL")).assertIsDisplayed()
         click("기록 저장");await{snapshot().treatments.size==1}
         node("오늘도 기록을 마쳤어요").assertExists()
         assertEquals(900,snapshot().treatments.single().totalUf());stock(8)
@@ -117,13 +128,15 @@ class AppFlowTest {
     @Test fun templateQuantityCanBeClearedRetypedAndOnlyThisRecordAdjusted() {
         openTemplates();click("수정");input("${p.name} 수량","")
         field("${p.name} 수량").assertExists();node("저장").assertIsNotEnabled()
-        input("${p.name} 수량","3");click("+1");click("저장")
+        input("${p.name} 수량","4");click("저장")
         await{snapshot().templates.single().items.single().quantity==4}
         stock(10);back();back();click("오늘 기록 시작");beforeAndTemplate()
         click("이번 기록만 수량 조정");input("${p.name} 수량","3");click("수량 조정 마치기")
         stock(10);click("기록 저장");await{snapshot().treatments.size==1};stock(7)
         assertEquals(4,snapshot().templates.single().items.single().quantity)
-        click("종료 후 기록하기");input("초기배액량","2300");input("기계 제수량","600");click("기록 저장")
+        assertEquals("night",snapshot().treatments.single().usageTemplateId)
+        assertEquals("밤 구성",snapshot().treatments.single().compositionName(snapshot()))
+        click("기록하기");input("초기배액량","2300");input("기계 제수량","600");click("기록 저장")
         await{snapshot().treatments.single().complete()};stock(7)
         assertEquals(1,snapshot().usages.size)
     }
@@ -161,12 +174,12 @@ class AppFlowTest {
     }
     @Test fun yesterdayMorningCompletionKeepsYesterdayAndHidesItsPrompt() {
         runBlocking {app.repository.save(Treatment(date=yesterday,weightGrams=62000,systolic=120,diastolic=80,items=listOf(Item(p.id,p.name,2))),true)}
-        await{compose.onAllNodesWithText("어제 기록 작성하기").fetchSemanticsNodes().isNotEmpty()}
-        click("작성하기");node("날짜 ${yesterday.replace('-','.')}").assertExists()
+        await{compose.onAllNodesWithText("어제의 기록").fetchSemanticsNodes().isNotEmpty()}
+        click("어제 기록하기");node("날짜 ${yesterday.replace('-','.')}").assertExists()
         input("초기배액량","2200");input("기계 제수량","500");click("기록 저장")
         await{snapshot().treatments.single().complete()}
         assertEquals(yesterday,snapshot().treatments.single().date);stock(8)
-        node("어제 기록 작성하기").assertDoesNotExist();node("오늘 기록 시작").assertExists()
+        node("어제의 기록").assertDoesNotExist();node("오늘 기록 시작").assertExists()
     }
     @Test fun pastDateCanBeChosenAndFutureDateDoesNotChangeTheRecord() {
         click("오늘 기록 시작");click("어제");node("날짜 ${yesterday.replace('-','.')}").assertExists()
@@ -179,12 +192,10 @@ class AppFlowTest {
         click("기록 저장");await{snapshot().treatments.isNotEmpty()}
         assertEquals(yesterday,snapshot().treatments.single().date)
     }
-    @Test fun decimalTypingClearAndStepControlsKeepExactValues() {
+    @Test fun decimalTypingAndClearKeepExactValues() {
         click("오늘 기록 시작")
         input("몸무게","61.");field("몸무게").assertTextContains("61.")
         field("몸무게").performTextInput("5");field("몸무게").assertTextContains("61.5")
-        click("+0.1");field("몸무게").assertTextContains("61.6")
-        click("-0.5");field("몸무게").assertTextContains("61.1")
         show(compose.onNodeWithContentDescription("몸무게 전체 지우기")).performClick()
         input("몸무게","62.25");click("기록 저장")
         await{snapshot().treatments.isNotEmpty()};assertEquals(62250,snapshot().treatments.single().weightGrams)
@@ -199,8 +210,9 @@ class AppFlowTest {
     }
     @Test fun statisticsSelectionSurvivesOpeningARecord() {
         runBlocking { app.repository.save(Treatment(weightGrams=62300,systolic=120,diastolic=80,initialDrain=2300,machineUf=600),true) }
-        tab("통계");click("30D");click("표");click(today());back()
-        node("30D").assertIsSelected();node("표").assertIsSelected()
+        tab("통계");select("통계 기간","30D");select("표시 방식","표")
+        show(compose.onAllNodesWithText(today()).onFirst()).performClick();back()
+        selectedValue("통계 기간","30D");selectedValue("표시 방식","표")
     }
     @Test fun recordTableFiltersPeriodAndKeepsSelectionAfterEditing() {
         runBlocking {
@@ -208,16 +220,16 @@ class AppFlowTest {
             app.repository.save(Treatment(id="older",date=LocalDate.now().minusDays(15).toString(),weightGrams=61000),false)
             app.repository.save(Treatment(id="manual",date=yesterday,kind="MANUAL",manualDrain=2195,drainUnit="g"),true)
         }
-        tab("기록");click("표");node("7D").assertIsSelected()
+        tab("기록");click("표");selectedValue("조회 기간","7D")
         compose.onNodeWithTag("record-row-recent").assertExists()
         compose.onNodeWithTag("record-row-manual").assertExists()
         compose.onNodeWithTag("record-row-older").assertDoesNotExist()
         show(node("2195 g")).assertIsDisplayed()
-        click("30D");compose.onNodeWithTag("record-row-older").assertExists()
+        select("조회 기간","30D");compose.onNodeWithTag("record-row-older").assertExists()
         show(compose.onNodeWithTag("record-row-recent")).performClick()
         node("날짜 ${yesterday.replace('-','.')}").assertExists();back()
-        node("표").assertIsSelected();node("30D").assertIsSelected()
-        click("기간 지정")
+        node("표").assertIsSelected();selectedValue("조회 기간","30D")
+        select("조회 기간","기간 지정")
         node("시작 ${LocalDate.now().minusDays(29).toString().replace('-','.')}").assertExists()
         click("리스트");node("리스트").assertIsSelected()
         click("캘린더");node("캘린더").assertIsSelected()

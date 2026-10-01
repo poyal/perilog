@@ -29,37 +29,50 @@ import com.poyal.perilog.domain.*
     var discard by rememberSaveable{mutableStateOf(false)}
     var error by rememberSaveable{mutableStateOf("")}
     fun update(next:Treatment)=vm.change(next)
-    val beforeComplete=current.saved && current.weightGrams!=null && current.systolic!=null && current.diastolic!=null
-    Page(if(current.kind=="MACHINE")"치료 기록"else"추가투석",back=back,actions={Bow(32)},
+    val beforeComplete=current.weightGrams!=null && current.systolic!=null && current.diastolic!=null
+    val compositionComplete=current.items.isNotEmpty() || current.usageConfirmed
+    val recordComplete=current.initialDrain!=null && current.machineUf!=null
+    Page(if(current.kind=="MACHINE")"치료 기록"else"추가투석",back=back,
         footer={Action("기록 저장",{vm.save(current.items.isNotEmpty() || current.usageConfirmed,back)},!vm.busy.collectAsState().value)}) {
         DateControl(current.date,{if(it<=today()){vm.changeDate(it);error=""}else error="미래 날짜에는 치료 기록을 등록할 수 없어요."})
         if(error.isNotEmpty())Text(error,color=MaterialTheme.colorScheme.error)
         if(current.kind=="MACHINE") {
-            Row(Modifier.fillMaxWidth().padding(vertical=4.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                StageBadge("1",beforeComplete);Text("시작 전",fontWeight=FontWeight.SemiBold)
-                HorizontalDivider(Modifier.weight(1f),color=MaterialTheme.colorScheme.primary.copy(alpha=.35f))
-                StageBadge("2",current.saved && current.initialDrain!=null && current.machineUf!=null);Text("종료 후",fontWeight=FontWeight.SemiBold)
-            }
             Paper {
-                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Section("시작 전 기록");Spacer(Modifier.weight(1f));TextButton(onClick={beforeExpanded=!beforeExpanded}){Text(if(beforeExpanded)"접기"else"수정")}}
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    StageBadge("1",beforeComplete);Section("활력 상태");Spacer(Modifier.weight(1f))
+                    TextButton(onClick={beforeExpanded=!beforeExpanded}){Text(if(beforeExpanded)"접기"else"수정")}
+                }
                 if(!beforeExpanded)AdaptivePair(first={MeasurementSummary(current.weightGrams?.let{"${it/1000.0} kg"} ?: "—","몸무게")},second={MeasurementSummary("${current.systolic ?: "—"} / ${current.diastolic ?: "—"}","혈압 · mmHg")})
                 else {
                     current.sourceDate?.let{Hint("$it 측정값을 참고해 불러왔어요. 이 기록의 측정값으로 확인해 주세요.")}
-                    NumberInput("몸무게",current.weightGrams,{update(current.copy(weightGrams=it))},"kg",1000,listOf(100,500,1000))
-                    AdaptivePair(first={NumberInput("수축기 혈압",current.systolic,{update(current.copy(systolic=it))},"mmHg",steps=listOf(1))},second={NumberInput("이완기 혈압",current.diastolic,{update(current.copy(diastolic=it))},"mmHg",steps=listOf(1))})
+                    NumberInput("몸무게",current.weightGrams,{update(current.copy(weightGrams=it))},"kg",1000)
+                    AdaptivePair(first={NumberInput("수축기 혈압",current.systolic,{update(current.copy(systolic=it))},"mmHg")},second={NumberInput("이완기 혈압",current.diastolic,{update(current.copy(diastolic=it))},"mmHg")})
                 }
             }
         }
         Paper {
-            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Section("사용 구성");Spacer(Modifier.weight(1f));TextButton(onClick={picker=!picker;quantities=false}){Text(if(picker)"구성 선택 접기"else"구성 변경")}}
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                if(current.kind=="MACHINE")StageBadge("2",compositionComplete)
+                Section("사용 구성");Spacer(Modifier.weight(1f))
+                TextButton(onClick={picker=!picker;quantities=false}){Text(if(picker)"구성 선택 접기"else"구성 변경")}
+            }
+            current.compositionColor(s)?.let{color->
+                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    ColorDot(color,18,"${current.compositionName(s)} 대표")
+                    Text(current.compositionName(s),style=MaterialTheme.typography.bodyMedium,fontWeight=FontWeight.SemiBold)
+                }
+            }
             if(current.items.isEmpty())Hint("사용한 품목을 선택해 주세요.")else ProductChips(s,current.items)
             if(picker) {
                 if(s.templates.isEmpty())Hint("설정 → 사용 구성 관리에서 자주 쓰는 조합을 만들어 보세요.")
                 s.templates.forEach{template->
-                    Surface(onClick={update(current.copy(items=template.items.map{it.copy(batchId=null)}));picker=false;quantities=false},
+                    Surface(onClick={update(current.copy(items=template.items.map{it.copy(batchId=null)},usageTemplateId=template.id,usageTemplateName=template.name,usageTemplateColor=template.color));picker=false;quantities=false},
                         shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surfaceContainerLow,border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)) {
                         Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
-                            Row(verticalAlignment=Alignment.CenterVertically){Text(template.name,Modifier.weight(1f),fontWeight=FontWeight.Bold);Icon(Icons.Outlined.ChevronRight,null)}
+                            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                                ColorDot(template.color,20,"${template.name} 대표")
+                                Text(template.name,Modifier.weight(1f),fontWeight=FontWeight.Bold);Icon(Icons.Outlined.ChevronRight,null)
+                            }
                             template.items.forEach{ProductLine(s,it,compact=true)}
                         }
                     }
@@ -74,22 +87,20 @@ import com.poyal.perilog.domain.*
             ItemQuantityEditor(s,current.items,{update(current.copy(items=it))},batches=true)
         }
         if(current.kind=="MACHINE")Paper {
-            Section("종료 후 기록")
+            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                StageBadge("3",recordComplete);Section("투석 기록")
+            }
             AdaptivePair(first={NumberInput("초기배액량",current.initialDrain,{update(current.copy(initialDrain=it))},"mL",large=true)},second={
                 NumberInput("기계 제수량",current.machineUf,{update(current.copy(machineUf=it))},"mL",signed=true,large=true)
             })
             if(current.machineUf!=null)TextButton(onClick={update(current.copy(machineUf=current.machineUf.let{-it}))}){Text("제수량 + / − 바꾸기",style=MaterialTheme.typography.bodyMedium)}
             Surface(color=MaterialTheme.colorScheme.primaryContainer,shape=MaterialTheme.shapes.medium,modifier=Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                    Text("총 제수량",fontWeight=FontWeight.Bold)
-                    Text(current.totalUf()?.let{"$it mL"} ?: "—",style=MaterialTheme.typography.headlineLarge)
-                    TextButton(onClick={calculation=!calculation}){Text("계산 방법 ${if(calculation)"접기"else"보기"}");Icon(if(calculation)Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,null)}
-                    if(calculation){
-                        Text("초기배액량 − 이전 최종 주입 설정값 + 기계 제수량",style=MaterialTheme.typography.bodyMedium)
-                        Hint("설정값 기준 계산 · 이전 기준 ${current.basisMl?.let{"$it mL"} ?: "미확인"}")
-                        NumberInput("이 기록의 이전 주입 기준",current.basisMl,{update(current.copy(basisMl=it))},"mL")
-                        Hint("이전 주입 기준을 모르면 비워 두세요. 총 제수량은 계산하지 않아요.")
+                    Row(verticalAlignment=Alignment.CenterVertically) {
+                        Text("제수량",fontWeight=FontWeight.Bold)
+                        IconButton(onClick={calculation=true}){Icon(Icons.Outlined.HelpOutline,"제수량 도움말",Modifier.size(20.dp))}
                     }
+                    Text(current.totalUf()?.let{"$it mL"} ?: "—",style=MaterialTheme.typography.headlineLarge)
                 }
             }
         }else Paper {
@@ -116,11 +127,19 @@ import com.poyal.perilog.domain.*
         Hint("입력한 내용은 초안으로 보관해요. 사용 물품은 기록 저장 시 재고에 반영해요.")
         TextButton(onClick={discard=true}){Text("이 초안 버리기",color=MaterialTheme.colorScheme.secondary)}
     }
+    if(calculation && current.kind=="MACHINE")AlertDialog(onDismissRequest={calculation=false},title={Text("제수량 도움말")},
+        text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            Text("초기배액량 − 이전 최종 주입 설정값 + 기계 제수량",style=MaterialTheme.typography.bodyMedium)
+            Hint("설정값 기준으로 자동 계산해요. 이전 최종 주입 설정값은 이 기록에 따로 보관해요.")
+            NumberInput("이 기록의 이전 주입 기준",current.basisMl,{update(current.copy(basisMl=it))},"mL")
+            Hint("초기배액량, 기계 제수량, 이전 주입 기준이 모두 있어야 제수량을 계산해요.")
+        }},containerColor=MaterialTheme.colorScheme.surface,confirmButton={TextButton(onClick={calculation=false}){Text("닫기")}})
     if(discard)Confirm("초안을 버릴까요?","기존에 저장한 기록과 사용 내역은 유지됩니다.",{discard=false}){vm.discard(current.id){discard=false;back()}}
 }
 @Composable private fun StageBadge(label:String,done:Boolean) {
-    Surface(shape=CircleShape,color=MaterialTheme.colorScheme.primary,modifier=Modifier.size(32.dp)){
-        Box(contentAlignment=Alignment.Center){if(done)Icon(Icons.Outlined.Check,null,Modifier.size(20.dp),tint=MaterialTheme.colorScheme.onPrimary)else Text(label,color=MaterialTheme.colorScheme.onPrimary,fontWeight=FontWeight.Bold)}
+    Surface(shape=CircleShape,color=if(done)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+        border=if(done)null else BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),modifier=Modifier.size(32.dp)){
+        Box(contentAlignment=Alignment.Center){Text(label,color=if(done)MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,fontWeight=FontWeight.Bold)}
     }
 }
 @Composable private fun MeasurementSummary(value:String,label:String) {

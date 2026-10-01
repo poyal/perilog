@@ -119,6 +119,25 @@ private val dark=darkColorScheme(
 }
 @Composable fun Section(text:String) {Text(text,style=MaterialTheme.typography.titleMedium)}
 @Composable fun Hint(text:String) {Text(text,style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+@Composable fun SelectionBox(label:String,value:String,options:List<String>,onSelect:(String)->Unit,modifier:Modifier=Modifier) {
+    var expanded by remember{mutableStateOf(false)}
+    Box(modifier) {
+        Surface(onClick={expanded=true},shape=RoundedCornerShape(12.dp),color=MaterialTheme.colorScheme.surface,
+            border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),
+            modifier=Modifier.fillMaxWidth().semantics{contentDescription=label;stateDescription=value}) {
+            Column(Modifier.padding(horizontal=10.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(2.dp)) {
+                Text(label,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                    Text(value,Modifier.weight(1f),style=MaterialTheme.typography.bodyMedium)
+                    Icon(Icons.Outlined.ExpandMore,null,Modifier.size(18.dp))
+                }
+            }
+        }
+        DropdownMenu(expanded=expanded,onDismissRequest={expanded=false}) {
+            options.forEach{option->DropdownMenuItem(text={Text(option)},onClick={expanded=false;onSelect(option)})}
+        }
+    }
+}
 @Composable fun Action(text:String,onClick:()->Unit,enabled:Boolean=true,icon:ImageVector?=null) {
     val colors=MaterialTheme.colorScheme
     Button(onClick,Modifier.fillMaxWidth().heightIn(min=54.dp),enabled=enabled,shape=RoundedCornerShape(18.dp),
@@ -212,7 +231,7 @@ private val dark=darkColorScheme(
         }
     }
 }
-@Composable fun NumberInput(label:String,value:Int?,onChange:(Int?)->Unit,unit:String,scale:Int=1,steps:List<Int> = emptyList(),signed:Boolean=false,large:Boolean=false) {
+@Composable fun NumberInput(label:String,value:Int?,onChange:(Int?)->Unit,unit:String,scale:Int=1,signed:Boolean=false,large:Boolean=false) {
     fun formatted(number:Int?)=number?.let{BigDecimal(it).divide(BigDecimal(scale)).stripTrailingZeros().toPlainString()} ?: ""
     var text by rememberSaveable{mutableStateOf(formatted(value))}
     var emitted by rememberSaveable{mutableStateOf(value)}
@@ -243,15 +262,6 @@ private val dark=darkColorScheme(
             colors=OutlinedTextFieldDefaults.colors(unfocusedBorderColor=MaterialTheme.colorScheme.outlineVariant,focusedBorderColor=MaterialTheme.colorScheme.primary,
                 unfocusedContainerColor=MaterialTheme.colorScheme.surfaceContainerLowest,focusedContainerColor=MaterialTheme.colorScheme.surfaceContainerLowest))
         if(large && value!=null)TextButton(onClick={text="";emitted=null;invalid=false;errors.remove(errorId);onChange(null)},contentPadding=PaddingValues(horizontal=4.dp)){Text("지우기",style=MaterialTheme.typography.bodySmall)}
-        if(steps.isNotEmpty())FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-            (steps.reversed().map{-it}+steps).forEach{step->
-                OutlinedButton(onClick={invalid=false;errors.remove(errorId)
-                    val next=((value?:0).toLong()+step).coerceIn(if(signed)Int.MIN_VALUE.toLong()else 0L,Int.MAX_VALUE.toLong()).toInt()
-                    text=formatted(next);emitted=next;onChange(next)},contentPadding=PaddingValues(horizontal=12.dp),modifier=Modifier.heightIn(min=48.dp)) {
-                    Text((if(step>0)"+"else"")+BigDecimal(step).divide(BigDecimal(scale)).stripTrailingZeros().toPlainString())
-                }
-            }
-        }
     }
 }
 @Composable fun Confirm(title:String,text:String,onDismiss:()->Unit,onConfirm:()->Unit) {

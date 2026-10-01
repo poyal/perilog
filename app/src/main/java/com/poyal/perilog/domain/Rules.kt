@@ -18,6 +18,19 @@ fun Treatment.missing(): List<String> = buildList {
     if (!usageConfirmed) add("사용 구성 확인")
 }
 fun Treatment.complete(): Boolean = missing().isEmpty()
+private fun Treatment.matchingTemplate(s:Snapshot):UsageTemplate? = if(items.isEmpty())null else
+    s.templates.firstOrNull{template->template.items.associate{it.productId to it.quantity}==items.associate{it.productId to it.quantity}}
+fun Treatment.withUsageTemplate(s:Snapshot):Treatment {
+    val template=(s.templates.find{it.id==usageTemplateId}
+        ?: if(usageTemplateId==null && usageTemplateName==null)matchingTemplate(s)else null) ?: return this
+    return copy(usageTemplateId=usageTemplateId ?: template.id,usageTemplateName=usageTemplateName ?: template.name,
+        usageTemplateColor=usageTemplateColor ?: template.color)
+}
+fun Treatment.compositionName(s:Snapshot):String =
+    s.templates.find{it.id==usageTemplateId}?.name ?: usageTemplateName ?: matchingTemplate(s)?.name
+        ?: if(items.isEmpty())"사용 없음"else"개별 사용 구성"
+fun Treatment.compositionColor(s:Snapshot):Long? = s.templates.find{it.id==usageTemplateId}?.color ?: usageTemplateColor
+    ?: if(usageTemplateId==null && usageTemplateName==null)matchingTemplate(s)?.color else null
 fun Snapshot.visibleRecords()=treatments + drafts.filter { draft -> treatments.none{it.id==draft.id} }
     .map { it.treatment.copy(saved=false,usageConfirmed=false) }
 
@@ -43,13 +56,15 @@ fun Preferences.basisOn(date: String) = basis.filter { it.from <= date }.maxByOr
 
 fun newTreatment(s: Snapshot, kind: String, date: String): Treatment {
     val eligible = s.treatments.filter { it.saved && (it.date < date || (kind == "MANUAL" && it.date == date)) }
-    val previous = eligible.filter { it.kind == kind && it.usageConfirmed }.maxWithOrNull(compareBy<Treatment> { it.date }.thenBy { it.createdAt })
+    val previous = eligible.filter { it.kind == kind && it.usageConfirmed }.maxWithOrNull(compareBy<Treatment> { it.date }.thenBy { it.createdAt })?.withUsageTemplate(s)
     val measurements = eligible.filter { it.weightGrams != null || it.systolic != null }.maxWithOrNull(compareBy<Treatment> { it.date }.thenBy { it.createdAt })
     return Treatment(date = date, kind = kind,
         weightGrams = if(kind == "MACHINE") measurements?.weightGrams else null,
         systolic = if(kind == "MACHINE") measurements?.systolic else null,
         diastolic = if(kind == "MACHINE") measurements?.diastolic else null,
         sourceDate = measurements?.date, items = previous?.items?.map { it.copy(batchId = null) } ?: emptyList(),
+        usageTemplateId = previous?.usageTemplateId, usageTemplateName = previous?.usageTemplateName,
+        usageTemplateColor = previous?.usageTemplateColor,
         basisMl = if(kind == "MACHINE") s.preferences.basisOn(date) else null,
         drainUnit = if(kind == "MANUAL") s.preferences.lastDrainUnit else "mL")
 }

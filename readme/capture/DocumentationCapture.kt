@@ -69,21 +69,21 @@ class DocumentationCapture {
     }
     @Test fun captureManual() {
         seed()
-        ui.waitUntil(10000){ui.onAllNodesWithText("종료 후 기록하기").fetchSemanticsNodes().isNotEmpty()}
+        ui.waitUntil(10000){ui.onAllNodesWithText("기록하기").fetchSemanticsNodes().isNotEmpty()}
         ui.onNodeWithContentDescription("설정").performClick()
         click("밝게");click("표시·알림·잠금 설정 저장");back()
         shot("01-home")
-        click("종료 후 기록하기");click("수정")
+        click("기록하기");click("수정")
         shot("02-before-treatment")
         click("접기");click("구성 변경")
         shot("03-usage-template")
         click("구성 선택 접기")
         input("초기배액량","2300");input("기계 제수량","600")
-        ui.onNodeWithText("종료 후 기록").performScrollTo()
+        ui.onNodeWithText("투석 기록").performScrollTo()
         shot("04-after-treatment")
-        click("계산 방법 보기")
-        ui.onNodeWithText("초기배액량 − 이전 최종 주입 설정값 + 기계 제수량").performScrollTo()
+        show(ui.onNodeWithContentDescription("제수량 도움말")).performClick()
         shot("05-calculation")
+        click("닫기")
         click("기록 저장")
         ui.waitUntil(10000){ui.onAllNodesWithText("오늘도 기록을 마쳤어요").fetchSemanticsNodes().isNotEmpty()}
         ui.waitUntil(10000){ui.onAllNodesWithText("기록을 저장했어요").fetchSemanticsNodes().isEmpty()}
@@ -98,7 +98,7 @@ class DocumentationCapture {
         if(today.dayOfMonth<8) {click("이전");click("28")}
         shot("09-calendar")
         tab("통계");shot("10-statistics")
-        click("표");shot("11-statistics-table")
+        show(ui.onNodeWithContentDescription("표시 방식")).performClick();click("표");shot("11-statistics-table")
         tab("재고");shot("12-inventory")
         click("입고 이력");shot("13-receipt-history")
         click("+ 일괄 입고 등록")
@@ -119,7 +119,7 @@ class DocumentationCapture {
         tab("홈")
         val before=runBlocking{app.repository.snapshot()}
         runBlocking{app.repository.restore(before.copy(treatments=before.treatments.filterNot{it.id=="day-1"},usages=before.usages.filterNot{it.id=="day-1"}))}
-        ui.waitUntil(10000){ui.onAllNodesWithText("어제 기록 작성하기").fetchSemanticsNodes().isNotEmpty()}
+        ui.waitUntil(10000){ui.onAllNodesWithText("어제의 기록").fetchSemanticsNodes().isNotEmpty()}
         shot("21-yesterday-prompt")
         seed(completeToday=true)
         val p=runBlocking{app.repository.snapshot().preferences}

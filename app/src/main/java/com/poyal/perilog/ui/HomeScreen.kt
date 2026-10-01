@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 package com.poyal.perilog.ui
 
 import androidx.compose.animation.AnimatedVisibility
@@ -8,7 +9,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -35,7 +35,6 @@ import kotlinx.coroutines.delay
     val progress=listOf(before,usage,after).count{it}
     val resume=if(machine==null || !machine.complete())machine else todayEntries.firstOrNull{!it.complete()} ?: machine
     val yesterday=s.yesterdaySummary(date)
-    var showYesterday by rememberSaveable(yesterday.date){mutableStateOf(false)}
     var celebration by remember{mutableStateOf(false)}
     LaunchedEffect(complete,date) {
         if(complete && date !in s.preferences.celebratedDates) {
@@ -45,42 +44,50 @@ import kotlinx.coroutines.delay
         }
     }
     val openToday={edit(resume?.id,resume?.kind ?: "MACHINE",date)}
-    val hero=when {complete->"오늘도 기록을 마쳤어요";before && usage->"종료 후 기록이 남았어요";else->"오늘의 기록을 이어가요"}
-    val action=when{complete->"오늘 기록 확인";machine==null->"오늘 기록 시작";resume?.kind=="MANUAL"->"추가투석 이어쓰기";before && usage->"종료 후 기록하기";else->"이어서 입력하기"}
+    val hero=when {complete->"오늘도 기록을 마쳤어요";before && usage->"투석 기록이 남았어요";else->"오늘의 기록을 이어가요"}
+    val action=when{complete->"오늘 기록 확인";machine==null->"오늘 기록 시작";resume?.kind=="MANUAL"->"추가투석 이어쓰기";before && usage->"기록하기";else->"이어서 입력하기"}
     Page(stringResource(R.string.app_name),stringResource(R.string.app_description),brand=true,
         actions={IconButton(onClick=settings){Icon(Icons.Outlined.Settings,"설정",Modifier.size(28.dp))}}) {
         Text(LocalDate.parse(date).format(DateTimeFormatter.ofPattern("yyyy. MM. dd (E)",Locale.KOREAN)),color=MaterialTheme.colorScheme.onSurfaceVariant)
         Text(hero,style=MaterialTheme.typography.headlineMedium)
         if(yesterday.visible)Paper {
-            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Outlined.History,null,tint=MaterialTheme.colorScheme.secondary)
-                Column(Modifier.weight(1f)){Section("어제 기록 작성하기");Hint(yesterday.date)}
-                TextButton(onClick={
-                    if(yesterday.pending.size+(if(yesterday.needsMachine)1 else 0)>1)showYesterday=!showYesterday
-                    else {val t=yesterday.pending.firstOrNull();edit(t?.id,t?.kind ?: "MACHINE",yesterday.date)}
-                }){Text(if(showYesterday)"접기"else"작성하기")}
+                FlowRow(Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                    Text("어제의 기록",style=MaterialTheme.typography.titleLarge)
+                    Text(yesterday.date,Modifier.align(Alignment.CenterVertically),style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
-            Hint(if(yesterday.needsMachine)"어제의 기계투석 기록이 없어요."else yesterday.pending.firstOrNull()?.missing()?.joinToString(" · ") ?: "")
-            if(showYesterday) {
-                if(yesterday.needsMachine)TextButton(onClick={edit(null,"MACHINE",yesterday.date)}){Text("어제 기계투석 기록 추가")}
-                yesterday.pending.forEachIndexed{i,t->MenuRow("${if(t.kind=="MACHINE")"기계투석"else"추가투석"} ${i+1}",t.missing().joinToString(" · ")){edit(t.id,t.kind,t.date)}}
+            HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
+            val pending=if(yesterday.needsMachine)listOf(Treatment(date=yesterday.date))+yesterday.pending else yesterday.pending
+            pending.forEachIndexed{i,t->
+                val open={edit(if(yesterday.needsMachine && i==0)null else t.id,t.kind,yesterday.date)}
+                if(pending.size>1 || t.kind=="MANUAL")Section("${if(t.kind=="MACHINE")"기계투석"else"추가투석"}${if(pending.size>1)" ${i+1}"else""}")
+                val stages=buildList {
+                    if(t.kind=="MACHINE") {
+                        if(t.weightGrams==null || t.systolic==null || t.diastolic==null)add("1. 활력 상태" to t.missing().filter{it in listOf("몸무게","혈압")}.joinToString(" · "))
+                        if(!t.usageConfirmed)add("2. 사용 구성" to "")
+                        if(t.initialDrain==null || t.machineUf==null)add("3. 투석 기록" to t.missing().filter{it in listOf("초기배액량","제수량")}.joinToString(" · "))
+                    } else if(!t.usageConfirmed)add("사용 구성" to "")
+                    if(isEmpty() && !t.saved)add("기록 저장" to "")
+                }
+                stages.forEach{(label,detail)->
+                    HomeRecordStep(label,false,open,detail)
+                    HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
+                }
             }
+            Action("어제 기록하기",{
+                if(yesterday.needsMachine)edit(null,"MACHINE",yesterday.date)
+                else yesterday.pending.firstOrNull()?.let{edit(it.id,it.kind,yesterday.date)}
+            },icon=Icons.Outlined.ChevronRight)
         }
         AnimatedVisibility(celebration) {Paper {Text("🎀 오늘의 기록 완료!",style=MaterialTheme.typography.titleLarge);Hint("오늘 하루도 꼼꼼히 챙겼어요.")}}
         Box {
             Paper {
                 Text("오늘의 기록",style=MaterialTheme.typography.titleLarge,modifier=Modifier.padding(end=36.dp))
                 HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
-                listOf("시작 전 기록" to before,"사용 구성 확인" to usage,"종료 후 기록" to after).forEach{(label,done)->
-                    Row(Modifier.fillMaxWidth().clickable(onClick=openToday).heightIn(min=52.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                        Surface(shape=CircleShape,color=if(done)MaterialTheme.colorScheme.primary else Color.Transparent,
-                            border=if(done)null else BorderStroke(1.5.dp,Coral),modifier=Modifier.size(32.dp)) {
-                            Box(contentAlignment=Alignment.Center){if(done)Icon(Icons.Outlined.Check,null,Modifier.size(21.dp),tint=MaterialTheme.colorScheme.onPrimary)}
-                        }
-                        Text(label,Modifier.weight(1f),fontWeight=FontWeight.SemiBold)
-                        Text(if(done)"완료"else"미입력",style=MaterialTheme.typography.bodyMedium,color=if(done)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary)
-                        Icon(Icons.Outlined.ChevronRight,null,Modifier.size(18.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                listOf("1. 활력 상태" to before,"2. 사용 구성" to usage,"3. 투석 기록" to after).forEach{(label,done)->
+                    HomeRecordStep(label,done,openToday)
                     HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
                 }
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
@@ -123,5 +130,20 @@ import kotlinx.coroutines.delay
                 }
             }
         }
+    }
+}
+
+@Composable private fun HomeRecordStep(label:String,done:Boolean,open:()->Unit,detail:String="") {
+    Row(Modifier.fillMaxWidth().clickable(onClick=open).heightIn(min=52.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+        Surface(shape=CircleShape,color=if(done)MaterialTheme.colorScheme.primary else Color.Transparent,
+            border=if(done)null else BorderStroke(1.5.dp,Coral),modifier=Modifier.size(32.dp)) {
+            Box(contentAlignment=Alignment.Center){if(done)Icon(Icons.Outlined.Check,null,Modifier.size(21.dp),tint=MaterialTheme.colorScheme.onPrimary)}
+        }
+        Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(2.dp)) {
+            Text(label,fontWeight=FontWeight.SemiBold)
+            if(detail.isNotEmpty())Hint(detail)
+        }
+        Text(if(done)"완료"else"미입력",style=MaterialTheme.typography.bodyMedium,color=if(done)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary)
+        Icon(Icons.Outlined.ChevronRight,null,Modifier.size(18.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

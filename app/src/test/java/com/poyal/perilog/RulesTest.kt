@@ -9,6 +9,35 @@ import org.junit.Test
 class RulesTest {
     private val p=Product(id="p",name="투석액 1.5%")
     private fun usage(id:String,date:String,q:Int,at:Long=10)=Usage(id,date,listOf(Item(p.id,p.name,q)),"MACHINE",at)
+    @Test fun yesterdayUsesCalendarBoundariesAndNeverOlderMissingDays() {
+        listOf("2027-01-01" to "2026-12-31","2026-10-01" to "2026-09-30","2024-03-01" to "2024-02-29").forEach{(now,previous)->
+            val s=Snapshot(treatments=listOf(Treatment(date="2024-01-01",saved=true)))
+            assertEquals(previous,s.yesterdaySummary(now).date)
+            assertTrue(s.yesterdaySummary(now).needsMachine)
+            assertTrue(s.yesterdaySummary(now).pending.isEmpty())
+        }
+    }
+    @Test fun yesterdayHidesOnlyWhenAllEntriesAreCompleteAndListsMultipleDrafts() {
+        val machine=Treatment(id="machine",date="2026-09-30",saved=true,usageConfirmed=true,
+            weightGrams=62000,systolic=120,diastolic=80,initialDrain=2300,machineUf=600)
+        val manual=Treatment(id="manual",date=machine.date,kind="MANUAL",saved=true,usageConfirmed=true)
+        val complete=Snapshot(treatments=listOf(machine,manual))
+        assertFalse(complete.yesterdaySummary("2026-10-01").visible)
+        val first=manual.copy(id="draft-1",saved=false,createdAt=1)
+        val second=manual.copy(id="draft-2",saved=false,createdAt=2)
+        val s=complete.copy(drafts=listOf(Draft(first.id,first),Draft(second.id,second)))
+        assertEquals(listOf(first.id,second.id),s.yesterdaySummary("2026-10-01").pending.map{it.id})
+        assertFalse(s.yesterdaySummary("2026-10-01").needsMachine)
+        assertTrue(s.yesterdaySummary("2026-10-02").needsMachine)
+    }
+    @Test fun versionOneBackupWithoutNewVersionMetadataStillLoads() {
+        val legacy="""{"formatVersion":1,"appVersion":"1.0.0","products":[{"id":"p","name":"옛 품목"}],"templates":[{"id":"t","name":"밤 구성","items":[{"productId":"p","name":"옛 품목","quantity":2}]}]}"""
+        val s=codec.decodeFromString<Snapshot>(legacy)
+        validate(s)
+        assertEquals("1.0.0",s.appVersion)
+        assertEquals(2,s.templates.single().items.single().quantity)
+        assertEquals(2000,s.preferences.basisOn("2026-10-01"))
+    }
     @Test fun expiryAlertBoundariesRespectZeroAndUndated() {
         assertEquals("사용기한 7일 남음",expiryState("2026-10-08",1,"2026-10-01",7))
         assertNull(expiryState("2026-10-09",1,"2026-10-01",7))

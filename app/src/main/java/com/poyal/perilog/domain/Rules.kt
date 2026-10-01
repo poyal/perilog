@@ -30,6 +30,15 @@ fun List<Treatment>.dayComplete(date: String): Boolean {
     val entries = filter { it.date == date }
     return entries.any { it.kind == "MACHINE" && it.complete() } && entries.all { it.complete() }
 }
+data class YesterdaySummary(val date:String,val pending:List<Treatment>,val needsMachine:Boolean) {
+    val visible:Boolean get()=needsMachine || pending.isNotEmpty()
+}
+fun Snapshot.yesterdaySummary(on:String):YesterdaySummary {
+    val date=LocalDate.parse(on).minusDays(1).toString()
+    val records=visibleRecords().filter{it.date==date}
+    return YesterdaySummary(date,records.filterNot{it.complete()}.sortedBy{it.createdAt},records.none{it.kind=="MACHINE"})
+}
+
 fun Preferences.basisOn(date: String) = basis.filter { it.from <= date }.maxByOrNull { it.from }?.ml ?: 2000
 
 fun newTreatment(s: Snapshot, kind: String, date: String): Treatment {

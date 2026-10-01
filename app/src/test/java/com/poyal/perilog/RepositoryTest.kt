@@ -19,6 +19,22 @@ class RepositoryTest {
     private val p=Product(id="p",name="테스트 물품")
     @Before fun setup() {db=Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(),JournalDb::class.java).allowMainThreadQueries().build();repo=Repository(db)}
     @After fun close() {db.close()}
+    @Test fun productColorAndTemplateChangesDoNotRewriteActualUsage()=runBlocking {
+        repo.product(p)
+        repo.template(UsageTemplate(id="night",name="밤",items=listOf(Item(p.id,p.name,2))))
+        repo.receipt(Receipt(date=today(),createdAt=1,lines=listOf(ReceiptLine(productId=p.id,quantity=10))))
+        repo.save(Treatment(id="t",items=listOf(Item(p.id,p.name,3))),true)
+        repo.product(p.copy(color=0xFF123456),listOf(0xFF123456))
+        repo.template(UsageTemplate(id="night",name="밤 수정",items=listOf(Item(p.id,p.name,4))))
+        val s=repo.snapshot()
+        assertEquals(7,inventory(s).products.getValue(p.id).balance)
+        assertEquals(3,s.treatments.single().items.single().quantity)
+        assertEquals(4,s.templates.single().items.single().quantity)
+        assertEquals(0xFF123456,s.products.single().color)
+        assertTrue(0xFF123456 in s.preferences.palette)
+        repo.preferences(s.preferences.copy(darkMode="DARK"));repo.markCelebrated(today())
+        assertEquals("DARK",repo.snapshot().preferences.darkMode)
+    }
     @Test fun repeatedSaveEditDeleteUndoAndCancelDoNotDoubleDebit()=runBlocking {
         repo.product(p)
         repo.receipt(Receipt(date=today(),createdAt=1,lines=listOf(ReceiptLine(productId=p.id,quantity=10))))

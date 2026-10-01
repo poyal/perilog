@@ -1,1 +1,5 @@
-<resources><string name="app_name">나의 하루, 나의 투석 기록</string></resources>
+<resources>
+    <string name="app_name">페리로그</string>
+    <string name="app_description">나의 하루, 나의 투석 기록</string>
+    <string name="unlock_title">페리로그 열기</string>
+</resources>

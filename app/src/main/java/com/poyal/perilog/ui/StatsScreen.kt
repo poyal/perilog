@@ -36,6 +36,7 @@ private fun number(n:Double)=if(n%1.0==0.0)n.toLong().toString()else String.form
     val metric=metrics[selected]
     val entries=s.treatments.filter{it.date in from..to && if(selected<6)it.kind=="MACHINE"else it.kind=="MANUAL"}.sortedWith(compareBy<Treatment>{it.date}.thenBy{it.createdAt})
     val values=entries.map{metric.values(it)}
+    val hasNegative=values.flatten().filterNotNull().any{it<0}
     val max=values.flatten().filterNotNull().maxOfOrNull{abs(it)}?.coerceAtLeast(1.0) ?: 1.0
     val primary=MaterialTheme.colorScheme.primary;val secondary=MaterialTheme.colorScheme.secondary
     Page("통계","내 기록의 변화를 확인해요") {
@@ -63,10 +64,10 @@ private fun number(n:Double)=if(n%1.0==0.0)n.toLong().toString()else String.form
                 Column(Modifier.fillMaxWidth().clickable{open(t.id)}) {
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(t.date);Text(values[i].joinToString(" / "){it?.let(::number) ?: "—"}+" ${metric.unit}")}
                     if(!table) Canvas(Modifier.fillMaxWidth().height(if(selected==1)44.dp else 28.dp)) {
-                        val middle=size.width/2f
+                        val middle=if(hasNegative)size.width/2f else 0f
                         drawLine(Color.Gray,Offset(middle,0f),Offset(middle,size.height),1.dp.toPx())
                         values[i].forEachIndexed{j,v->if(v!=null) {
-                            val width=(abs(v)/max*(size.width/2f-4.dp.toPx())).toFloat()
+                            val width=(abs(v)/max*((if(hasNegative)size.width/2f else size.width)-4.dp.toPx())).toFloat()
                             drawRect(if(j==0)primary else secondary,Offset(if(v<0)middle-width else middle,j*20.dp.toPx()+3.dp.toPx()),Size(width,14.dp.toPx()))
                         }}
                     }

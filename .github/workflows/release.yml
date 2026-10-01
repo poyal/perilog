@@ -66,6 +66,6 @@ jobs:
             ".release/perilog-$version.sha256" \
             ".release/perilog-$version-screenshots.zip" \
             --verify-tag --draft \
-            --title "나의 하루, 나의 투석 기록 $RELEASE_TAG" \
+            --title "페리로그 $RELEASE_TAG" \
             --notes-file "readme/releases/$RELEASE_TAG.md"
           gh release edit "$RELEASE_TAG" --draft=false --latest

@@ -1,0 +1,55 @@
+name: Android checks and E2E
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Enable emulator acceleration
+        run: sudo chmod 666 /dev/kvm
+      - name: Prepare Android emulator
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "system-images;android-35;google_apis;x86_64"
+          echo no | avdmanager create avd --name perilog-e2e --package "system-images;android-35;google_apis;x86_64" --device pixel_7 --force
+          "$ANDROID_HOME/emulator/emulator" -avd perilog-e2e -port 5554 -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > /tmp/perilog-emulator.log 2>&1 &
+          adb -s emulator-5554 wait-for-device
+          timeout 180 bash -c 'until adb -s emulator-5554 shell getprop sys.boot_completed | tr -d "\r" | grep -q 1; do sleep 2; done'
+          adb -s emulator-5554 shell input keyevent 82
+      - name: Unit tests and lint
+        run: ./scripts/build.sh :app:testDebugUnitTest :app:lintDebug
+      - name: Offline E2E with normal and large text
+        run: ./scripts/test-e2e.sh all
+      - name: Recover an unsaved form after process death
+        run: ./scripts/test-process-restore.py
+      - name: Upload test reports and failure captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perilog-test-results
+          include-hidden-files: true
+          retention-days: 14
+          path: |
+            .tools/e2e-results/
+            app/build/reports/tests/
+            app/build/reports/lint-results-debug.html
+            /tmp/perilog-emulator.log

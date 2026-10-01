@@ -1,7 +1,6 @@
 package com.poyal.perilog.ui
 
 import android.Manifest
-import android.app.TimePickerDialog
 import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -11,6 +10,12 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.ui.res.stringResource
+import com.poyal.perilog.R
+import com.poyal.perilog.BuildConfig
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
@@ -27,11 +32,11 @@ import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-@Composable fun SettingsScreen(s:Snapshot,vm:JournalViewModel,back:()->Unit) {
+@Composable fun SettingsScreen(s:Snapshot,vm:JournalViewModel,navigate:(String)->Unit,back:()->Unit) {
     val context=LocalContext.current
-    var p by remember(s.preferences){mutableStateOf(s.preferences)}
-    var basis by remember{mutableStateOf<Int?>(s.preferences.basis.last().ml)}
-    var basisFrom by remember{mutableStateOf(today())}
+    var p by rememberJsonState("preferences"){s.preferences}
+    var basis by rememberSaveable{mutableStateOf<Int?>(s.preferences.basis.last().ml)}
+    var basisFrom by rememberSaveable{mutableStateOf(today())}
     var restoring by remember{mutableStateOf<Snapshot?>(null)}
     var reset by remember{mutableStateOf(false)}
     var files by remember{mutableStateOf<List<Pair<String,Uri>>>(emptyList())}
@@ -52,6 +57,11 @@ import kotlinx.coroutines.withContext
     }
     Page("설정","내 기록과 사용 방식을 관리해요",back) {
         Paper {
+            MenuRow("사용 구성 관리","품목별 색상과 EA 수량을 함께 설정해요",Icons.Outlined.ViewList){navigate("templates")}
+            HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
+            MenuRow("품목 관리 · 색상",icon=Icons.Outlined.Inventory2){navigate("products")}
+        }
+        Paper {
             Section("투석 계산 기준")
             Hint("새 기록에 적용할 이전 최종 주입 설정값이에요. 저장한 과거 기록의 계산은 바뀌지 않아요.")
             NumberInput("이전 최종 주입 설정",basis,{basis=it},"mL")
@@ -66,7 +76,8 @@ import kotlinx.coroutines.withContext
             Row(verticalAlignment=Alignment.CenterVertically){Switch(p.celebrate,{p=p.copy(celebrate=it)});Text("완료 축하 애니메이션")}
             Row(verticalAlignment=Alignment.CenterVertically){Switch(p.reminder,{enabled->p=p.copy(reminder=enabled);if(enabled && Build.VERSION.SDK_INT>=33)permission.launch(Manifest.permission.POST_NOTIFICATIONS)});Text("미작성 항목 기기 알림")}
             if(p.reminder) {
-                OutlinedButton(onClick={TimePickerDialog(context,{_,h,m->p=p.copy(reminderHour=h,reminderMinute=m)},p.reminderHour,p.reminderMinute,true).show()}){Text("알림 시각 ${p.reminderHour.toString().padStart(2,'0')}:${p.reminderMinute.toString().padStart(2,'0')}")}
+                AdaptivePair(first={NumberInput("알림 시각",p.reminderHour,{p=p.copy(reminderHour=it?:0)},"시")},second={NumberInput("알림 분",p.reminderMinute,{p=p.copy(reminderMinute=it?:0)},"분")})
+                if(p.reminderHour !in 0..23 || p.reminderMinute !in 0..59)Hint("시는 0~23, 분은 0~59 사이로 입력해 주세요.")
                 Hint("완료된 날에는 알리지 않아요. 휴대폰 절전 상태에 따라 알림이 늦어질 수 있어요.")
             }
             Row(verticalAlignment=Alignment.CenterVertically){Switch(p.lock,{enabled->
@@ -105,7 +116,8 @@ import kotlinx.coroutines.withContext
             p.palette.forEach{color->Box(Modifier.size(44.dp).background(androidx.compose.ui.graphics.Color(color),MaterialTheme.shapes.small).combinedClickable(onClick={},onLongClick={val next=p.copy(palette=p.palette-color);p=next;vm.preferences(next)}))}
         }}
         TextButton(onClick={reset=true}){Text("모든 앱 데이터 초기화",color=MaterialTheme.colorScheme.error)}
-        Hint("나의 하루, 나의 투석 기록 1.0.0 · 기기 내부 저장")
+        Hint("${stringResource(R.string.app_name)} ${BuildConfig.VERSION_NAME} · 기기 내부 저장")
+        Hint(stringResource(R.string.app_description))
     }
     restoring?.let{incoming->Confirm("백업으로 전체 복원할까요?","${Instant.ofEpochMilli(incoming.exportedAt).atZone(ZoneId.systemDefault()).toLocalDateTime()}\n치료 ${incoming.treatments.size}건 · 품목 ${incoming.products.size}개 · 입고 ${incoming.receipts.size}건\n현재 데이터는 앱 내부에 보호 백업한 뒤 교체합니다.",{restoring=null}){
         vm.act("데이터를 복원했어요"){vm.app.backup.restore(incoming);Reminders.schedule(context,incoming.preferences);restoring=null;back()}

@@ -95,7 +95,14 @@ class Repository(val db: JournalDb) {
         d.treatments().find{it.id==id}?.let { d.put(it.copy(usageConfirmed=false)) }
         log("사용 취소",id,codec.encodeToString(u),"")
     }
-    suspend fun product(p: Product) = db.withTransaction { val s=read(); validate(s.copy(products=s.products.filterNot{it.id==p.id}+p)); d.put(p) }
+    suspend fun product(p: Product, extraColors: List<Long> = emptyList()) = db.withTransaction {
+        val s=read(); validate(s.copy(products=s.products.filterNot{it.id==p.id}+p)); d.put(p)
+        if(extraColors.isNotEmpty())d.put(SettingsRow(payload=codec.encodeToString(s.preferences.copy(palette=(s.preferences.palette+extraColors).distinct()))))
+    }
+    suspend fun markCelebrated(date: String) = db.withTransaction {
+        val p=read().preferences
+        if(date !in p.celebratedDates)d.put(SettingsRow(payload=codec.encodeToString(p.copy(celebratedDates=p.celebratedDates+date))))
+    }
     suspend fun template(t: UsageTemplate) = db.withTransaction { val s=read(); validate(s.copy(templates=s.templates.filterNot{it.id==t.id}+t)); d.put(t) }
     suspend fun deleteTemplate(id: String) = d.deleteTemplate(id)
     suspend fun receipt(r: Receipt) = db.withTransaction {

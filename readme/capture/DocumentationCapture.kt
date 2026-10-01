@@ -52,10 +52,14 @@ class DocumentationCapture {
             treatments=entries,usages=entries.map{Usage(it.id,it.date,it.items,it.kind,it.createdAt)},receipts=listOf(receipt),
             preferences=Preferences(celebrate=false,darkMode="LIGHT"))) }
     }
-    private fun click(text:String) {ui.onNodeWithText(text).performScrollTo().performClick()}
+    private fun show(node:SemanticsNodeInteraction):SemanticsNodeInteraction {val parents=node.onAncestors().filter(hasScrollAction())
+        for(index in parents.fetchSemanticsNodes().indices.reversed())runCatching{parents[index].performScrollTo()}
+        runCatching{node.performScrollTo()}
+        return node}
+    private fun click(text:String) {show(ui.onNodeWithText(text)).performClick()}
     private fun tab(text:String) {ui.onNodeWithText(text,useUnmergedTree=true).performClick()}
-    private fun back() {ui.onNodeWithContentDescription("뒤로").performScrollTo().performClick()}
-    private fun input(label:String,value:String) {ui.onNode(hasSetTextAction() and hasText(label)).performScrollTo().performTextReplacement(value)}
+    private fun back() {ui.onNodeWithContentDescription("뒤로").performClick()}
+    private fun input(label:String,value:String) {ui.onNode(hasSetTextAction() and (hasText(label) or hasContentDescription(label))).performScrollTo().performTextReplacement(value)}
     private fun shot(name:String) {
         ui.runOnIdle { (ui.activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(ui.activity.window.decorView.windowToken,0) }
         ui.waitForIdle(); SystemClock.sleep(650)
@@ -65,15 +69,15 @@ class DocumentationCapture {
     }
     @Test fun captureManual() {
         seed()
-        ui.waitUntil(10000){ui.onAllNodesWithText("이어서 입력하기").fetchSemanticsNodes().isNotEmpty()}
+        ui.waitUntil(10000){ui.onAllNodesWithText("종료 후 기록하기").fetchSemanticsNodes().isNotEmpty()}
         ui.onNodeWithContentDescription("설정").performClick()
         click("밝게");click("표시·알림·잠금 설정 저장");back()
         shot("01-home")
-        click("이어서 입력하기");click("수정")
+        click("종료 후 기록하기");click("수정")
         shot("02-before-treatment")
         click("접기");click("구성 변경")
         shot("03-usage-template")
-        ui.onNodeWithText("취소").performClick()
+        click("구성 선택 접기")
         input("초기배액량","2300");input("기계 제수량","600")
         ui.onNodeWithText("종료 후 기록").performScrollTo()
         shot("04-after-treatment")
@@ -85,9 +89,8 @@ class DocumentationCapture {
         ui.waitUntil(10000){ui.onAllNodesWithText("기록을 저장했어요").fetchSemanticsNodes().isEmpty()}
         shot("06-completed")
         click("추가투석");click("구성 변경");click("추가투석 · 1.5 + 라인")
-        ui.onNodeWithText("이 구성 사용").performClick()
         input("배액무게","2150")
-        ui.onNodeWithText("추가투석",useUnmergedTree=true).performScrollTo()
+        ui.onNodeWithText("배액 기록 · 선택").performScrollTo()
         shot("07-manual-treatment")
         back()
         tab("기록");shot("08-record-list")
@@ -97,21 +100,27 @@ class DocumentationCapture {
         tab("통계");shot("10-statistics")
         click("표");shot("11-statistics-table")
         tab("재고");shot("12-inventory")
-        click("입고 등록 · 이력");shot("13-receipt-history")
+        click("입고 이력");shot("13-receipt-history")
         click("+ 일괄 입고 등록")
         shot("14-bulk-receipt")
         ui.onNodeWithText("취소").performClick();back()
         click("품목 관리 · 색상");click("투석액 1.5%")
         shot("15-product-settings")
-        click("컬러 피커 · 색 추가");shot("16-color-picker")
-        ui.onAllNodesWithText("취소").onLast().performClick()
-        ui.onNodeWithText("취소").performClick();back()
+        click("컬러 피커 · 색 추가");show(ui.onNode(hasSetTextAction() and hasText("HEX 색상")));shot("16-color-picker")
+        click("컬러 피커 접기");click("취소");back()
         click("사용 구성 관리");shot("17-templates")
+        ui.onAllNodesWithText("수정").onFirst().performClick();shot("22-template-editor");back()
         back();tab("홈");ui.onNodeWithContentDescription("설정").performClick()
         shot("18-settings")
         ui.onNodeWithText("지금 백업").performScrollTo()
         shot("19-backup")
         back()
+        tab("기록");click("표");shot("23-record-table")
+        tab("홈")
+        val before=runBlocking{app.repository.snapshot()}
+        runBlocking{app.repository.restore(before.copy(treatments=before.treatments.filterNot{it.id=="day-1"},usages=before.usages.filterNot{it.id=="day-1"}))}
+        ui.waitUntil(10000){ui.onAllNodesWithText("어제 기록 작성하기").fetchSemanticsNodes().isNotEmpty()}
+        shot("21-yesterday-prompt")
         seed(completeToday=true)
         val p=runBlocking{app.repository.snapshot().preferences}
         runBlocking{app.repository.preferences(p.copy(darkMode="DARK"))}

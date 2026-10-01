@@ -69,7 +69,7 @@ data class Preferences(val basis: List<Basis> = listOf(Basis("1970-01-01", 2000)
     val celebratedDates: Set<String> = emptySet(), val lastDrainUnit: String = "g")
 
 @Serializable
-data class Snapshot(val formatVersion: Int = 1, val appVersion: String = "1.0.0",
+data class Snapshot(val formatVersion: Int = 1, val appVersion: String = "1.0.1",
     val exportedAt: Long = System.currentTimeMillis(), val products: List<Product> = emptyList(),
     val templates: List<UsageTemplate> = emptyList(), val treatments: List<Treatment> = emptyList(),
     val usages: List<Usage> = emptyList(), val receipts: List<Receipt> = emptyList(),

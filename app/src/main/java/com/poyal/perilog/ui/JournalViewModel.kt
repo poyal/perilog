@@ -2,6 +2,8 @@ package com.poyal.perilog.ui
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.SavedStateHandle
+import kotlinx.serialization.encodeToString
 import androidx.lifecycle.viewModelScope
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -14,14 +16,14 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-class JournalViewModel(application: Application): AndroidViewModel(application) {
+class JournalViewModel(application: Application,private val savedState:SavedStateHandle): AndroidViewModel(application) {
     val app=application as PerilogApplication
     val repository=app.repository
     val state=repository.snapshots.stateIn(viewModelScope,SharingStarted.Eagerly,Snapshot())
     val ready=MutableStateFlow(false)
     val busy=MutableStateFlow(false)
     val message=MutableSharedFlow<String>(extraBufferCapacity=8)
-    val editor=MutableStateFlow<Treatment?>(null)
+    val editor=MutableStateFlow(savedState.get<String>("editor")?.let{codec.decodeFromString<Treatment>(it)})
     val calendarDay=MutableStateFlow(today())
     val inputErrors=mutableStateMapOf<String,String>()
     val recordFilters=RecordFilters()
@@ -45,9 +47,11 @@ class JournalViewModel(application: Application): AndroidViewModel(application) 
         draftJob?.cancel()
         val s=state.value
         editor.value=s.drafts.find{it.id==id}?.treatment ?: s.treatments.find{it.id==id} ?: newTreatment(s,kind,date)
+        savedState["editor"]=codec.encodeToString(editor.value!!)
     }
     fun change(t: Treatment) {
         editor.value=t
+        savedState["editor"]=codec.encodeToString(t)
         draftJob?.cancel()
         draftJob=viewModelScope.launch { delay(350); serial.withLock { repository.draft(t) } }
     }
@@ -62,18 +66,20 @@ class JournalViewModel(application: Application): AndroidViewModel(application) 
             diastolic=if(t.diastolic==old.diastolic)fresh.diastolic else t.diastolic,
             items=if(t.items==old.items)fresh.items else t.items,sourceDate=fresh.sourceDate))
     }
-    fun discard(id: String,done: ()->Unit) { draftJob?.cancel(); act { repository.discardDraft(id);editor.value=null;done() } }
+    fun discard(id: String,done: ()->Unit) { draftJob?.cancel(); act { repository.discardDraft(id);editor.value=null;savedState.remove<String>("editor");done() } }
     fun save(confirm: Boolean,onSaved: () -> Unit) {
         val t=editor.value ?: return
         draftJob?.cancel()
-        act("기록을 저장했어요") { repository.save(t,confirm); editor.value=null; onSaved() }
+        act("기록을 저장했어요") { repository.save(t,confirm); editor.value=null;savedState.remove<String>("editor"); onSaved() }
     }
+    fun markCelebrated(date:String) = act { repository.markCelebrated(date) }
     fun preferences(p: Preferences) = act { repository.preferences(p); Reminders.schedule(app,p) }
 }
 
 
 class RecordFilters {
-    val calendar=mutableStateOf(false)
+    val mode=mutableStateOf("리스트")
+    val range=mutableStateOf("전체")
     val month=mutableStateOf(java.time.YearMonth.now().toString())
     val selected=mutableStateOf(today())
     val type=mutableStateOf("전체")

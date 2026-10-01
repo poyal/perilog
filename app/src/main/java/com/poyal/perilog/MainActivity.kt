@@ -1,6 +1,8 @@
 package com.poyal.perilog
 
 import android.os.Bundle
+import android.content.res.Configuration
+import androidx.core.view.WindowCompat
 import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -32,8 +34,8 @@ class MainActivity: FragmentActivity() {
             JournalApp()
             if(!unlocked) Surface(Modifier.fillMaxSize()) {
                 Column(Modifier.padding(32.dp),verticalArrangement=Arrangement.Center,horizontalAlignment=Alignment.CenterHorizontally) {
-                    Text("나의 하루",style=MaterialTheme.typography.headlineLarge)
-                    Text("나의 투석 기록",style=MaterialTheme.typography.titleLarge)
+                    Text(getString(R.string.app_name),style=MaterialTheme.typography.headlineLarge)
+                    Text(getString(R.string.app_description),style=MaterialTheme.typography.titleLarge)
                     Spacer(Modifier.height(32.dp)); Text(authMessage)
                     Button(onClick={ authenticate() }) { Text("기록 열기") }
                 }
@@ -41,6 +43,8 @@ class MainActivity: FragmentActivity() {
         } } }
         lifecycleScope.launch { app.repository.snapshots.collect {
             lockEnabled=it.preferences.lock
+            val dark=it.preferences.darkMode=="DARK" || (it.preferences.darkMode=="SYSTEM" && resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK==Configuration.UI_MODE_NIGHT_YES)
+            WindowCompat.getInsetsController(window,window.decorView).apply { isAppearanceLightStatusBars=!dark;isAppearanceLightNavigationBars=!dark }
             if(lockEnabled) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE) else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
             if(!lockEnabled) unlocked=true
         } }
@@ -66,6 +70,6 @@ class MainActivity: FragmentActivity() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) { authenticating=false; unlocked=true; authMessage="" }
             override fun onAuthenticationError(errorCode: Int,errString: CharSequence) { authenticating=false; authMessage=errString.toString() }
         })
-        prompt.authenticate(BiometricPrompt.PromptInfo.Builder().setTitle("나의 투석 기록 열기").setAllowedAuthenticators(authenticators).build())
+        prompt.authenticate(BiometricPrompt.PromptInfo.Builder().setTitle(getString(R.string.unlock_title)).setAllowedAuthenticators(authenticators).build())
     }
 }

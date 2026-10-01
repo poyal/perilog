@@ -1918,3 +1918,9 @@ Keep inventory cards clear and practical, airy margins, strong quantity typograp
 - 계획·개발·상세 사용·검증 문서는 `readme/`로 이동한다. 초기 시안은 `design/`, 실제 캡처는 `readme/screenshots/`에 보관한다.
 - 릴리즈 버전은 v1.0.0. 설치 APK·SHA-256·20장 스크린샷 ZIP을 제공한다. 서명 키는 로컬 비공개 파일로 유지한다.
 - 태그 전용 배포 커밋에 검증한 산출물을 넣고 GitHub Actions로 릴리즈에 게시한다. 메인 브랜치에는 소스·문서·스크린샷을 보관한다.
+
+### 게시 완료
+
+- v1.0.0 릴리즈에 APK·체크섬·스크린샷 ZIP을 게시했다.
+- GitHub에서 다시 내려받은 파일의 체크섬·APK 서명·ZIP 무결성을 확인했다.
+- README의 실제 실행 화면 20장이 렌더링됨을 확인했다. 상세 결과는 [검증 기록](검증-기록.md)에 남긴다.

@@ -4,12 +4,20 @@ on:
   push:
     tags:
       - 'v*'
+    branches:
+      - 'release/v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag (for example v1.0.0)
+        required: true
+        type: string
 
 permissions:
   contents: write
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: android-release-publish
   cancel-in-progress: false
 
 jobs:
@@ -17,17 +25,29 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
+      - name: Select the existing release tag
+        id: release
+        shell: bash
+        env:
+          REQUESTED_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          tag="${REQUESTED_TAG:-${GITHUB_REF_NAME##*/}}"
+          [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
       - name: Check out the release tag
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
+          ref: ${{ steps.release.outputs.tag }}
           persist-credentials: false
       - name: Verify packaged release assets
         shell: bash
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: |
           set -euo pipefail
-          [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
-          version="${GITHUB_REF_NAME#v}"
-          test -s "readme/releases/$GITHUB_REF_NAME.md"
+          version="${RELEASE_TAG#v}"
+          test -s "readme/releases/$RELEASE_TAG.md"
           test -s ".release/perilog-$version.apk"
           test -s ".release/perilog-$version-screenshots.zip"
           cd .release
@@ -37,14 +57,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: |
           set -euo pipefail
-          version="${GITHUB_REF_NAME#v}"
-          gh release create "$GITHUB_REF_NAME" \
+          version="${RELEASE_TAG#v}"
+          gh release create "$RELEASE_TAG" \
             ".release/perilog-$version.apk" \
             ".release/perilog-$version.sha256" \
             ".release/perilog-$version-screenshots.zip" \
             --verify-tag --draft \
-            --title "나의 하루, 나의 투석 기록 $GITHUB_REF_NAME" \
-            --notes-file "readme/releases/$GITHUB_REF_NAME.md"
-          gh release edit "$GITHUB_REF_NAME" --draft=false --latest
+            --title "나의 하루, 나의 투석 기록 $RELEASE_TAG" \
+            --notes-file "readme/releases/$RELEASE_TAG.md"
+          gh release edit "$RELEASE_TAG" --draft=false --latest

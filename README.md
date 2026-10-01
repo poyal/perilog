@@ -12,11 +12,11 @@
 
 Android 12 이상 · Galaxy Z 플립7 우선 설계 · 로그인 없음 · 외부 API·인터넷 권한 없음 · 기기 내부 저장
 
-**[v1.0.1 APK 다운로드](https://github.com/poyal/perilog/releases/download/v1.0.1/perilog-1.0.1.apk)** · [최신 릴리즈](https://github.com/poyal/perilog/releases/latest) · [스크린샷 원본 ZIP](https://github.com/poyal/perilog/releases/download/v1.0.1/perilog-1.0.1-screenshots.zip)
+**[v1.0.2 APK 다운로드](https://github.com/poyal/perilog/releases/download/v1.0.2/perilog-1.0.2.apk)** · [최신 릴리즈](https://github.com/poyal/perilog/releases/latest) · [스크린샷 원본 ZIP](https://github.com/poyal/perilog/releases/download/v1.0.2/perilog-1.0.2-screenshots.zip)
 
-아래 매뉴얼은 **v1.0.1의 신규 UI** 기준입니다. 기존 v1.0.0 사용자는 앱을 삭제하지 않고 새 APK를 덮어 설치하면 기록을 유지할 수 있습니다.
+아래 매뉴얼은 **v1.0.1에서 도입한 신규 UI** 기준입니다. **v1.0.2는 Android 15에서 화면 재생성 후 키보드가 열린 상태의 배치를 수정한 버전**입니다. 기존 v1.0.0·v1.0.1 사용자는 앱을 삭제하지 않고 새 APK를 덮어 설치하면 기록을 유지할 수 있습니다.
 
-> 아래 23장은 **Android 16 / API 36 에뮬레이터에서 실제 앱을 실행한 캡처**입니다. 기록·수량·제품 구성은 사용법을 설명하기 위한 예시이며, 실제 사용자 데이터나 기기 설정 권장값이 아닙니다. 이미지를 누르면 원본을 볼 수 있습니다.
+> 기본 화면 23장은 **Android 16 / API 36 에뮬레이터에서 실제 앱을 실행한 캡처**입니다. 가로 키보드 화면 1장은 Android 15 / API 35 수정 확인 화면입니다. 기록·수량·제품 구성은 사용법을 설명하기 위한 예시이며, 실제 사용자 데이터나 기기 설정 권장값이 아닙니다. 이미지를 누르면 원본을 볼 수 있습니다.
 
 <table>
   <tr><th>오늘 할 일</th><th>기록을 모두 마친 날</th><th>재고 한눈에 보기</th></tr>
@@ -76,6 +76,10 @@ Android 12 이상 · Galaxy Z 플립7 우선 설계 · 로그인 없음 · 외�
 3. 숫자 옆 **×**로 지우고 새로 입력하거나, 몸무게의 **±0.1 / ±0.5 / ±1**, 혈압의 **±1** 버튼을 사용합니다. 증감 버튼은 화면 폭에 맞춰 줄바꿈됩니다.
 4. 불러온 사용 구성을 확인합니다. 달라졌다면 **구성 변경**을 펼쳐 저장한 구성을 누르면 바로 적용됩니다. 필요하면 **이번 기록만 수량 조정**을 펼쳐 EA를 수정합니다. 템플릿에 저장한 수량은 그대로 유지됩니다.
 5. **기록 저장**을 누릅니다. 시작 전 항목만 먼저 저장해도 됩니다.
+
+키보드를 열면 하단 탭을 숨겨 입력 공간을 확보합니다. 가로 화면에서 글씨를 크게 사용해도 입력칸과 저장 버튼을 함께 볼 수 있습니다.
+
+<a href="readme/screenshots/24-android15-landscape-keyboard.png"><img src="readme/screenshots/24-android15-landscape-keyboard.png" alt="Android 15에서 글씨 1.5배·가로 화면·숫자 키보드와 함께 표시되는 몸무게 입력칸과 저장 버튼" width="720"></a>
 
 ### 아침에 작성하는 기록 날짜
 

@@ -1990,3 +1990,15 @@ Keep inventory cards clear and practical, airy margins, strong quantity typograp
 - 화면 유지 수정 후 원격 프로세스 복구 검사가 통과했다. 남은 UI 오류는 창 포커스 이후 실제 키보드가 표시돼도 하단 탭이 남는 현상이다.
 - API 35 개발용 에뮬레이터를 추가해 같은 오류와 화면을 재현했다. Android 15에서는 decor view 재사용 시 기존 content-insets 처리가 남고, edge-to-edge 강제 적용 이후 setter가 반환해 초기화 순서가 중요하다.
 - `MainActivity.onCreate`의 API 35 상태 복원 경로에서 `enableEdgeToEdge()`보다 먼저 창 inset 처리를 초기화한다. 기존 검사 조건을 유지한 채 기본/큰 글씨 회전 검사가 모두 통과했다. API 36 회귀 및 전체 원격 CI도 확인한다.
+
+### v1.0.2 수정 배포 준비 (2026-10-01)
+
+- 실제 앱 코드에 Android 15 호환 수정을 반영했으므로 기존 v1.0.1 태그·APK를 보존하고 v1.0.2(versionCode 3)로 준비한다.
+- API 35·36의 기본/큰 글씨 회전 검사 각 1개, API 35의 실제 프로세스 복구, 단위·저장소 25개, Lint 오류 0을 확인했다.
+- 가상 기록을 만든 별도 API 35 에뮬레이터에서 v1.0.1→v1.0.2 덮어 설치와 모든 DB 행 일치를 확인했다. 동일 서명을 검증했다.
+- 기본 화면 23장에 API 35 가로 키보드 검증 화면 1장을 추가해 README·ZIP 24장을 준비한다. 최종 전체 CI 성공 후 서명 APK·체크섬·ZIP을 게시하고 공개 파일을 재확인한다.
+
+### v1.0.2 전체 CI 완료 (2026-10-01)
+
+- 최종 소스 `dfcd045`의 [원격 실행](https://github.com/poyal/perilog/actions/runs/36836418353)이 성공했다. 단위·Lint·기본/큰 글씨 UI E2E·프로세스 복구 단계가 모두 통과했다.
+- 배포용 서명 APK에서도 API 35 가로·1.5배 글씨·키보드를 확인하고 24번 이미지를 촬영했다. README·릴리즈 설명·검증 기록에 결과를 반영한다.

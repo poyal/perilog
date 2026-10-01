@@ -1,6 +1,7 @@
 package com.poyal.perilog
 
 import android.os.Bundle
+import android.os.Build
 import android.content.res.Configuration
 import androidx.core.view.WindowCompat
 import android.view.WindowManager
@@ -29,6 +30,12 @@ class MainActivity: FragmentActivity() {
     private val app get()=application as PerilogApplication
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Android 15 can retain the old content-insets applier when reusing a
+        // decor view. Reset it before enableEdgeToEdge obtains that view;
+        // afterwards edge-to-edge enforcement makes this setter a no-op.
+        if(savedInstanceState!=null && Build.VERSION.SDK_INT==35) {
+            WindowCompat.setDecorFitsSystemWindows(window,false)
+        }
         enableEdgeToEdge()
         setContent { PerilogTheme("SYSTEM") { Box(Modifier.fillMaxSize()) {
             JournalApp()

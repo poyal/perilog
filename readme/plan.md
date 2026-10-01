@@ -2002,3 +2002,9 @@ Keep inventory cards clear and practical, airy margins, strong quantity typograp
 
 - 최종 소스 `dfcd045`의 [원격 실행](https://github.com/poyal/perilog/actions/runs/36836418353)이 성공했다. 단위·Lint·기본/큰 글씨 UI E2E·프로세스 복구 단계가 모두 통과했다.
 - 배포용 서명 APK에서도 API 35 가로·1.5배 글씨·키보드를 확인하고 24번 이미지를 촬영했다. README·릴리즈 설명·검증 기록에 결과를 반영한다.
+
+### v1.0.2 게시 및 공개 파일 확인 완료 (2026-10-01)
+
+- 전체 CI 성공 후 v1.0.2 정식 릴리즈에 동일 서명 APK·SHA-256·화면 24장 ZIP을 게시했다. 게시 작업은 성공했고 최신 릴리즈가 v1.0.2임을 확인했다.
+- 공개 파일 3개를 다시 받아 원본 일치·APK 서명·ZIP 24장·압축 무결성을 확인했다. GitHub README 이미지·다운로드 링크도 확인했다.
+- v1.0.1 태그·배포 파일은 보존했다. 검증용으로 추가 실행한 API 35 에뮬레이터는 종료했다.

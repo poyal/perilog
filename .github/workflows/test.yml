@@ -22,9 +22,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     env:
-      ANDROID_USER_HOME: ${{ runner.temp }}/perilog-android
-      ANDROID_EMULATOR_HOME: ${{ runner.temp }}/perilog-android
-      ANDROID_AVD_HOME: ${{ runner.temp }}/perilog-android/avd
+      ANDROID_USER_HOME: /tmp/perilog-android
+      ANDROID_EMULATOR_HOME: /tmp/perilog-android
+      ANDROID_AVD_HOME: /tmp/perilog-android/avd
     steps:
       - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:

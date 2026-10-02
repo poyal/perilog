@@ -6,7 +6,7 @@
 
 **나의 하루, 나의 투석 기록.**
 
-페리로그는 매일의 복막투석 기록과 사용 물품을 휴대폰에서 관리하는 앱입니다. 시작 전 몸무게·혈압과 종료 후 투석 결과를 나누어 저장하고, 사용한 물품과 남은 재고를 함께 확인할 수 있습니다.
+페리로그는 매일의 복막투석 기록과 사용 물품을 휴대폰에서 관리하는 앱입니다. 시작 전 몸무게·혈압과 종료 후 투석 결과를 나누어 저장하고, 사용한 물품과 남은 재고를 함께 확인할 수 있습니다. 병원 일정과 자주 쓰는 연락처도 홈에서 확인합니다.
 
 Android 12 이상 · 로그인 없음 · 기록은 기기 내부 저장
 
@@ -58,7 +58,7 @@ Android 12 이상 · 로그인 없음 · 기록은 기기 내부 저장
   <tr><th>오늘 남은 항목</th><th>기록을 마친 날</th></tr>
   <tr>
     <td><a href="docs/screenshots/01-home.png"><img src="docs/screenshots/01-home.png" alt="홈에서 오늘 남은 기록 확인" width="260"></a></td>
-    <td><a href="docs/screenshots/06-completed.png"><img src="docs/screenshots/06-completed.png" alt="오늘 기록 완료와 기록 일수" width="260"></a></td>
+    <td><a href="docs/screenshots/06-completed.png"><img src="docs/screenshots/06-completed.png" alt="오늘 기록 완료와 체크 표시" width="260"></a></td>
   </tr>
 </table>
 
@@ -201,6 +201,8 @@ Android 12 이상 · 로그인 없음 · 기록은 기기 내부 저장
 
 품목을 눌러 **재고 상세 → 이 품목 이력**으로 열면 해당 품목이 미리 선택됩니다. 이력에서 수정·조회 화면에 다녀오거나 화면이 재생성되어도 선택한 필터를 유지합니다.
 
+<a href="docs/screenshots/38-stock-history.png"><img src="docs/screenshots/38-stock-history.png" alt="종류·상태·품목·기간 필터와 재고 사용·손실 이력" width="280"></a>
+
 ### 실제 수량과 다를 때
 
 재고에서 품목을 누르면 날짜별 남은 수량을 보고 **수량 추가·차감**, **수량 맞추기**, **이 품목 이력**을 사용할 수 있습니다. 누락한 입고가 있으면 실제 받은 날짜로 추가하고, 잘못 입력한 사용은 사용 취소로 되돌립니다.
@@ -215,6 +217,14 @@ Android 12 이상 · 로그인 없음 · 기록은 기기 내부 저장
 4. 저장한 사유와 수량은 **재고 → 이력** 또는 **재고 상세 → 이 품목 이력**에 남습니다. 잘못 입력했다면 **조정 취소 → 확인**을 누릅니다. 취소한 내역도 이력에 남습니다.
 
 재고가 부족해도 치료 기록은 저장할 수 있으며 부족한 수량은 음수로 표시됩니다. 물품은 입고 순서대로 차감합니다. 과거 날짜로 조정할 때 그 뒤에 수량을 맞춘 이력이 있으면 현재 재고는 그 기준 수량을 따릅니다.
+
+<table>
+  <tr><th>품목별 재고 상세</th><th>사유를 적어 일부 수량 변경</th></tr>
+  <tr>
+    <td><a href="docs/screenshots/37-stock-detail.png"><img src="docs/screenshots/37-stock-detail.png" alt="재고 수량과 수량 맞추기·추가·차감 버튼" width="260"></a></td>
+    <td><a href="docs/screenshots/36-stock-adjustment.png"><img src="docs/screenshots/36-stock-adjustment.png" alt="변경 수량·사유와 적용 후 재고 확인" width="260"></a></td>
+  </tr>
+</table>
 
 <table>
   <tr><th>남은 재고</th><th>품목별 일괄 입고</th></tr>
@@ -261,6 +271,8 @@ Android 12 이상 · 로그인 없음 · 기록은 기기 내부 저장
 
 진료과와 치료 항목은 각각 관리합니다. 색상과 아이콘 옆에 이름도 함께 표시됩니다. 설정에서는 **병원 일정·연락처**와 **투석 물품·사용 구성** 헤더로 관리 메뉴를 구분합니다.
 
+<a href="docs/screenshots/33-treatment-items.png"><img src="docs/screenshots/33-treatment-items.png" alt="자주 사용하는 검사·치료 항목과 아이콘 등록" width="280"></a>
+
 ### 예약 등록과 다음 예약 재사용
 
 1. 홈에서 **병원 일정 등록**을 눌러 새 예약을 등록합니다. 예정 일정이 있으면 제목 옆 **+**를 사용합니다. 저장한 일정의 수정·삭제는 **설정 → 병원 일정 관리**에서 합니다.
@@ -272,6 +284,14 @@ Android 12 이상 · 로그인 없음 · 기록은 기기 내부 저장
 
 등록한 진료과·치료 항목을 수정하거나 삭제해도 이미 저장한 예약 내용은 유지됩니다. 수정된 내용을 적용하려면 예약 편집에서 해당 항목을 해제 후 다시 선택하세요. 이전에 여러 치료를 묶어 등록한 구성은 항목별로 나뉘며 예약에 저장한 이름·아이콘은 유지됩니다. 병원 예약 알림은 제공하지 않습니다.
 
+<table>
+  <tr><th>홈의 병원 일정과 연락처</th><th>진료과별 예약시간 입력</th></tr>
+  <tr>
+    <td><a href="docs/screenshots/31-home-hospital-contacts.png"><img src="docs/screenshots/31-home-hospital-contacts.png" alt="병원 일정 D-day·진료과별 시간과 연락처 아바타" width="260"></a></td>
+    <td><a href="docs/screenshots/32-appointment-editor.png"><img src="docs/screenshots/32-appointment-editor.png" alt="진료과 여러 개 선택과 각 진료과의 예약시간" width="260"></a></td>
+  </tr>
+</table>
+
 ### 이모지 연락처와 전화·문자 연결
 
 1. **설정 → 연락처 관리 → + 연락처 등록**을 엽니다. 연락처가 없을 때는 홈의 **연락처 등록** 버튼에서도 입력 화면을 바로 열 수 있습니다.
@@ -280,6 +300,14 @@ Android 12 이상 · 로그인 없음 · 기록은 기기 내부 저장
 4. **연결 방법 선택** 모달에서 허용된 **전화** 또는 **문자**를 고릅니다. 번호가 입력된 전화 앱이나 문자 작성 화면이 열리며, 통화·전송은 해당 앱에서 직접 실행합니다.
 
 등록한 연락처의 이름·번호·아바타·연결 허용은 **설정 → 연락처 관리**에서 수정·삭제할 수 있습니다. 두 연결 방법을 모두 끄면 모달에는 연결이 꺼져 있다는 안내를 표시합니다.
+
+<table>
+  <tr><th>연락처 등록·수정</th><th>전화 또는 문자 선택</th></tr>
+  <tr>
+    <td><a href="docs/screenshots/34-contact-editor.png"><img src="docs/screenshots/34-contact-editor.png" alt="연락처 이모지·이름·번호와 전화·문자 허용" width="260"></a></td>
+    <td><a href="docs/screenshots/35-contact-actions.png"><img src="docs/screenshots/35-contact-actions.png" alt="홈 연락처에서 허용된 연결 방법 선택" width="260"></a></td>
+  </tr>
+</table>
 
 <a id="backup"></a>
 

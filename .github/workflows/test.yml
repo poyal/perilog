@@ -1,13 +1,8 @@
-name: Android checks and E2E
+name: Android verification (manual diagnostics)
 
+# Normal development and release verification run locally. Use Actions only
+# to diagnose a runner-specific issue; publishing never waits for this job.
 on:
-  pull_request:
-  push:
-    branches: [main]
-    paths-ignore:
-      - 'README.md'
-      - 'readme/**'
-      - 'design/**'
   workflow_dispatch:
 
 permissions:

@@ -219,6 +219,18 @@ Android 12 이상 · Galaxy Z 플립7 우선 설계 · 로그인 없음 · 기�
 
 기록·재고·백업은 서버에 전송하지 않습니다. 업데이트할 때 기존 앱을 삭제하지 마시고 필요한 데이터는 미리 내보내 두세요.
 
+<table>
+  <tr><th>페리로그 정보</th><th>다크모드 정보 화면</th><th>다크모드 재고</th></tr>
+  <tr>
+    <td><a href="readme/screenshots/25-about.png"><img src="readme/screenshots/25-about.png" alt="페리로그 버전과 제작자 및 문의 링크" width="240"></a></td>
+    <td><a href="readme/screenshots/26-about-dark.png"><img src="readme/screenshots/26-about-dark.png" alt="남색 다크모드의 페리로그 정보 화면" width="240"></a></td>
+    <td><a href="readme/screenshots/28-dark-inventory.png"><img src="readme/screenshots/28-dark-inventory.png" alt="카드와 재고 수량이 선명한 다크모드 재고 화면" width="240"></a></td>
+  </tr>
+</table>
+
+화면은 가상 데이터를 사용한 개발 빌드입니다. 업데이트 화면의 공개 버전 상태는 외부 네트워크 대신 검사 응답을 사용한 예시입니다.
+
+
 ## 더 자세히
 
 - [설치·사용 상세 안내](readme/사용-안내.md)

@@ -13,3 +13,5 @@
 - [문서 캡처 코드](capture/DocumentationCapture.kt)
 
 화면과 아이콘의 초기 디자인 시안은 [design 폴더](../design/)에 있습니다.
+
+- [v1.0.4 변경 내용](releases/v1.0.4.md) — 로컬 검증 후보, 공개 배포 여부는 검증 기록 참조

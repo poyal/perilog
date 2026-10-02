@@ -16,9 +16,9 @@ android {
         applicationId = "com.poyal.perilog"
         minSdk = 31
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.0.3"
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        versionCode = 5
+        versionName = "1.0.4"
+        testInstrumentationRunner = "com.poyal.perilog.PerilogTestRunner"
     }
     signingConfigs {
         if (signingFile.exists()) create("personal") {
@@ -42,6 +42,10 @@ android {
     buildFeatures { compose = true; buildConfig = true }
     if (providers.gradleProperty("captureScreenshots").isPresent) {
         sourceSets.getByName("androidTest").java.srcDir("../readme/capture")
+    }
+    if (providers.gradleProperty("updateFixture").isPresent) {
+        sourceSets.getByName("androidTest").assets.srcDir("../.tools/update-fixture")
+        sourceSets.getByName("androidTest").java.srcDir("src/updateTest/java")
     }
     testOptions { unitTests.isIncludeAndroidResources = true }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }

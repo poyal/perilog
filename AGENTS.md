@@ -1,3 +1,7 @@
+# 응답 언어와 말투
+
+사용자에게 항상 한국어 존댓말로 응답한다.
+
 # 릴리즈 운영
 
 페리로그 릴리즈를 준비하거나 게시할 때는 먼저 [페리로그 전용 로컬 검증·배포 운영 가이드](readme/로컬-검증-후-배포-운영-가이드.md)를 읽고 따른다. 버전 변경, 서명 APK 준비, 릴리즈 태그·브랜치 푸시, 게시 워크플로 실행, 실패한 게시 재개에 모두 적용한다.
@@ -18,5 +22,5 @@
 - 물품, 사용 구성, 입고 재고, 지난 2주 기록과 오늘의 활력 상태·사용 구성 예시를 채운다.
 - 기존에 입력하거나 수정한 값은 유지한다. 샘플 준비를 위해 앱 데이터를 초기화하지 않는다.
 - `:app:assembleDebug :app:assembleDebugAndroidTest -PcaptureScreenshots`로 빌드한다.
-- 개발용 에뮬레이터에 두 APK를 설치하고 `adb -s <emulator-serial> shell am instrument -w -e class com.poyal.perilog.capture.PreviewSamples#load com.poyal.perilog.debug.test/androidx.test.runner.AndroidJUnitRunner`로 샘플을 준비한다. 반복 실행은 기존 값과 초안을 보존한다.
+- 개발용 에뮬레이터에 두 APK를 설치하고 `adb -s <emulator-serial> shell am instrument -w -e class com.poyal.perilog.capture.PreviewSamples#load com.poyal.perilog.debug.test/com.poyal.perilog.PerilogTestRunner`로 샘플을 준비한다. 반복 실행은 기존 값과 초안을 보존한다.
 - 샘플 준비 후 페리로그 앱을 다시 열고 에뮬레이터 창을 사용자가 직접 조작할 수 있게 남겨 둔다.

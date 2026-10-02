@@ -40,32 +40,9 @@ jobs:
         with:
           ref: ${{ steps.release.outputs.tag }}
           persist-credentials: false
-      - name: Verify packaged release assets
-        shell: bash
-        env:
-          RELEASE_TAG: ${{ steps.release.outputs.tag }}
-        run: |
-          set -euo pipefail
-          version="${RELEASE_TAG#v}"
-          test -s "readme/releases/$RELEASE_TAG.md"
-          test -s ".release/perilog-$version.apk"
-          test -s ".release/perilog-$version-screenshots.zip"
-          cd .release
-          sha256sum --strict -c "perilog-$version.sha256"
-      - name: Upload assets and publish release
-        shell: bash
+      - name: Upload, redownload and verify before publication
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
-        run: |
-          set -euo pipefail
-          version="${RELEASE_TAG#v}"
-          gh release create "$RELEASE_TAG" \
-            ".release/perilog-$version.apk" \
-            ".release/perilog-$version.sha256" \
-            ".release/perilog-$version-screenshots.zip" \
-            --verify-tag --draft \
-            --title "페리로그 $RELEASE_TAG" \
-            --notes-file "readme/releases/$RELEASE_TAG.md"
-          gh release edit "$RELEASE_TAG" --draft=false --latest
+        run: python3 scripts/publish-release.py

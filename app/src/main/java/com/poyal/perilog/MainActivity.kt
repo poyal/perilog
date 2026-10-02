@@ -22,6 +22,7 @@ import com.poyal.perilog.ui.*
 import kotlinx.coroutines.launch
 
 class MainActivity: FragmentActivity() {
+    private var themeMode by mutableStateOf("SYSTEM")
     private var unlocked by mutableStateOf(false)
     private var lockEnabled by mutableStateOf(false)
     private var authMessage by mutableStateOf("")
@@ -37,8 +38,8 @@ class MainActivity: FragmentActivity() {
             WindowCompat.setDecorFitsSystemWindows(window,false)
         }
         enableEdgeToEdge()
-        setContent { PerilogTheme("SYSTEM") { Box(Modifier.fillMaxSize()) {
-            JournalApp()
+        setContent { PerilogTheme(themeMode) { Box(Modifier.fillMaxSize()) {
+            JournalApp(unlocked = unlocked)
             if(!unlocked) Surface(Modifier.fillMaxSize()) {
                 Column(Modifier.padding(32.dp),verticalArrangement=Arrangement.Center,horizontalAlignment=Alignment.CenterHorizontally) {
                     Text(getString(R.string.app_name),style=MaterialTheme.typography.headlineLarge)
@@ -49,6 +50,7 @@ class MainActivity: FragmentActivity() {
             }
         } } }
         lifecycleScope.launch { app.repository.snapshots.collect {
+            themeMode=it.preferences.darkMode
             lockEnabled=it.preferences.lock
             val dark=it.preferences.darkMode=="DARK" || (it.preferences.darkMode=="SYSTEM" && resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK==Configuration.UI_MODE_NIGHT_YES)
             WindowCompat.getInsetsController(window,window.decorView).apply { isAppearanceLightStatusBars=!dark;isAppearanceLightNavigationBars=!dark }

@@ -34,7 +34,7 @@ import java.math.BigDecimal
 
 val LocalInputErrors=staticCompositionLocalOf<MutableMap<String,String>>{mutableMapOf()}
 val Coral=Color(0xFFF47761)
-private val light=lightColorScheme(
+internal val light=lightColorScheme(
     primary=Color(0xFF2476CF),onPrimary=Color.White,primaryContainer=Color(0xFFDDEFFF),onPrimaryContainer=Color(0xFF12345A),
     secondary=Color(0xFFB34E3B),onSecondary=Color.White,secondaryContainer=Color(0xFFFFEAE3),onSecondaryContainer=Color(0xFF873B2E),
     tertiary=Color(0xFF337D77),onTertiary=Color.White,tertiaryContainer=Color(0xFFDEF2EE),onTertiaryContainer=Color(0xFF205951),
@@ -44,16 +44,16 @@ private val light=lightColorScheme(
     surfaceContainerHigh=Color(0xFFEAF2F8),surfaceContainerHighest=Color(0xFFDDEAF5),
     outline=Color(0xFF8198AF),outlineVariant=Color(0xFFD7E4EF),inverseSurface=Color(0xFF203A54),inverseOnSurface=Color.White,inversePrimary=Color(0xFFA9D3FF),
     error=Color(0xFFAC3F33),onError=Color.White,errorContainer=Color(0xFFFFE5DF),onErrorContainer=Color(0xFF792B22))
-private val dark=darkColorScheme(
-    primary=Color(0xFFA9D3FF),onPrimary=Color(0xFF103A62),primaryContainer=Color(0xFF234969),onPrimaryContainer=Color(0xFFDCEEFF),
-    secondary=Color(0xFFFFB8A8),onSecondary=Color(0xFF5E2A21),secondaryContainer=Color(0xFF573C37),onSecondaryContainer=Color(0xFFFFDBD1),
+internal val dark=darkColorScheme(
+    primary=Color(0xFFA9D3FF),onPrimary=Color(0xFF103252),primaryContainer=Color(0xFF294F72),onPrimaryContainer=Color(0xFFE3F0FF),
+    secondary=Color(0xFFFFB7A7),onSecondary=Color(0xFF5E2A21),secondaryContainer=Color(0xFF573C37),onSecondaryContainer=Color(0xFFFFDBD1),
     tertiary=Color(0xFFA3DAD0),onTertiary=Color(0xFF153F38),tertiaryContainer=Color(0xFF285C53),onTertiaryContainer=Color(0xFFD6F5EE),
-    background=Color(0xFF142332),onBackground=Color(0xFFF3EFE6),surface=Color(0xFF203142),onSurface=Color(0xFFF3EFE6),
-    surfaceVariant=Color(0xFF30465A),onSurfaceVariant=Color(0xFFB6C9DA),surfaceTint=Color(0xFFA9D3FF),
-    surfaceContainerLowest=Color(0xFF142332),surfaceContainerLow=Color(0xFF203142),surfaceContainer=Color(0xFF263C50),
-    surfaceContainerHigh=Color(0xFF30465A),surfaceContainerHighest=Color(0xFF3A5164),
-    outline=Color(0xFF8CA3B9),outlineVariant=Color(0xFF41586C),inverseSurface=Color(0xFFE8F2FA),inverseOnSurface=Color(0xFF203142),inversePrimary=Color(0xFF2476CF),
-    error=Color(0xFFFFB4A5),onError=Color(0xFF601E17),errorContainer=Color(0xFF773229),onErrorContainer=Color(0xFFFFDAD2))
+    background=Color(0xFF101D2C),onBackground=Color(0xFFF2F5FA),surface=Color(0xFF203449),onSurface=Color(0xFFF2F5FA),
+    surfaceVariant=Color(0xFF30485F),onSurfaceVariant=Color(0xFFC1D0E0),surfaceTint=Color(0xFFA9D3FF),
+    surfaceContainerLowest=Color(0xFF152639),surfaceContainerLow=Color(0xFF203449),surfaceContainer=Color(0xFF283F56),
+    surfaceContainerHigh=Color(0xFF30485F),surfaceContainerHighest=Color(0xFF3A526A),
+    outline=Color(0xFF819BB7),outlineVariant=Color(0xFF49627A),inverseSurface=Color(0xFFE8F2FA),inverseOnSurface=Color(0xFF203142),inversePrimary=Color(0xFF2476CF),
+    error=Color(0xFFFFB7A7),onError=Color(0xFF601E17),errorContainer=Color(0xFF773229),onErrorContainer=Color(0xFFFFDAD2))
 
 @Composable fun PerilogTheme(mode:String,content:@Composable ()->Unit) {
     val night=mode=="DARK" || mode=="SYSTEM" && isSystemInDarkTheme()
@@ -113,7 +113,7 @@ private val dark=darkColorScheme(
 
 @Composable fun Paper(modifier:Modifier=Modifier,content:@Composable ColumnScope.()->Unit) {
     Card(modifier.fillMaxWidth(),shape=RoundedCornerShape(24.dp),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface),
-        elevation=CardDefaults.cardElevation(defaultElevation=1.dp)) {
+        border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),elevation=CardDefaults.cardElevation(defaultElevation=0.dp)) {
         Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp),content=content)
     }
 }
@@ -123,7 +123,7 @@ private val dark=darkColorScheme(
     var expanded by remember{mutableStateOf(false)}
     Box(modifier) {
         Surface(onClick={expanded=true},shape=RoundedCornerShape(12.dp),color=MaterialTheme.colorScheme.surface,
-            border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),
+            border=BorderStroke(1.dp,MaterialTheme.colorScheme.outline),
             modifier=Modifier.fillMaxWidth().semantics{contentDescription=label;stateDescription=value}) {
             Column(Modifier.padding(horizontal=10.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(2.dp)) {
                 Text(label,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -141,8 +141,8 @@ private val dark=darkColorScheme(
 @Composable fun Action(text:String,onClick:()->Unit,enabled:Boolean=true,icon:ImageVector?=null) {
     val colors=MaterialTheme.colorScheme
     Button(onClick,Modifier.fillMaxWidth().heightIn(min=54.dp),enabled=enabled,shape=RoundedCornerShape(18.dp),
-        contentPadding=PaddingValues(0.dp),colors=ButtonDefaults.buttonColors(containerColor=Color.Transparent,disabledContainerColor=colors.surfaceVariant)) {
-        Row(Modifier.fillMaxWidth().then(if(enabled)Modifier.background(Brush.horizontalGradient(listOf(colors.primary,colors.primary.copy(alpha=.88f))))else Modifier)
+        contentPadding=PaddingValues(0.dp),colors=ButtonDefaults.buttonColors(containerColor=colors.primary,contentColor=colors.onPrimary,disabledContainerColor=colors.surfaceVariant)) {
+        Row(Modifier.fillMaxWidth()
             .padding(horizontal=18.dp,vertical=15.dp),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically) {
             if(icon!=null){Icon(icon,null,Modifier.size(22.dp));Spacer(Modifier.width(10.dp))};Text(text)
         }
@@ -259,7 +259,7 @@ private val dark=darkColorScheme(
             trailingIcon=if(!large){{IconButton(onClick={text="";emitted=null;invalid=false;errors.remove(errorId);onChange(null)}){Icon(Icons.Outlined.Close,"$label 전체 지우기",Modifier.size(20.dp))}}}else null,
             textStyle=MaterialTheme.typography.titleLarge.copy(fontSize=if(large)28.sp else 22.sp),
             shape=RoundedCornerShape(14.dp),modifier=Modifier.fillMaxWidth().semantics{contentDescription=label},singleLine=true,
-            colors=OutlinedTextFieldDefaults.colors(unfocusedBorderColor=MaterialTheme.colorScheme.outlineVariant,focusedBorderColor=MaterialTheme.colorScheme.primary,
+            colors=OutlinedTextFieldDefaults.colors(unfocusedBorderColor=MaterialTheme.colorScheme.outline,focusedBorderColor=MaterialTheme.colorScheme.primary,
                 unfocusedContainerColor=MaterialTheme.colorScheme.surfaceContainerLowest,focusedContainerColor=MaterialTheme.colorScheme.surfaceContainerLowest))
         if(large && value!=null)TextButton(onClick={text="";emitted=null;invalid=false;errors.remove(errorId);onChange(null)},contentPadding=PaddingValues(horizontal=4.dp)){Text("지우기",style=MaterialTheme.typography.bodySmall)}
     }

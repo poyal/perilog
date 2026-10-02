@@ -16,9 +16,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.isActive
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
-@Composable fun JournalApp(vm:JournalViewModel=viewModel()) {
+@Composable fun JournalApp(vm:JournalViewModel=viewModel(), unlocked:Boolean=true) {
+    val updates = vm.app.updates
+    val updateState by updates.state.collectAsStateWithLifecycle()
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current
     val s by vm.state.collectAsStateWithLifecycle()
     val ready by vm.ready.collectAsStateWithLifecycle()
     val busy by vm.busy.collectAsStateWithLifecycle()
@@ -26,6 +31,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
     var stack by rememberSaveable{mutableStateOf(listOf("home"))}
     var tab by rememberSaveable{mutableStateOf("home")}
     var editingId by rememberSaveable{mutableStateOf<String?>(null)}
+    LaunchedEffect(ready, unlocked) { if (ready && unlocked) updates.startSession() }
+    LaunchedEffect(lifecycle, unlocked) {
+        if (unlocked) lifecycle.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+            while (kotlinx.coroutines.currentCoroutineContext().isActive) {
+                updates.refreshDownload()
+                kotlinx.coroutines.delay(1000)
+            }
+        }
+    }
     val route=stack.last()
     val rootTabs=listOf("home","records","stats","stock")
     val management=route.contains('/')
@@ -41,6 +55,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
     BackHandler(stack.size>1 && !management){back()}
     CompositionLocalProvider(LocalInputErrors provides vm.inputErrors){PerilogTheme(s.preferences.darkMode){
         val colors=MaterialTheme.colorScheme
+        if (ready && unlocked) UpdatePrompt(updateState, updates::dismissPrompt) {
+            updates.dismissPrompt(); navigate("about"); updates.download()
+        }
         Scaffold(containerColor=Color.Transparent,contentColor=colors.onBackground,snackbarHost={SnackbarHost(snackbar)},
             bottomBar={if(!management && !WindowInsets.isImeVisible)NavigationBar(containerColor=colors.surface.copy(alpha=.97f),tonalElevation=0.dp){
                 listOf(Triple("home","홈",Icons.Outlined.Home),Triple("records","기록",Icons.Outlined.Description),Triple("stats","통계",Icons.Outlined.BarChart),Triple("stock","재고",Icons.Outlined.Inventory2)).forEach{(id,label,icon)->
@@ -48,7 +65,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
                         colors=NavigationBarItemDefaults.colors(selectedIconColor=colors.primary,selectedTextColor=colors.primary,indicatorColor=colors.primaryContainer,unselectedIconColor=colors.onSurfaceVariant,unselectedTextColor=colors.onSurfaceVariant))
                 }
             }}){padding->
-            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(colors.background,androidx.compose.ui.graphics.lerp(colors.background,colors.primaryContainer,.45f))))
+            Box(Modifier.fillMaxSize().background(colors.background)
                 .padding(padding).consumeWindowInsets(padding).imePadding()) {
                 if(!ready)CircularProgressIndicator(Modifier.align(Alignment.Center))else key(route){when {
                     route=="home"->HomeScreen(s,vm,date,{navigate("settings")},{id,kind,day->editor(id,kind,day)},{navigate("records")},{navigate("stock")})
@@ -58,6 +75,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
                     route=="products"->ProductsScreen(s,::navigate,::back)
                     route=="templates"->TemplatesScreen(s,vm,::navigate,::back)
                     route=="receipts"->ReceiptsScreen(s,vm,::navigate,::back)
+                    route=="about"->AboutScreen(updates,::back)
                     route=="settings"->SettingsScreen(s,vm,::navigate,::back)
                     route=="edit"->TreatmentScreen(s,vm,::back)
                     route.startsWith("product/")->ProductEditor(s,vm,route.substringAfter('/'),::back)

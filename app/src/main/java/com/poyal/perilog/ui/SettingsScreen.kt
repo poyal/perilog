@@ -115,6 +115,7 @@ import kotlinx.coroutines.withContext
         Paper {Section("사용자 색상");Hint("색상을 길게 누르면 팔레트에서 삭제해요. 품목에 지정된 색은 유지돼요.");Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             p.palette.forEach{color->Box(Modifier.size(44.dp).background(androidx.compose.ui.graphics.Color(color),MaterialTheme.shapes.small).combinedClickable(onClick={},onLongClick={val next=p.copy(palette=p.palette-color);p=next;vm.preferences(next)}))}
         }}
+        Paper { MenuRow("페리로그 정보", "앱 정보 · 업데이트 · 문의", Icons.Outlined.Info) { navigate("about") } }
         TextButton(onClick={reset=true}){Text("모든 앱 데이터 초기화",color=MaterialTheme.colorScheme.error)}
         Hint("${stringResource(R.string.app_name)} ${BuildConfig.VERSION_NAME} · 기기 내부 저장")
         Hint(stringResource(R.string.app_description))

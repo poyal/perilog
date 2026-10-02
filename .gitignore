@@ -12,3 +12,5 @@ dist/
 *.keystore
 signing.properties
 .release/
+
+__pycache__/

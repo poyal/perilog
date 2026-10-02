@@ -88,6 +88,24 @@ class AppFlowTest {
         input("몸무게","62.3");input("수축기 혈압","120");input("이완기 혈압","80")
         click("구성 변경");click("밤 구성")
     }
+    @Test fun aboutWorksOfflineAndDarkThemeSurvivesRecreation() {
+        compose.onNodeWithContentDescription("설정").performClick()
+        click("어둡게"); click("표시·알림·잠금 설정 저장")
+        await { snapshot().preferences.darkMode == "DARK" }
+        click("페리로그 정보")
+        node("제작자  Poyal").assertExists()
+        click("업데이트 확인")
+        await { compose.onAllNodesWithText("아직 공개된 정식 릴리즈가 없어요.").fetchSemanticsNodes().isNotEmpty() }
+        screenshot("about-dark.png")
+        show(node("다운로드 폴더 열기")).assertExists()
+        show(node("업데이트와 데이터")).assertExists()
+        compose.activityRule.scenario.recreate()
+        await { compose.onAllNodesWithText("페리로그 정보").fetchSemanticsNodes().isNotEmpty() }
+        assertEquals("DARK", snapshot().preferences.darkMode)
+        back()
+        await { compose.onAllNodesWithText("설정").fetchSemanticsNodes().isNotEmpty() }
+    }
+
     @Test fun machineEntryAndAdditionalUseWorkOffline() {
         click("오늘 기록 시작");beforeAndTemplate()
         input("초기배액량","2300");input("기계 제수량","600")

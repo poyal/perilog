@@ -126,5 +126,15 @@ class DocumentationCapture {
         runBlocking{app.repository.preferences(p.copy(darkMode="DARK"))}
         SystemClock.sleep(800)
         shot("20-dark-mode")
+        click("오늘 기록 확인")
+        show(ui.onNodeWithText("투석 기록"));shot("27-dark-treatment")
+        back();tab("재고");shot("28-dark-inventory")
+        tab("홈");ui.onNodeWithContentDescription("설정").performClick()
+        click("페리로그 정보");shot("26-about-dark")
+        show(ui.onNodeWithText("업데이트"));shot("29-about-update")
+        back();back()
+        runBlocking { app.repository.preferences(app.repository.snapshot().preferences.copy(darkMode="LIGHT")) }
+        ui.onNodeWithContentDescription("설정").performClick();click("페리로그 정보")
+        shot("25-about")
     }
 }

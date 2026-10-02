@@ -1,246 +1,90 @@
 <p align="center">
-  <img src="design/icon-concepts/02-daily-journal-bow.png" alt="파란 나비 리본이 있는 기록장 앱 아이콘" width="120">
+  <img src="design/icon-concepts/02-daily-journal-bow.png" alt="페리로그 아이콘" width="100">
 </p>
 
 # 페리로그
 
-나의 하루, 나의 투석 기록
+**나의 하루, 나의 투석 기록.**
 
-**매일의 복막투석 기록과 사용 물품을 내 휴대폰에서 관리하세요.**
+매일의 복막투석 기록과 사용 물품을 휴대폰에서 관리하는 Android 앱입니다. 몸무게·혈압과 투석 결과를 나누어 적고, 사용한 물품을 재고에 반영하며, 날짜별 기록과 변화를 돌아볼 수 있습니다.
 
-시작 전 몸무게·혈압, 종료 후 기계에서 확인한 초기배액량·제수량을 적으면 총 제수량을 계산합니다. 어제 사용한 구성을 이어 쓰고, 기록을 저장하면 사용한 물품이 재고에 반영됩니다.
+Android 12 이상 · 로그인 없음 · 기록은 기기 내부 저장
 
-Android 12 이상 · Galaxy Z 플립7 우선 설계 · 로그인 없음 · 기록은 기기 내부 저장 · 업데이트 확인·다운로드 시 GitHub 접속
-
-**[v1.0.3 APK 다운로드](https://github.com/poyal/perilog/releases/download/v1.0.3/perilog-1.0.3.apk)** · [최신 릴리즈](https://github.com/poyal/perilog/releases/latest) · [스크린샷 원본 ZIP](https://github.com/poyal/perilog/releases/download/v1.0.3/perilog-1.0.3-screenshots.zip)
-
-**v1.0.3**은 기록 카드·입력 단계·사용 구성 색상·라인차트를 개선했습니다. 기존 v1.0.0~v1.0.2 사용자는 앱을 삭제하지 않고 새 APK를 덮어 설치하면 기록을 유지할 수 있습니다. 같은 서명 키를 사용하며 기존 데이터베이스는 자동으로 이전합니다.
-
-> 화면 24장은 **Android 15 / API 35 에뮬레이터에서 v1.0.3을 실행한 캡처**입니다. 가로 키보드 화면은 배포하는 서명 APK에서 촬영했습니다. 기록·수량·제품 구성은 사용법을 설명하기 위한 예시이며, 실제 사용자 데이터나 기기 설정 권장값이 아닙니다. 이미지를 누르면 원본을 볼 수 있습니다.
+**[v1.0.4 APK 다운로드](https://github.com/poyal/perilog/releases/download/v1.0.4/perilog-1.0.4.apk)** · [릴리즈 노트](readme/releases/v1.0.4.md) · [설치·사용 안내](readme/사용-안내.md)
 
 <table>
-  <tr><th>오늘 할 일</th><th>기록을 모두 마친 날</th><th>재고 한눈에 보기</th></tr>
+  <tr><th>오늘의 기록</th><th>투석 결과 입력</th><th>물품과 재고</th></tr>
   <tr>
-    <td><a href="readme/screenshots/01-home.png"><img src="readme/screenshots/01-home.png" alt="홈 화면의 종료 후 미입력 안내와 오늘의 기록 진행률" width="240"></a></td>
-    <td><a href="readme/screenshots/06-completed.png"><img src="readme/screenshots/06-completed.png" alt="오늘 기록 완료와 누적 기록 일수" width="240"></a></td>
-    <td><a href="readme/screenshots/12-inventory.png"><img src="readme/screenshots/12-inventory.png" alt="색상별 투석액과 소모품의 EA 재고" width="240"></a></td>
+    <td><a href="readme/screenshots/01-home.png"><img src="readme/screenshots/01-home.png" alt="오늘 남은 기록을 확인하는 홈 화면" width="240"></a></td>
+    <td><a href="readme/screenshots/04-after-treatment.png"><img src="readme/screenshots/04-after-treatment.png" alt="초기배액량과 기계 제수량 입력" width="240"></a></td>
+    <td><a href="readme/screenshots/12-inventory.png"><img src="readme/screenshots/12-inventory.png" alt="품목별 색상과 남은 EA 수량" width="240"></a></td>
   </tr>
 </table>
 
-## 1. 휴대폰에 설치하기
+## 할 수 있는 일
 
-1. 휴대폰에서 사용할 버전의 APK 다운로드를 누릅니다.
-2. 내려받은 APK를 엽니다.
-3. Android가 요청하면 파일을 연 앱의 **이 출처 허용**을 설정하고 설치합니다. 휴대폰 설정에 따라 안내 문구가 다를 수 있습니다.
-4. **페리로그**를 실행합니다. 계정이나 회원 가입은 필요하지 않습니다.
-
-현재는 APK 직접 설치 방식입니다. 업데이트는 새 APK를 기존 앱 위에 설치하세요. **앱을 삭제하면 내부 기록이 지워지므로 삭제·기기 변경 전에는 파일로 내보내기부터 해 주세요.**
-
-## 2. 처음 한 번 준비하기
-
-| 순서 | 어디에서 | 할 일 |
-| --- | --- | --- |
-| 1 | 재고 → 품목 관리 · 색상 | 사용하는 투석액·카세트·손투석 라인을 등록하고 이름·색상 지정 |
-| 2 | 재고 → 입고 등록 | 가지고 있는 물품을 품목별 EA 수량으로 등록 |
-| 3 | 설정 또는 재고 → 사용 구성 관리 | 자주 쓰는 조합을 이름 붙여 저장 |
-| 4 | 홈 오른쪽 위 설정 → 투석 계산 기준 | 이전 최종 주입 설정값 확인. 앱 기본값은 2000mL |
-| 5 | 설정 → 주기적 파일 백업 | 보관 폴더를 선택하고 자동 백업 연결 |
-
-품목별 현재 수량만 빠르게 맞추려면 재고에서 해당 품목을 눌러 **현재 수량 맞추기**를 사용합니다. 사용기한을 나눠 관리하려면 입고 등록을 이용하세요.
-
-### 내 물품과 색상, 자주 쓰는 구성
-
-제품명에 농도·용량을 알아보기 쉽게 적고, 준비된 색상 또는 **컬러 피커 · 색 추가**로 색을 지정합니다. 제품 색은 기록의 사용 구성과 재고에도 함께 보입니다.
-
-사용 구성은 예를 들어 **투석액 1.5% × 1EA + 투석액 2.5% × 1EA + 카세트 × 1EA**처럼 만듭니다. 손투석용 조합도 따로 저장할 수 있습니다. 매번 템플릿을 고를 필요 없이, 새 기록에는 **직전 같은 종류 기록에서 실제 사용한 품목·수량**을 불러옵니다.
-
-<table>
-  <tr><th>품목과 색상</th><th>나만의 색 추가</th><th>사용 구성 관리</th></tr>
-  <tr>
-    <td><a href="readme/screenshots/15-product-settings.png"><img src="readme/screenshots/15-product-settings.png" alt="품목 이름, 종류와 색상 설정" width="240"></a></td>
-    <td><a href="readme/screenshots/16-color-picker.png"><img src="readme/screenshots/16-color-picker.png" alt="RGB 슬라이더와 HEX 컬러 피커" width="240"></a></td>
-    <td><a href="readme/screenshots/17-templates.png"><img src="readme/screenshots/17-templates.png" alt="기계투석과 추가투석에 사용할 구성 목록" width="240"></a></td>
-  </tr>
-</table>
-
-품목·구성·입고는 넓은 전용 화면에서 편집합니다. 아래의 **저장/취소** 버튼은 고정되어 있고, 변경 후 뒤로 가면 버릴지 확인합니다. 구성 편집에서는 품목 옆 색상을 보며 사용할 품목과 EA 수량을 한 화면에서 정합니다.
-
-<a href="readme/screenshots/22-template-editor.png"><img src="readme/screenshots/22-template-editor.png" alt="품목 색상과 EA 수량을 함께 편집하는 사용 구성 화면" width="300"></a>
-
-## 3. 매일 기계투석 기록하기
-
-### 시작 전: 몸무게·혈압과 사용 구성
-
-1. 홈에서 오늘 기록을 시작합니다. 기록 날짜는 오늘이 기본이며 **어제**나 원하는 과거 날짜로 바꿀 수 있습니다.
-2. 몸무게와 수축기·이완기 혈압을 확인합니다. 이전 수치는 참고로 불러오므로 **오늘 측정값으로 확인한 뒤 저장**합니다.
-3. 숫자를 직접 입력합니다. 숫자 옆 **×**로 지우고 새로 입력할 수 있습니다.
-4. 불러온 사용 구성을 확인합니다. 달라졌다면 **구성 변경**을 펼쳐 저장한 구성을 누르면 바로 적용됩니다. 필요하면 **이번 기록만 수량 조정**을 펼쳐 EA를 수정합니다. 템플릿에 저장한 수량은 그대로 유지됩니다.
-5. **기록 저장**을 누릅니다. 시작 전 항목만 먼저 저장해도 됩니다.
-
-키보드를 열면 하단 탭을 숨겨 입력 공간을 확보합니다. 가로 화면에서 글씨를 크게 사용해도 입력칸과 저장 버튼을 함께 볼 수 있습니다.
-
-<a href="readme/screenshots/24-android15-landscape-keyboard.png"><img src="readme/screenshots/24-android15-landscape-keyboard.png" alt="Android 15에서 글씨 1.5배·가로 화면·숫자 키보드와 함께 표시되는 몸무게 입력칸과 저장 버튼" width="720"></a>
-
-### 아침에 작성하는 기록 날짜
-
-기록은 **화면에서 선택한 날짜**에 저장됩니다. 어젯밤 시작한 기록에 아침 결과를 이어 적으면 어제 날짜가 유지됩니다. 아침에 새 기록을 시작하면 기본은 오늘이므로, 전날 기록으로 남기려면 **어제**를 선택하세요. 자동으로 날짜를 옮기지는 않습니다.
-
-<a href="readme/screenshots/21-yesterday-prompt.png"><img src="readme/screenshots/21-yesterday-prompt.png" alt="오늘 카드 위에 표시한 어제 기록 작성 안내" width="300"></a>
-
-### 종료 후: 기계에서 확인한 두 값
-
-홈의 **기록하기**를 눌러 **초기배액량**과 **기계 제수량**을 적습니다. **제수량**은 자동으로 계산됩니다. 오늘의 기록은 **1. 활력 상태 → 2. 사용 구성 → 3. 투석 기록** 순서로 표시됩니다. 평균저류시간·메모는 선택 항목이며, 1~4차 배액량은 따로 입력하지 않습니다.
-
-<table>
-  <tr><th>시작 전 입력</th><th>사용 구성 선택</th><th>종료 후 입력</th></tr>
-  <tr>
-    <td><a href="readme/screenshots/02-before-treatment.png"><img src="readme/screenshots/02-before-treatment.png" alt="활력 상태 단계의 몸무게와 수축기·이완기 혈압 입력" width="240"></a></td>
-    <td><a href="readme/screenshots/03-usage-template.png"><img src="readme/screenshots/03-usage-template.png" alt="저장한 사용 구성 선택과 품목별 EA 수량" width="240"></a></td>
-    <td><a href="readme/screenshots/04-after-treatment.png"><img src="readme/screenshots/04-after-treatment.png" alt="초기배액량과 기계 제수량을 입력한 치료 기록" width="240"></a></td>
-  </tr>
-</table>
-
-### 총 제수량은 이렇게 표시돼요
-
-```text
-총 제수량 = 초기배액량 − 이전 최종 주입 설정값 + 기계 제수량
-
-예시: 2300 − 2000 + 600 = 900mL
-```
-
-실제 최종 주입량을 매일 확인하기 어려운 사용 방식을 반영해 **설정값 기준으로 계산**합니다. **제수량 옆 ?**를 누르면 도움말에서 식과 이 기록의 기준을 확인하고 수정할 수 있습니다. 설정에서 기준을 변경해도 이미 저장한 과거 기록의 기준은 유지됩니다.
-
-**배액량**은 배액한 전체 양이고, **제수량**은 배액량에서 이전 주입량을 뺀 값입니다. 종료 후의 ‘기계 제수량’ 칸에는 기계에 표시된 제수량을 입력합니다. 음수라면 **제수량 + / − 바꾸기**를 사용하고, 측정값이 0이면 `0`을 입력합니다. 빈칸은 미입력으로 남습니다.
-
-<table>
-  <tr><th>총 제수량과 계산 기준</th><th>추가투석 기록</th></tr>
-  <tr>
-    <td><a href="readme/screenshots/05-calculation.png"><img src="readme/screenshots/05-calculation.png" alt="설정값 2000mL 기준 총 제수량 900mL 계산" width="270"></a></td>
-    <td><a href="readme/screenshots/07-manual-treatment.png"><img src="readme/screenshots/07-manual-treatment.png" alt="추가투석 사용 물품과 선택 입력인 배액무게" width="270"></a></td>
-  </tr>
-</table>
-
-### 손투석은 추가투석으로
-
-홈의 **추가투석**에서 사용 구성을 확인하고 저장합니다. **하루에 여러 번** 등록할 수 있고, **물품 사용만 기록해도 완료**됩니다. 배액을 적고 싶으면 배액무게 **g/kg** 또는 배액량 **mL**를 선택합니다.
-
-무게와 부피는 입력한 단위대로 보관합니다. 무게를 부피로 자동 환산하거나, 용기 무게를 자동으로 빼거나, 기계투석 제수량에 합산하지 않습니다.
-
-### 저장·수정할 때 알아두기
-
-- 작성 중 화면을 나간 내용은 초안으로 보관합니다. **초안과 구성 미리보기는 재고를 차감하지 않습니다.**
-- 저장한 기록에 종료 후 수치를 추가하거나 다시 저장해도 사용량이 중복 차감되지 않습니다. 사용 품목·수량을 고치면 변경분이 반영됩니다.
-- 기록 삭제와 실제 물품 사용 취소는 구분합니다. 잘못 입력한 물품 사용은 별도의 **사용 취소**로 되돌립니다.
-- 홈에는 오늘 남은 항목이 표시됩니다. **어제의 기록**도 같은 카드 모양으로 미입력 단계만 보여 주며, 제목 옆에 시계 아이콘과 날짜를 표시합니다. 모두 완료하면 사라집니다. 치료 기록 화면은 각 카드 제목 앞의 숫자 배경이 해당 입력을 채우면 파란색으로 바뀝니다. 모두 입력하면 완료 메시지와 기록 일수를 보여 주며, 축하 애니메이션은 설정에서 켜고 끌 수 있습니다.
-
-## 4. 기록과 변화를 돌아보기
-
-**기록**에서는 **리스트·캘린더·표**로 날짜별 기록을 찾습니다. 카드의 **사용 구성 이름** 태그를 누르면 물품과 수량을 상세 창에서 확인합니다. 사용 구성 관리에서 대표 색상을 정하면 관리 목록·구성 선택·선택된 구성·기록 태그와 상세 창에 같은 색이 표시됩니다. 선택한 구성 이름은 이번 기록의 수량을 바꿔도 유지됩니다. 오른쪽 **⋮** 메뉴에서 기록을 수정하거나 삭제하며, **사용 취소**는 사용 구성 상세에 있습니다. **표**는 7D·30D·전체·기간 지정으로 몸무게, 혈압, 초기배액, 기계 제수량, 총 제수량, 추가 배액, 평균저류시간을 함께 비교합니다. 날짜 열은 고정되어 있고 나머지 열은 좌우로 밀어 봅니다. 같은 날 추가투석도 각각 한 행으로 표시합니다.
-
-날짜나 행을 누르면 해당 기록을 수정할 수 있고 돌아와도 표·기간 선택은 유지됩니다. 미입력은 `—`로 표시하며 추가 배액은 기록한 원래 단위를 유지합니다.
-
-<a href="readme/screenshots/23-record-table.png"><img src="readme/screenshots/23-record-table.png" alt="기록 화면의 7일 기간별 비교 표" width="300"></a>
-
-**통계**에서는 선택 상자로 **7D / 30D / 90D / 직접 선택** 기간을 정합니다. **활력 상태**는 혈압·체중, **투석 기록**은 필수 입력인 초기배액량·기계 제수량을 각각 한 줄에 하나씩 라인차트로 표시합니다. 혈압은 수축기와 이완기를 두 선으로 구분합니다. 표시 방식에서 표로 바꿀 수 있으며 미입력 값은 0으로 채우지 않고 선도 연결하지 않습니다.
-
-<table>
-  <tr><th>목록</th><th>캘린더</th></tr>
-  <tr>
-    <td><a href="readme/screenshots/08-record-list.png"><img src="readme/screenshots/08-record-list.png" alt="날짜별 치료 기록 목록" width="270"></a></td>
-    <td><a href="readme/screenshots/09-calendar.png"><img src="readme/screenshots/09-calendar.png" alt="월별 캘린더와 선택한 날의 기록" width="270"></a></td>
-  </tr>
-  <tr><th>기간별 라인차트</th><th>날짜별 수치 표</th></tr>
-  <tr>
-    <td><a href="readme/screenshots/10-statistics.png"><img src="readme/screenshots/10-statistics.png" alt="최근 7일 혈압과 체중의 라인차트" width="270"></a></td>
-    <td><a href="readme/screenshots/11-statistics-table.png"><img src="readme/screenshots/11-statistics-table.png" alt="통계의 날짜별 수치 표" width="270"></a></td>
-  </tr>
-</table>
-
-## 5. 입고와 재고 관리하기
-
-물품을 받은 날 **재고 → 입고 등록**으로 들어갑니다.
-
-1. 입고 날짜를 고릅니다.
-2. 받은 품목별 수량을 **EA**로 입력합니다. 빈칸 또는 0EA인 품목은 제외합니다.
-3. 사용기한은 기본 **무관**입니다. 관리할 품목만 날짜를 지정합니다. 같은 품목에 기한이 여러 개면 **이 품목의 다른 사용기한 추가**를 누릅니다.
-4. **함께 저장**을 누르면 같은 날의 입고 이력으로 남습니다.
-
-<table>
-  <tr><th>날짜별 입고 이력</th><th>품목별 일괄 입고</th></tr>
-  <tr>
-    <td><a href="readme/screenshots/13-receipt-history.png"><img src="readme/screenshots/13-receipt-history.png" alt="한 번에 받은 여러 품목의 입고 이력" width="270"></a></td>
-    <td><a href="readme/screenshots/14-bulk-receipt.png"><img src="readme/screenshots/14-bulk-receipt.png" alt="품목별 입고 수량과 사용기한 무관 설정" width="270"></a></td>
-  </tr>
-</table>
-
-**사용기한 임박 안내**는 설정에서 며칠 전부터 표시할지 정합니다. 기본은 **7일 전**이며, 남은 재고 중 임박한 물품을 홈에 알려 줍니다.
-
-사용한 물품은 기한이 빠른 유효 재고부터 배정하고, 다음으로 기한 없는 재고를 사용합니다. 기한이 지난 재고는 자동 배정하지 않으며 사용 구성에서 실제 재고를 직접 고를 수도 있습니다.
-
-재고가 부족해도 치료 기록을 저장할 수 있습니다. **미배정**은 사용량에 연결할 재고가 부족하다는 표시이므로 누락한 입고나 현재 수량을 확인하세요. **현재 수량 맞추기**는 새 기준을 만들며 기한별 구분은 ‘무관’으로 바뀝니다. 기존 기한 구분을 유지하려면 입고·사용 이력을 수정하세요.
-
-## 6. 파일로 내보내기와 자동 백업
-
-앱 데이터는 휴대폰 내부에 저장됩니다. **설정 → 데이터 내보내기 · 가져오기**에서 기록·품목·구성·재고·설정을 한 파일로 보관할 수 있습니다.
-
-| 기능 | 사용 방법 |
+| 기능 | 내용 |
 | --- | --- |
-| 전체 데이터 내보내기 | JSON 파일을 저장할 위치 선택 |
-| 백업 파일 가져오기 | JSON 파일 선택 → 내용 요약 확인 → 전체 복원 |
-| 주기적 파일 백업 | 보관 폴더 선택 → 매일/매주 선택 → 백업 설정 저장 |
-| 지금 백업 | 연결한 폴더에 즉시 백업 |
+| 매일 기록 | 몸무게·혈압, 사용 구성, 투석 결과를 단계별로 저장하고 미작성 항목 확인 |
+| 추가투석 | 하루 여러 건 기록, 물품 사용만 저장 가능, 배액량·무게는 입력한 단위로 보관 |
+| 기록과 통계 | 리스트·캘린더·기간별 표, 혈압·몸무게·투석 결과의 라인차트 |
+| 물품과 재고 | 품목별 색상, 자주 쓰는 구성, 일괄 입고, 사용기한과 EA 수량 관리 |
+| 백업 | 전체 JSON 내보내기·가져오기, 선택한 폴더에 주기적 백업 |
+| 표시와 안내 | 밝게·어둡게·시스템 테마, 큰 글씨와 가로 입력, 미작성 알림, 선택형 앱 잠금 |
 
-자동 백업은 기본 **매일 / 최근 30개 보관**입니다. 오래된 자동 파일만 정리하며 직접 내보낸 파일은 그대로 남습니다. 최근 성공 시각과 폴더 접근 실패 안내는 설정에서 확인할 수 있습니다.
+시작 전 항목만 먼저 저장하고 투석이 끝난 뒤 결과를 이어 적을 수 있습니다. 초안은 재고를 차감하지 않으며, 저장한 기록을 수정하거나 다시 저장해도 물품 사용량을 중복 차감하지 않습니다.
 
-**가져오기는 현재 데이터와 합치는 기능이 아니라 전체 교체입니다.** 복원 직전의 데이터는 앱 내부 보호 백업에 남고 설정에서 외부로 내보낼 수 있습니다. 앱을 삭제하면 내부 보호 백업도 함께 지워집니다.
+## v1.0.4에서 달라진 점
 
-백업 JSON에는 암호가 없습니다. 새 기기나 재설치 후에는 백업 폴더를 다시 연결하세요. 앱 자체는 서버에 데이터를 보내지 않으며, 파일 선택기에서 고른 저장 위치의 동작은 해당 파일 제공자에 따릅니다.
+- 다크모드의 본문·보조 설명·입력칸·카드 구분을 더 선명하게 다듬었습니다.
+- 설정의 설명과 토글을 좌우로 정렬했습니다. 항목 전체를 눌러 전환할 수 있습니다.
+- **설정 → 페리로그 정보**에서 버전·제작자·문의 링크와 업데이트를 확인할 수 있습니다.
+- 새 버전을 알리고, 앱에서 APK 다운로드와 체크섬 검증 후 Android 설치 화면으로 연결합니다.
 
 <table>
-  <tr><th>계산 기준과 표시 설정</th><th>내보내기와 주기적 백업</th><th>다크 모드</th></tr>
+  <tr><th>다크모드</th><th>페리로그 정보</th><th>정리된 설정</th></tr>
   <tr>
-    <td><a href="readme/screenshots/18-settings.png"><img src="readme/screenshots/18-settings.png" alt="이전 최종 주입 기준과 사용기한 임박 일수 설정" width="240"></a></td>
-    <td><a href="readme/screenshots/19-backup.png"><img src="readme/screenshots/19-backup.png" alt="JSON 내보내기 가져오기와 자동 백업 폴더 및 주기 설정" width="240"></a></td>
-    <td><a href="readme/screenshots/20-dark-mode.png"><img src="readme/screenshots/20-dark-mode.png" alt="어두운 테마의 오늘 기록 완료 화면" width="240"></a></td>
+    <td><a href="readme/screenshots/20-dark-mode.png"><img src="readme/screenshots/20-dark-mode.png" alt="남색 배경과 밝은 글씨의 홈 화면" width="240"></a></td>
+    <td><a href="readme/screenshots/26-about-dark.png"><img src="readme/screenshots/26-about-dark.png" alt="버전·제작자·문의 링크가 있는 정보 화면" width="240"></a></td>
+    <td><a href="readme/screenshots/30-settings-toggles.png"><img src="readme/screenshots/30-settings-toggles.png" alt="설명 왼쪽·토글 오른쪽으로 정렬한 설정 화면" width="240"></a></td>
   </tr>
 </table>
 
-## 7. 알림과 앱 잠금
+[전체 화면 안내](readme/화면-안내.md) · [스크린샷 원본 ZIP](https://github.com/poyal/perilog/releases/download/v1.0.4/perilog-1.0.4-screenshots.zip)
 
-홈의 미작성 안내는 항상 표시됩니다. 휴대폰 알림도 받고 싶다면 설정에서 **미작성 항목 기기 알림**을 켜고 시간을 지정한 다음 **표시·알림·잠금 설정 저장**을 누릅니다. 기록을 완료한 날에는 알리지 않으며, 절전 상태에 따라 알림과 자동 백업 실행이 늦어질 수 있습니다.
+화면은 v1.0.4의 API 35·36 에뮬레이터에서 가상 데이터로 촬영했습니다. 24·30번은 배포하는 서명 APK, 나머지는 같은 소스의 개발 빌드입니다. 개발 빌드의 업데이트 상태는 검사 응답을 사용한 예시입니다.
 
-**앱 잠금 · 생체 / 기기 인증**은 선택 기능입니다. 앱 잠금은 외부로 내보낸 백업 파일까지 잠그지는 않습니다. 화면 테마는 시스템·밝게·어둡게 중 선택할 수 있습니다.
+## 설치와 업데이트
 
-## 8. 앱 정보와 업데이트 (v1.0.4부터)
+1. 휴대폰에서 [APK](https://github.com/poyal/perilog/releases/download/v1.0.4/perilog-1.0.4.apk)를 내려받아 엽니다.
+2. Android가 요청하면 파일을 연 앱의 **이 출처 허용**을 켜고 설치합니다.
+3. 페리로그를 실행합니다. 계정이나 회원 가입은 필요하지 않습니다.
 
-**설정 → 페리로그 정보**에서 제작자·문의 링크와 현재/최신 버전을 확인합니다. 새 버전이 있으면 앱을 완전히 종료한 뒤 다시 실행할 때 안내합니다. 자동 조회는 하루 한 번이며 수동 확인도 가능합니다.
+**업데이트는 앱을 삭제하지 않고 기존 앱 위에 설치하세요.** v1.0.3 → v1.0.4의 기록·재고·설정·백업 권한 보존을 확인했습니다.
 
-**APK 다운로드 → 체크섬 확인 → 업데이트 설치** 순서로 진행합니다. 처음에는 Android가 페리로그의 ‘이 출처의 앱 설치 허용’을 요청할 수 있습니다. 설치를 취소하거나 보안 설정으로 차단돼도 APK는 **Download 폴더에 보존**됩니다. ‘다운로드 폴더 열기’로 파일을 직접 열 수 있고 설치 성공 후에도 자동 삭제하지 않습니다.
+v1.0.4부터는 **페리로그 정보 → 업데이트 확인 → APK 다운로드 → 업데이트 설치**로 진행할 수 있습니다. 자동 조회는 하루 한 번이며, 확인된 새 버전은 앱을 완전히 종료한 뒤 새로 시작할 때 안내합니다. 설치를 취소하거나 보안 설정으로 차단돼도 APK는 Download 폴더에 남습니다.
 
-기록·재고·백업은 서버에 전송하지 않습니다. 업데이트할 때 기존 앱을 삭제하지 마시고 필요한 데이터는 미리 내보내 두세요.
+## 처음 사용하는 순서
 
-<table>
-  <tr><th>페리로그 정보</th><th>다크모드 정보 화면</th><th>다크모드 재고</th></tr>
-  <tr>
-    <td><a href="readme/screenshots/25-about.png"><img src="readme/screenshots/25-about.png" alt="페리로그 버전과 제작자 및 문의 링크" width="240"></a></td>
-    <td><a href="readme/screenshots/26-about-dark.png"><img src="readme/screenshots/26-about-dark.png" alt="남색 다크모드의 페리로그 정보 화면" width="240"></a></td>
-    <td><a href="readme/screenshots/28-dark-inventory.png"><img src="readme/screenshots/28-dark-inventory.png" alt="카드와 재고 수량이 선명한 다크모드 재고 화면" width="240"></a></td>
-  </tr>
-</table>
+1. **재고 → 품목 관리 · 색상**에서 사용하는 물품을 등록합니다.
+2. **입고 등록**으로 보유 수량을 넣고, **사용 구성 관리**에서 자주 쓰는 조합을 저장합니다.
+3. **설정**에서 이전 최종 주입 설정값을 확인하고 백업 폴더를 연결합니다.
+4. 홈에서 오늘 기록을 시작합니다. 이전 수치는 참고값이므로 오늘 측정값으로 확인한 뒤 저장합니다.
 
-화면은 가상 데이터를 사용한 개발 빌드입니다. 업데이트 화면의 공개 버전 상태는 외부 네트워크 대신 검사 응답을 사용한 예시입니다.
+날짜 선택, 총 제수량 계산 방식, 사용 취소와 재고 조정은 [사용 안내](readme/사용-안내.md)에 정리했습니다.
 
+## 데이터와 백업
 
-## 더 자세히
+기록·재고·설정은 기기 내부에 보관하며, GitHub에는 업데이트 조회·다운로드 요청만 보냅니다. 기록과 백업을 업로드하지 않습니다.
 
-- [설치·사용 상세 안내](readme/사용-안내.md)
-- [개발·빌드·릴리즈 안내](readme/개발-안내.md)
-- [릴리즈 운영 가이드](readme/로컬-검증-후-배포-운영-가이드.md)
-- [계획 및 결정 이력](readme/plan.md)
-- [테스트 결과와 남은 실기기 확인 항목](readme/검증-기록.md)
-- [자동 E2E 실행 방법](readme/E2E-테스트.md)
-- [v1.0.1 변경 내용](readme/releases/v1.0.1.md)
-- [v1.0.3 변경 내용](readme/releases/v1.0.3.md)
-- [v1.0.0 릴리즈 노트](readme/releases/v1.0.0.md)
+**앱 삭제·기기 변경 전에는 설정에서 전체 데이터를 내보내 주세요.** 백업 가져오기는 현재 데이터를 전체 교체하며, 복원 직전 데이터는 앱 내부 보호 백업으로 남깁니다. JSON 백업은 암호화하지 않으며 앱 잠금도 외부 백업 파일에는 적용되지 않습니다.
 
-자동 테스트와 서명 APK 검증의 실행 결과는 [검증 기록](readme/검증-기록.md)에 남깁니다. Z 플립7 실물의 접기·펼치기, 삼성 파일 선택기, 절전 상태의 백업·알림은 별도 확인 대상입니다.
+## 문서와 문의
+
+- [설치·사용 안내](readme/사용-안내.md) · [전체 화면 안내](readme/화면-안내.md)
+- [개발·빌드 안내](readme/개발-안내.md) · [E2E 실행 방법](readme/E2E-테스트.md)
+- [로컬 검증·릴리즈 운영 가이드](readme/로컬-검증-후-배포-운영-가이드.md) · [검증 기록](readme/검증-기록.md)
+- [계획·결정 이력](readme/plan.md) · [이전 릴리즈](https://github.com/poyal/perilog/releases)
+- [버그 신고·기능 제안](https://github.com/poyal/perilog/issues) · [이메일 문의](mailto:poyal.work@gmail.com)
+
+릴리즈는 로컬에서 검증한 서명 APK를 그대로 게시합니다. GitHub Actions는 파일 게시를 담당하며, 무거운 Android 검사는 수동 진단용으로만 실행합니다.

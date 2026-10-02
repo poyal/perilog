@@ -12,11 +12,11 @@
 
 Android 12 이상 · Galaxy Z 플립7 우선 설계 · 로그인 없음 · 외부 API·인터넷 권한 없음 · 기기 내부 저장
 
-**[v1.0.2 APK 다운로드](https://github.com/poyal/perilog/releases/download/v1.0.2/perilog-1.0.2.apk)** · [최신 릴리즈](https://github.com/poyal/perilog/releases/latest) · [스크린샷 원본 ZIP](https://github.com/poyal/perilog/releases/download/v1.0.2/perilog-1.0.2-screenshots.zip)
+**[v1.0.3 APK 다운로드](https://github.com/poyal/perilog/releases/download/v1.0.3/perilog-1.0.3.apk)** · [최신 릴리즈](https://github.com/poyal/perilog/releases/latest) · [스크린샷 원본 ZIP](https://github.com/poyal/perilog/releases/download/v1.0.3/perilog-1.0.3-screenshots.zip)
 
-현재 소스는 **v1.0.3 준비 버전**으로 기록 카드·입력 단계·사용 구성 색상·라인차트를 개선했습니다. 아래 APK 다운로드는 게시된 **v1.0.2**입니다. v1.0.3 APK는 기존 서명 키가 있는 환경에서 빌드하며, 새 릴리즈를 게시하면 다운로드 링크와 화면 캡처도 갱신합니다. 기존 앱을 삭제하지 않고 업데이트하려면 같은 서명 키를 사용해야 합니다.
+**v1.0.3**은 기록 카드·입력 단계·사용 구성 색상·라인차트를 개선했습니다. 기존 v1.0.0~v1.0.2 사용자는 앱을 삭제하지 않고 새 APK를 덮어 설치하면 기록을 유지할 수 있습니다. 같은 서명 키를 사용하며 기존 데이터베이스는 자동으로 이전합니다.
 
-> 기본 화면 23장은 **Android 16 / API 36 에뮬레이터에서 실제 앱을 실행한 캡처**입니다. 가로 키보드 화면 1장은 Android 15 / API 35 수정 확인 화면입니다. 기록·수량·제품 구성은 사용법을 설명하기 위한 예시이며, 실제 사용자 데이터나 기기 설정 권장값이 아닙니다. 이미지를 누르면 원본을 볼 수 있습니다.
+> 화면 24장은 **Android 15 / API 35 에뮬레이터에서 v1.0.3을 실행한 캡처**입니다. 가로 키보드 화면은 배포하는 서명 APK에서 촬영했습니다. 기록·수량·제품 구성은 사용법을 설명하기 위한 예시이며, 실제 사용자 데이터나 기기 설정 권장값이 아닙니다. 이미지를 누르면 원본을 볼 수 있습니다.
 
 <table>
   <tr><th>오늘 할 일</th><th>기록을 모두 마친 날</th><th>재고 한눈에 보기</th></tr>
@@ -94,7 +94,7 @@ Android 12 이상 · Galaxy Z 플립7 우선 설계 · 로그인 없음 · 외�
 <table>
   <tr><th>시작 전 입력</th><th>사용 구성 선택</th><th>종료 후 입력</th></tr>
   <tr>
-    <td><a href="readme/screenshots/02-before-treatment.png"><img src="readme/screenshots/02-before-treatment.png" alt="몸무게와 수축기 이완기 혈압, 숫자 입력 보조 버튼" width="240"></a></td>
+    <td><a href="readme/screenshots/02-before-treatment.png"><img src="readme/screenshots/02-before-treatment.png" alt="활력 상태 단계의 몸무게와 수축기·이완기 혈압 입력" width="240"></a></td>
     <td><a href="readme/screenshots/03-usage-template.png"><img src="readme/screenshots/03-usage-template.png" alt="저장한 사용 구성 선택과 품목별 EA 수량" width="240"></a></td>
     <td><a href="readme/screenshots/04-after-treatment.png"><img src="readme/screenshots/04-after-treatment.png" alt="초기배액량과 기계 제수량을 입력한 치료 기록" width="240"></a></td>
   </tr>
@@ -149,9 +149,9 @@ Android 12 이상 · Galaxy Z 플립7 우선 설계 · 로그인 없음 · 외�
     <td><a href="readme/screenshots/08-record-list.png"><img src="readme/screenshots/08-record-list.png" alt="날짜별 치료 기록 목록" width="270"></a></td>
     <td><a href="readme/screenshots/09-calendar.png"><img src="readme/screenshots/09-calendar.png" alt="월별 캘린더와 선택한 날의 기록" width="270"></a></td>
   </tr>
-  <tr><th>기간별 막대그래프</th><th>날짜별 수치 표</th></tr>
+  <tr><th>기간별 라인차트</th><th>날짜별 수치 표</th></tr>
   <tr>
-    <td><a href="readme/screenshots/10-statistics.png"><img src="readme/screenshots/10-statistics.png" alt="최근 7일 몸무게 평균과 막대그래프" width="270"></a></td>
+    <td><a href="readme/screenshots/10-statistics.png"><img src="readme/screenshots/10-statistics.png" alt="최근 7일 혈압과 체중의 라인차트" width="270"></a></td>
     <td><a href="readme/screenshots/11-statistics-table.png"><img src="readme/screenshots/11-statistics-table.png" alt="통계의 날짜별 수치 표" width="270"></a></td>
   </tr>
 </table>
@@ -219,7 +219,7 @@ Android 12 이상 · Galaxy Z 플립7 우선 설계 · 로그인 없음 · 외�
 - [테스트 결과와 남은 실기기 확인 항목](readme/검증-기록.md)
 - [자동 E2E 실행 방법](readme/E2E-테스트.md)
 - [v1.0.1 변경 내용](readme/releases/v1.0.1.md)
-- [v1.0.3 준비 내용](readme/releases/v1.0.3.md)
+- [v1.0.3 변경 내용](readme/releases/v1.0.3.md)
 - [v1.0.0 릴리즈 노트](readme/releases/v1.0.0.md)
 
 자동 테스트와 서명 APK 검증의 실행 결과는 [검증 기록](readme/검증-기록.md)에 남깁니다. Z 플립7 실물의 접기·펼치기, 삼성 파일 선택기, 절전 상태의 백업·알림은 별도 확인 대상입니다.

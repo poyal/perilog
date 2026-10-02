@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricManager
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -18,7 +19,9 @@ import com.poyal.perilog.R
 import com.poyal.perilog.BuildConfig
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.edit
 import androidx.documentfile.provider.DocumentFile
@@ -73,18 +76,25 @@ import kotlinx.coroutines.withContext
             Section("표시와 안내")
             NumberInput("사용기한 임박 안내",p.expiryDays,{p=p.copy(expiryDays=it?:7)},"일 전")
             Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {listOf("SYSTEM" to "시스템","LIGHT" to "밝게","DARK" to "어둡게").forEach{(id,label)->FilterChip(p.darkMode==id,{p=p.copy(darkMode=id)},{Text(label)})}}
-            Row(verticalAlignment=Alignment.CenterVertically){Switch(p.celebrate,{p=p.copy(celebrate=it)});Text("완료 축하 애니메이션")}
-            Row(verticalAlignment=Alignment.CenterVertically){Switch(p.reminder,{enabled->p=p.copy(reminder=enabled);if(enabled && Build.VERSION.SDK_INT>=33)permission.launch(Manifest.permission.POST_NOTIFICATIONS)});Text("미작성 항목 기기 알림")}
-            if(p.reminder) {
-                AdaptivePair(first={NumberInput("알림 시각",p.reminderHour,{p=p.copy(reminderHour=it?:0)},"시")},second={NumberInput("알림 분",p.reminderMinute,{p=p.copy(reminderMinute=it?:0)},"분")})
-                if(p.reminderHour !in 0..23 || p.reminderMinute !in 0..59)Hint("시는 0~23, 분은 0~59 사이로 입력해 주세요.")
-                Hint("완료된 날에는 알리지 않아요. 휴대폰 절전 상태에 따라 알림이 늦어질 수 있어요.")
+            Column {
+                SettingsSwitch("완료 축하 애니메이션",p.celebrate,{p=p.copy(celebrate=it)})
+                HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
+                SettingsSwitch("미작성 항목 기기 알림",p.reminder,{enabled->
+                    p=p.copy(reminder=enabled)
+                    if(enabled && Build.VERSION.SDK_INT>=33)permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                })
+                if(p.reminder)Column(Modifier.padding(vertical=8.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                    AdaptivePair(first={NumberInput("알림 시각",p.reminderHour,{p=p.copy(reminderHour=it?:0)},"시")},second={NumberInput("알림 분",p.reminderMinute,{p=p.copy(reminderMinute=it?:0)},"분")})
+                    if(p.reminderHour !in 0..23 || p.reminderMinute !in 0..59)Hint("시는 0~23, 분은 0~59 사이로 입력해 주세요.")
+                    Hint("완료된 날에는 알리지 않아요. 휴대폰 절전 상태에 따라 알림이 늦어질 수 있어요.")
+                }
+                HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
+                SettingsSwitch("앱 잠금",p.lock,{enabled->
+                    val authenticators=BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+                    if(!enabled || BiometricManager.from(context).canAuthenticate(authenticators)==BiometricManager.BIOMETRIC_SUCCESS)p=p.copy(lock=enabled)
+                    else vm.act{vm.message.emit("먼저 휴대폰 설정에서 화면 잠금을 설정해 주세요.")}
+                },description="생체 인증 또는 기기 잠금 사용")
             }
-            Row(verticalAlignment=Alignment.CenterVertically){Switch(p.lock,{enabled->
-                val authenticators=BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
-                if(!enabled || BiometricManager.from(context).canAuthenticate(authenticators)==BiometricManager.BIOMETRIC_SUCCESS)p=p.copy(lock=enabled)
-                else vm.act{vm.message.emit("먼저 휴대폰 설정에서 화면 잠금을 설정해 주세요.")}
-            });Text("앱 잠금 · 생체 / 기기 인증")}
             Action("표시·알림·잠금 설정 저장",{vm.preferences(p)})
         }
         Paper {
@@ -125,5 +135,26 @@ import kotlinx.coroutines.withContext
     }}
     if(reset)Confirm("모든 앱 데이터를 초기화할까요?","현재 데이터는 보호 백업으로 남깁니다. 기록·재고·설정을 초기화하고 자동 백업 폴더 연결을 해제합니다. 외부 파일은 삭제하지 않아요.",{reset=false}){
         vm.act("초기화했어요"){vm.app.backup.protect();vm.repository.restore(Snapshot());context.deviceStore.edit{it.clear()};WorkManager.getInstance(context).cancelUniqueWork("perilog-backup");Reminders.schedule(context,Preferences());reset=false;back()}
+    }
+}
+
+@Composable private fun SettingsSwitch(
+    title:String,
+    checked:Boolean,
+    onCheckedChange:(Boolean)->Unit,
+    description:String=""
+) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min=64.dp).clip(MaterialTheme.shapes.small)
+            .toggleable(value=checked,role=Role.Switch,onValueChange=onCheckedChange)
+            .padding(vertical=8.dp),
+        verticalAlignment=Alignment.CenterVertically,
+        horizontalArrangement=Arrangement.spacedBy(16.dp)
+    ) {
+        Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+            Text(title,style=MaterialTheme.typography.bodyLarge)
+            if(description.isNotBlank())Hint(description)
+        }
+        Switch(checked=checked,onCheckedChange=null)
     }
 }

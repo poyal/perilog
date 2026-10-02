@@ -10,6 +10,7 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Brush
@@ -28,10 +29,21 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
     val ready by vm.ready.collectAsStateWithLifecycle()
     val busy by vm.busy.collectAsStateWithLifecycle()
     val date by vm.calendarDay.collectAsStateWithLifecycle()
+    val now by vm.localNow.collectAsStateWithLifecycle()
+    val screenState=rememberSaveableStateHolder()
+    val focus=androidx.compose.ui.platform.LocalFocusManager.current
+    val keyboard=androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     var stack by rememberSaveable{mutableStateOf(listOf("home"))}
     var tab by rememberSaveable{mutableStateOf("home")}
     var editingId by rememberSaveable{mutableStateOf<String?>(null)}
     LaunchedEffect(ready, unlocked) { if (ready && unlocked) updates.startSession() }
+    DisposableEffect(lifecycle) {
+        val observer=androidx.lifecycle.LifecycleEventObserver{_,event->
+            if(event==androidx.lifecycle.Lifecycle.Event.ON_RESUME)vm.refreshClock()
+        }
+        lifecycle.lifecycle.addObserver(observer)
+        onDispose{lifecycle.lifecycle.removeObserver(observer)}
+    }
     LaunchedEffect(lifecycle, unlocked) {
         if (unlocked) lifecycle.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
             while (kotlinx.coroutines.currentCoroutineContext().isActive) {
@@ -42,17 +54,19 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
     }
     val route=stack.last()
     val rootTabs=listOf("home","records","stats","stock")
-    val management=route.contains('/')
+    val editing=route.contains('/')
+    val management=editing || route in listOf("appointments","departments","careTemplates","contacts","stockHistory","receipts")
     val snackbar=remember{SnackbarHostState()}
     LaunchedEffect(Unit){vm.message.collect{snackbar.showSnackbar(it)}}
     LaunchedEffect(route){snackbar.currentSnackbarData?.dismiss()}
-    fun navigate(to:String){if(to in rootTabs){stack=listOf(to);tab=to}else stack=stack+to}
-    fun back(){if(stack.size>1)stack=stack.dropLast(1)}
+    fun navigate(to:String){focus.clearFocus();keyboard?.hide();if(to in rootTabs){stack.filter{it!=to}.forEach{screenState.removeState(it)};stack=listOf(to);tab=to}else if(to!=route)stack=stack+to}
+    fun back(){if(stack.size>1){focus.clearFocus();keyboard?.hide();screenState.removeState(stack.last());stack=stack.dropLast(1)}}
     fun editor(id:String?=null,kind:String="MACHINE",day:String=com.poyal.perilog.data.today()){
         vm.edit(id,kind,day);editingId=vm.editor.value?.id;navigate("edit")
     }
     LaunchedEffect(ready,route){if(ready && route=="edit" && vm.editor.value==null){if(editingId!=null && (s.treatments.any{it.id==editingId} || s.drafts.any{it.id==editingId}))vm.edit(editingId)else back()}}
-    BackHandler(stack.size>1 && !management){back()}
+    val readOnly=route.startsWith("stock/") || route.startsWith("stockHistory/")
+    BackHandler(stack.size>1 && (!editing || readOnly)){back()}
     CompositionLocalProvider(LocalInputErrors provides vm.inputErrors){PerilogTheme(s.preferences.darkMode){
         val colors=MaterialTheme.colorScheme
         if (ready && unlocked) UpdatePrompt(updateState, updates::dismissPrompt) {
@@ -67,22 +81,34 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
             }}){padding->
             Box(Modifier.fillMaxSize().background(colors.background)
                 .padding(padding).consumeWindowInsets(padding).imePadding()) {
-                if(!ready)CircularProgressIndicator(Modifier.align(Alignment.Center))else key(route){when {
-                    route=="home"->HomeScreen(s,vm,date,{navigate("settings")},{id,kind,day->editor(id,kind,day)},{navigate("records")},{navigate("stock")})
+                if(!ready)CircularProgressIndicator(Modifier.align(Alignment.Center))else key(route){screenState.SaveableStateProvider(route){when {
+                    route=="home"->HomeScreen(s,vm,date,{navigate("settings")},{id,kind,day->editor(id,kind,day)},::navigate,{navigate("stock")})
                     route=="records"->RecordsScreen(s,vm,snackbar){id,kind,day->editor(id,kind,day)}
                     route=="stats"->StatsScreen(s,vm){editor(it)}
                     route=="stock"->StockScreen(s,vm,::navigate)
                     route=="products"->ProductsScreen(s,::navigate,::back)
                     route=="templates"->TemplatesScreen(s,vm,::navigate,::back)
-                    route=="receipts"->ReceiptsScreen(s,vm,::navigate,::back)
+                    route=="stockHistory" || route=="receipts"->StockHistoryScreen(s,vm,null,::navigate,::back){editor(it)}
                     route=="about"->AboutScreen(updates,::back)
                     route=="settings"->SettingsScreen(s,vm,::navigate,::back)
                     route=="edit"->TreatmentScreen(s,vm,::back)
+                    route=="appointments"->AppointmentsScreen(s,vm,now,::navigate,::back)
+                    route=="departments"->DepartmentsScreen(s,vm,::navigate,::back)
+                    route=="careTemplates"->CareTemplatesScreen(s,vm,::navigate,::back)
+                    route=="contacts"->ContactsScreen(s,vm,::navigate,::back)
+                    route.startsWith("appointment/next/")->AppointmentEditor(s,vm,route.substringAfterLast('/'),true,::navigate,::back)
+                    route.startsWith("appointment/")->AppointmentEditor(s,vm,route.substringAfter('/'),false,::navigate,::back)
+                    route.startsWith("department/")->DepartmentEditor(s,vm,route.substringAfter('/'),::back)
+                    route.startsWith("care/")->CareTemplateEditor(s,vm,route.substringAfter('/'),::back)
+                    route.startsWith("contact/")->ContactEditor(s,vm,route.substringAfter('/'),::back)
                     route.startsWith("product/")->ProductEditor(s,vm,route.substringAfter('/'),::back)
                     route.startsWith("template/")->TemplateEditor(s,vm,route.substringAfter('/'),::back)
                     route.startsWith("receipt/")->ReceiptEditor(s,vm,route.substringAfter('/'),::back)
-                    route.startsWith("stock/")->StockDetailScreen(s,vm,route.substringAfter('/'),::back)
-                }}
+                    route.startsWith("stockHistory/")->StockHistoryScreen(s,vm,route.substringAfter('/'),::navigate,::back){editor(it)}
+                    route.startsWith("stock/")->StockDetailScreen(s,route.substringAfter('/'),::navigate,::back)
+                    route.startsWith("count/")->StockCountScreen(s,vm,route.substringAfter('/'),::back)
+                    route.startsWith("adjustment/")->StockAdjustmentScreen(s,vm,route.substringAfter('/'),::back)
+                }}}
                 if(busy)LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))
             }
         }

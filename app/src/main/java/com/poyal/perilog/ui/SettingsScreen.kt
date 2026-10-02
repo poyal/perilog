@@ -60,6 +60,16 @@ import kotlinx.coroutines.withContext
     }
     Page("설정","내 기록과 사용 방식을 관리해요",back) {
         Paper {
+            Section("병원 일정·연락처")
+            HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
+            MenuRow("병원 일정 관리","예약 날짜·시간·메모를 관리해요",Icons.Outlined.Event){navigate("appointments")}
+            MenuRow("진료과 관리","여러 진료과를 색상으로 구분해요",Icons.Outlined.Palette){navigate("departments")}
+            MenuRow("치료 구성 관리","검사·치료를 한 항목씩 등록해요",Icons.Outlined.MedicalServices){navigate("careTemplates")}
+            MenuRow("연락처 관리","아바타와 전화·문자 허용을 설정해요",Icons.Outlined.ContactPhone){navigate("contacts")}
+        }
+        Paper {
+            Section("투석 물품·사용 구성")
+            HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
             MenuRow("사용 구성 관리","품목별 색상과 EA 수량을 함께 설정해요",Icons.Outlined.ViewList){navigate("templates")}
             HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
             MenuRow("품목 관리 · 색상",icon=Icons.Outlined.Inventory2){navigate("products")}
@@ -74,7 +84,6 @@ import kotlinx.coroutines.withContext
         }
         Paper {
             Section("표시와 안내")
-            NumberInput("사용기한 임박 안내",p.expiryDays,{p=p.copy(expiryDays=it?:7)},"일 전")
             Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {listOf("SYSTEM" to "시스템","LIGHT" to "밝게","DARK" to "어둡게").forEach{(id,label)->FilterChip(p.darkMode==id,{p=p.copy(darkMode=id)},{Text(label)})}}
             Column {
                 SettingsSwitch("완료 축하 애니메이션",p.celebrate,{p=p.copy(celebrate=it)})
@@ -100,6 +109,7 @@ import kotlinx.coroutines.withContext
         Paper {
             Section("데이터 내보내기 · 가져오기")
             Text("기록 ${s.treatments.size}건 · 품목 ${s.products.size}개 · 입고 ${s.receipts.count{!it.cancelled}}건")
+            Hint("병원 일정 ${s.appointments.size}건 · 진료과 ${s.departments.size}개 · 치료 구성 ${s.careTemplates.size}개 · 연락처 ${s.contacts.size}개도 함께 보관해요.")
             Action("전체 데이터 내보내기",{export.launch("perilog-${today()}.json")})
             OutlinedButton(onClick={import.launch(arrayOf("application/json","text/plain","application/octet-stream"))},Modifier.fillMaxWidth()){Text("백업 파일 가져오기")}
             Hint("가져오기는 전체 교체예요. 파일을 확인하고 현재 데이터를 보호 백업한 뒤 복원해요. 백업 JSON에는 암호가 없으므로 보관 위치를 확인해 주세요.")
@@ -130,7 +140,7 @@ import kotlinx.coroutines.withContext
         Hint("${stringResource(R.string.app_name)} ${BuildConfig.VERSION_NAME} · 기기 내부 저장")
         Hint(stringResource(R.string.app_description))
     }
-    restoring?.let{incoming->Confirm("백업으로 전체 복원할까요?","${Instant.ofEpochMilli(incoming.exportedAt).atZone(ZoneId.systemDefault()).toLocalDateTime()}\n치료 ${incoming.treatments.size}건 · 품목 ${incoming.products.size}개 · 입고 ${incoming.receipts.size}건\n현재 데이터는 앱 내부에 보호 백업한 뒤 교체합니다.",{restoring=null}){
+    restoring?.let{incoming->Confirm("백업으로 전체 복원할까요?","${Instant.ofEpochMilli(incoming.exportedAt).atZone(ZoneId.systemDefault()).toLocalDateTime()}\n치료 ${incoming.treatments.size}건 · 품목 ${incoming.products.size}개 · 입고 ${incoming.receipts.size}건\n병원 일정 ${incoming.appointments.size}건 · 진료과 ${incoming.departments.size}개 · 치료 구성 ${incoming.careTemplates.size}개 · 연락처 ${incoming.contacts.size}개\n현재 데이터는 앱 내부에 보호 백업한 뒤 교체합니다.",{restoring=null}){
         vm.act("데이터를 복원했어요"){vm.app.backup.restore(incoming);Reminders.schedule(context,incoming.preferences);restoring=null;back()}
     }}
     if(reset)Confirm("모든 앱 데이터를 초기화할까요?","현재 데이터는 보호 백업으로 남깁니다. 기록·재고·설정을 초기화하고 자동 백업 폴더 연결을 해제합니다. 외부 파일은 삭제하지 않아요.",{reset=false}){

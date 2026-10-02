@@ -34,11 +34,6 @@ fun Treatment.compositionColor(s:Snapshot):Long? = s.templates.find{it.id==usage
 fun Snapshot.visibleRecords()=treatments + drafts.filter { draft -> treatments.none{it.id==draft.id} }
     .map { it.treatment.copy(saved=false,usageConfirmed=false) }
 
-fun expiryState(expiry: String?, remaining: Int, on: String, days: Int): String? {
-    if(expiry==null || remaining<=0) return null
-    val difference=java.time.temporal.ChronoUnit.DAYS.between(LocalDate.parse(on),LocalDate.parse(expiry))
-    return when { difference<0 -> "사용기한 지남";difference==0L -> "오늘까지";difference<=days -> "사용기한 ${difference}일 남음";else -> null }
-}
 fun List<Treatment>.dayComplete(date: String): Boolean {
     val entries = filter { it.date == date }
     return entries.any { it.kind == "MACHINE" && it.complete() } && entries.all { it.complete() }
@@ -55,16 +50,7 @@ fun Snapshot.yesterdaySummary(on:String):YesterdaySummary {
 fun Preferences.basisOn(date: String) = basis.filter { it.from <= date }.maxByOrNull { it.from }?.ml ?: 2000
 
 fun newTreatment(s: Snapshot, kind: String, date: String): Treatment {
-    val eligible = s.treatments.filter { it.saved && (it.date < date || (kind == "MANUAL" && it.date == date)) }
-    val previous = eligible.filter { it.kind == kind && it.usageConfirmed }.maxWithOrNull(compareBy<Treatment> { it.date }.thenBy { it.createdAt })?.withUsageTemplate(s)
-    val measurements = eligible.filter { it.weightGrams != null || it.systolic != null }.maxWithOrNull(compareBy<Treatment> { it.date }.thenBy { it.createdAt })
     return Treatment(date = date, kind = kind,
-        weightGrams = if(kind == "MACHINE") measurements?.weightGrams else null,
-        systolic = if(kind == "MACHINE") measurements?.systolic else null,
-        diastolic = if(kind == "MACHINE") measurements?.diastolic else null,
-        sourceDate = measurements?.date, items = previous?.items?.map { it.copy(batchId = null) } ?: emptyList(),
-        usageTemplateId = previous?.usageTemplateId, usageTemplateName = previous?.usageTemplateName,
-        usageTemplateColor = previous?.usageTemplateColor,
         basisMl = if(kind == "MACHINE") s.preferences.basisOn(date) else null,
         drainUnit = if(kind == "MANUAL") s.preferences.lastDrainUnit else "mL")
 }
@@ -82,6 +68,16 @@ fun inventory(s: Snapshot, through: String = today()): StockResult {
     val debt = mutableMapOf<String, Int>()
     val allocations = mutableListOf<Allocation>()
     val events = mutableListOf<Event>()
+    fun consume(productId:String,quantity:Int,batchId:String?=null,usageId:String?=null) {
+        var need=quantity
+        // Lots already follow event date and entry order. Legacy expiry metadata is ignored.
+        val candidates=lots.filter{it.productId==productId && it.remaining>0 && (batchId==null || it.id==batchId)}
+        candidates.forEach{lot->
+            val take=minOf(need,lot.remaining)
+            if(take>0){lot.remaining-=take;need-=take;usageId?.let{allocations+=Allocation(it,productId,lot.id,take)}}
+        }
+        if(need>0){debt[productId]=(debt[productId] ?: 0)+need;usageId?.let{allocations+=Allocation(it,productId,null,need)}}
+    }
     s.receipts.filter { !it.cancelled && it.date <= through }.forEach { r -> events += Event(r.date,r.createdAt,r.id) {
         r.lines.forEach { line ->
             known += line.productId
@@ -96,17 +92,14 @@ fun inventory(s: Snapshot, through: String = today()): StockResult {
     } }
     s.usages.filter { !it.cancelled && it.date <= through }.forEach { u -> events += Event(u.date,u.createdAt,u.id) {
         u.items.forEach { item ->
-            var need = item.quantity
-            val candidates = lots.filter { it.productId == item.productId && it.remaining > 0 &&
-                (if(item.batchId != null) it.id == item.batchId else it.expiry == null || it.expiry >= u.date) }
-                .sortedWith(compareBy<Lot> { it.expiry ?: "9999-12-31" }.thenBy { it.date }.thenBy { it.id })
-            candidates.forEach { lot ->
-                val take = minOf(need,lot.remaining)
-                if(take > 0) { lot.remaining -= take; need -= take; allocations += Allocation(u.id,item.productId,lot.id,take) }
-            }
-            if(need > 0) { debt[item.productId] = (debt[item.productId] ?: 0) + need; allocations += Allocation(u.id,item.productId,null,need) }
+            consume(item.productId,item.quantity,item.batchId,u.id)
         }
     } }
+    s.adjustments.filter{!it.cancelled && it.date<=through}.forEach{a->events+=Event(a.date,a.createdAt,a.id) {
+        known+=a.productId
+        if(a.delta>0)lots+=Lot(a.id,a.productId,null,a.date,a.delta)
+        else consume(a.productId,-a.delta)
+    }}
     events.sortedWith(compareBy<Event>{it.date}.thenBy{it.at}.thenBy{it.id}).forEach { it.action() }
     return StockResult(s.products.associate { p ->
         val pLots = lots.filter { it.productId == p.id }
@@ -116,13 +109,16 @@ fun inventory(s: Snapshot, through: String = today()): StockResult {
 
 fun validate(s: Snapshot) {
     require(s.formatVersion == 1) { "지원하지 않는 백업 버전입니다." }
+    validateAppointments(s)
     fun unique(ids: List<String>) { require(ids.all { it.isNotBlank() } && ids.distinct().size == ids.size) { "중복되거나 빈 ID가 있습니다." } }
     unique(s.products.map{it.id}); unique(s.templates.map{it.id}); unique(s.treatments.map{it.id})
     unique(s.usages.map{it.id}); unique(s.receipts.map{it.id}); unique(s.counts.map{it.id}); unique(s.audit.map{it.id})
+    unique(s.adjustments.map{it.id})
     unique(s.drafts.map{it.id})
-    unique(s.receipts.flatMap{it.lines}.map{it.id} + s.counts.map{it.id})
+    unique(s.receipts.flatMap{it.lines}.map{it.id} + s.counts.map{it.id} + s.adjustments.map{it.id})
     val products = s.products.map { it.id }.toSet()
-    val batches = s.receipts.flatMap{it.lines}.associate{it.id to it.productId} + s.counts.associate{it.id to it.productId}
+    val batches = s.receipts.flatMap{it.lines}.associate{it.id to it.productId} + s.counts.associate{it.id to it.productId} +
+        s.adjustments.filter{it.delta>0}.associate{it.id to it.productId}
     fun date(d: String) { LocalDate.parse(d) }
     fun items(lines: List<Item>) {
         unique(lines.map{it.productId})
@@ -142,6 +138,7 @@ fun validate(s: Snapshot) {
     s.usages.forEach { date(it.date); items(it.items) }
     s.receipts.forEach { r -> date(r.date); r.lines.forEach { require(it.productId in products && it.quantity in 1..100000); it.expiry?.let(::date) } }
     s.counts.forEach { date(it.date); require(it.productId in products && it.quantity in 0..1000000) }
+    s.adjustments.forEach{date(it.date);require(it.productId in products && it.delta in -100000..100000 && it.delta!=0 && it.memo.isNotBlank()){"조정 수량과 사유를 확인해 주세요."}}
     val p=s.preferences
     require(p.expiryDays in 0..3650 && p.backupDays in listOf(1,7) && p.keepBackups in 1..365)
     require(p.reminderHour in 0..23 && p.reminderMinute in 0..59 && p.darkMode in listOf("SYSTEM","LIGHT","DARK"))

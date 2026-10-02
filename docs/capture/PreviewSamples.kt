@@ -61,8 +61,7 @@ class PreviewSamples {
         }
         val receipt=Receipt(id="preview-delivery",date=date.minusDays(20).toString(),createdAt=1,
             lines=products.map{ReceiptLine(id="preview-lot-${it.id}",productId=it.id,
-                quantity=if(it.kind=="투석액")30 else 40,
-                expiry=if(it.id=="preview-d15")date.plusDays(3).toString()else null)},memo="샘플 정기 입고")
+                quantity=if(it.kind=="투석액")30 else 40)},memo="샘플 정기 입고")
         val templates=listOf(
             UsageTemplate(id="preview-night",name="밤 투석 · 1.5 + 2.5",items=composition),
             UsageTemplate(id="preview-manual",name="추가투석 · 1.5 + 라인",items=manualItems,color=0xFF8772B5))

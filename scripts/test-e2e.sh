@@ -6,7 +6,7 @@ PERILOG_SERIAL="${PERILOG_SERIAL:-emulator-5554}"
 case "$PERILOG_SERIAL" in emulator-*) ;; *) echo 'PERILOG_SERIAL must be a development emulator.' >&2; exit 1;; esac
 PERILOG_PROFILE="${1:-normal}"
 case "$PERILOG_PROFILE" in normal|large|all) ;; *) echo 'Usage: test-e2e.sh [normal|large|all]' >&2; exit 1;; esac
-PERILOG_TEST_TARGET="${PERILOG_TEST_TARGET:-com.poyal.perilog.AppFlowTest}"
+PERILOG_TEST_TARGET="${PERILOG_TEST_TARGET:-com.poyal.perilog.AppFlowTest,com.poyal.perilog.AppointmentFlowTest}"
 PERILOG_RESULTS_DIR="${PERILOG_RESULTS_DIR:-$PWD/.tools/e2e-results}"
 export ANDROID_SERIAL="$PERILOG_SERIAL"
 PERILOG_ADB="${ANDROID_HOME:-$PWD/.tools/android-sdk}/platform-tools/adb"

@@ -5,6 +5,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.MoreVert
@@ -42,13 +43,16 @@ import kotlinx.coroutines.launch
     var itemDetailsId by rememberSaveable{mutableStateOf<String?>(null)}
     val scope=rememberCoroutineScope()
     val entries=s.visibleRecords().sortedWith(compareByDescending<Treatment>{it.date}.thenByDescending{it.createdAt})
-    Page("기록","하루의 기록을 차곡차곡") {
+    Page("기록","하루의 기록을 차곡차곡",actions={
+        IconButton(onClick={newDate=if(calendar)selected else today();adding=!adding},modifier=Modifier.size(48.dp)) {
+            Icon(Icons.Outlined.Add,"기록 추가",Modifier.size(28.dp),tint=MaterialTheme.colorScheme.primary)
+        }
+    }) {
         FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             listOf("리스트","캘린더","표").forEach{label->FilterChip(mode==label,{
                 mode=label
                 if(label=="표" && range=="전체"){range="7D";period=true;from=LocalDate.now().minusDays(6).toString();to=today()}
             },{Text(label)})}
-            TextButton(onClick={newDate=if(calendar)selected else today();adding=!adding}){Text("+ 기록")}
         }
         if(adding)Paper {
             Section("기록 추가")
@@ -70,8 +74,8 @@ import kotlinx.coroutines.launch
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween) {
                 TextButton(onClick={month=ym.minusMonths(1).toString()}){Text("이전")};Section("${ym.year}년 ${ym.monthValue}월");TextButton(onClick={month=ym.plusMonths(1).toString()}){Text("다음")}
             }
-            Row { listOf("월","화","수","목","금","토","일").forEach{Box(Modifier.weight(1f),contentAlignment=Alignment.Center){Hint(it)}} }
-            val offset=ym.atDay(1).dayOfWeek.value-1
+            CalendarWeekdayHeader()
+            val offset=ym.atDay(1).dayOfWeek.value%7
             val rows=(offset+ym.lengthOfMonth()+6)/7
             repeat(rows) { week -> Row(Modifier.fillMaxWidth()) {
                 repeat(7){weekday ->
@@ -80,7 +84,7 @@ import kotlinx.coroutines.launch
                         val date=ym.atDay(day).toString();val count=entries.count{it.date==date}
                         val color=if(date==selected)MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
                         Column(Modifier.weight(1f).heightIn(min=54.dp).background(color,RoundedCornerShape(10.dp)).clickable{selected=date}.padding(vertical=6.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-                            Text(day.toString());if(count>0) Hint(if(entries.dayComplete(date))"✓ $count"else"· $count")
+                            Text(day.toString(),color=calendarDayColor(ym.atDay(day).dayOfWeek));if(count>0) Hint(if(entries.dayComplete(date))"✓ $count"else"· $count")
                         }
                     }
                 }
@@ -117,8 +121,7 @@ import kotlinx.coroutines.launch
                         ProductLine(s,item)
                         item.batchId?.let{batchId->
                             s.receipts.firstOrNull{receipt->receipt.lines.any{it.id==batchId}}?.let{receipt->
-                                val line=receipt.lines.first{it.id==batchId}
-                                Hint("${receipt.date} 입고 · ${line.expiry?.let{"사용기한 $it"} ?: "사용기한 무관"}")
+                                Hint("${receipt.date} 입고")
                             }
                             s.counts.find{it.id==batchId}?.let{Hint("${it.date} 재고 확인분")}
                         }
@@ -129,11 +132,13 @@ import kotlinx.coroutines.launch
             confirmButton={TextButton(onClick={itemDetailsId=null}){Text("닫기")}},
             dismissButton={if(usage!=null && !usage.cancelled && usage.items.isNotEmpty())TextButton(onClick={itemDetailsId=null;cancelling=usage}){Text("사용 취소",color=MaterialTheme.colorScheme.secondary)}})
     }
-    deleting?.let{t->Confirm("${if(t.saved)"기록"else"초안"}을 삭제할까요?","실제 사용한 물품의 재고 차감은 유지돼요. 잘못 입력한 사용은 사용 구성 상세의 ‘사용 취소’로 되돌릴 수 있어요.",{deleting=null}){
+    deleting?.let{t->Confirm("${if(t.saved)"기록"else"초안"}을 삭제할까요?",
+        if(t.saved)"연결된 물품 사용도 함께 취소해 재고에 반영해요. ‘되돌리기’로 기록과 사용 내역을 함께 복구할 수 있어요."
+        else "저장하지 않은 초안을 삭제해요. 재고는 바뀌지 않아요.",{deleting=null}){
         vm.act {
-            if(t.saved)vm.repository.deleteTreatment(t.id)else vm.repository.discardDraft(t.id)
+            val deleted=if(t.saved)vm.repository.deleteTreatment(t.id)else{vm.repository.discardDraft(t.id);null}
             deleting=null
-            if(t.saved)scope.launch { if(snackbar.showSnackbar("기록을 삭제했어요","되돌리기",duration=SnackbarDuration.Long)==SnackbarResult.ActionPerformed)vm.act{vm.repository.undoDelete(t)} }
+            if(deleted!=null)scope.launch { if(snackbar.showSnackbar("기록을 삭제했어요","되돌리기",duration=SnackbarDuration.Long)==SnackbarResult.ActionPerformed)vm.act{vm.repository.undoDelete(deleted)} }
         }
     }}
     cancelling?.let{u->Confirm("잘못 입력한 사용을 취소할까요?","${u.items.joinToString{it.name+" ${it.quantity}EA"}}의 차감을 되돌립니다. 실제 사용한 물품이면 취소하지 마세요.",{cancelling=null}){vm.act("사용 내역을 취소했어요"){vm.repository.cancelUsage(u.id);cancelling=null}}}

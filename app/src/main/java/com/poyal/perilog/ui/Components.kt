@@ -34,6 +34,16 @@ import java.math.BigDecimal
 
 val LocalInputErrors=staticCompositionLocalOf<MutableMap<String,String>>{mutableMapOf()}
 val Coral=Color(0xFFF47761)
+@Composable fun CompletionBadge(done:Boolean) {
+    Surface(shape=CircleShape,color=if(done)MaterialTheme.colorScheme.primary else Color.Transparent,
+        border=if(done)null else BorderStroke(1.5.dp,Coral),modifier=Modifier.size(32.dp).semantics {
+            stateDescription=if(done)"완료"else"미입력"
+        }) {
+        Box(contentAlignment=Alignment.Center) {
+            if(done)Icon(Icons.Outlined.Check,null,Modifier.size(21.dp),tint=MaterialTheme.colorScheme.onPrimary)
+        }
+    }
+}
 internal val light=lightColorScheme(
     primary=Color(0xFF2476CF),onPrimary=Color.White,primaryContainer=Color(0xFFDDEFFF),onPrimaryContainer=Color(0xFF12345A),
     secondary=Color(0xFFB34E3B),onSecondary=Color.White,secondaryContainer=Color(0xFFFFEAE3),onSecondaryContainer=Color(0xFF873B2E),
@@ -70,6 +80,11 @@ internal val dark=darkColorScheme(
         shapes=Shapes(extraSmall=RoundedCornerShape(8.dp),small=RoundedCornerShape(12.dp),medium=RoundedCornerShape(18.dp),large=RoundedCornerShape(24.dp),extraLarge=RoundedCornerShape(28.dp)),content=content)
 }
 
+@Composable fun SettingsIconButton(onClick:()->Unit) {
+    IconButton(onClick=onClick,modifier=Modifier.size(48.dp)) {
+        Icon(Icons.Outlined.Settings,"설정",Modifier.size(28.dp))
+    }
+}
 @Composable fun ScreenHeader(title:String,subtitle:String="",back:(()->Unit)?=null,brand:Boolean=false,actions:@Composable RowScope.()->Unit={}) {
     Row(Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
         if(back!=null) IconButton(onClick=back,Modifier.size(48.dp)){Icon(Icons.AutoMirrored.Outlined.ArrowBack,"뒤로")}
@@ -195,16 +210,31 @@ internal val dark=darkColorScheme(
         else Row(horizontalArrangement=Arrangement.spacedBy(14.dp)){Column(Modifier.weight(1f)){first()};Column(Modifier.weight(1f)){second()}}
     }
 }
+@Composable fun calendarDayColor(day:DayOfWeek,normal:Color=MaterialTheme.colorScheme.onSurface):Color = when(day) {
+    DayOfWeek.SUNDAY->MaterialTheme.colorScheme.error
+    DayOfWeek.SATURDAY->MaterialTheme.colorScheme.primary
+    else->normal
+}
+@Composable fun CalendarWeekdayHeader() {
+    Row {
+        listOf("일","월","화","수","목","금","토").forEachIndexed{index,label->
+            Box(Modifier.weight(1f),contentAlignment=Alignment.Center) {
+                Text(label,style=MaterialTheme.typography.bodyMedium,
+                    color=calendarDayColor(DayOfWeek.of(if(index==0)7 else index),MaterialTheme.colorScheme.onSurfaceVariant))
+            }
+        }
+    }
+}
 @Composable fun DateControl(date:String,onChange:(String)->Unit,label:String="날짜") {
     var open by rememberSaveable{mutableStateOf(false)}
-    var month by rememberSaveable{mutableStateOf(date.take(7))}
+    var month by rememberSaveable{mutableStateOf(date.ifBlank{today()}.take(7))}
     Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
-        Text("$label ${date.replace('-', '.')}",fontWeight=FontWeight.SemiBold)
+        Text(if(date.isBlank())"$label 선택해 주세요"else"$label ${date.replace('-', '.')}",fontWeight=FontWeight.SemiBold)
         Surface(shape=RoundedCornerShape(18.dp),color=MaterialTheme.colorScheme.surface) {
             FlowRow(Modifier.fillMaxWidth().padding(4.dp),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
                 FilterChip(date==today(),{onChange(today())},{Text("오늘")},border=null)
                 FilterChip(date==LocalDate.now().minusDays(1).toString(),{onChange(LocalDate.now().minusDays(1).toString())},{Text("어제")},border=null)
-                TextButton(onClick={month=date.take(7);open=!open}){Icon(Icons.Outlined.CalendarMonth,null,Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(if(open)"날짜 선택 접기"else"날짜 선택")}
+                TextButton(onClick={month=date.ifBlank{today()}.take(7);open=!open}){Icon(Icons.Outlined.CalendarMonth,null,Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(if(open)"날짜 선택 접기"else"날짜 선택")}
             }
         }
         if(open)Paper {
@@ -215,15 +245,15 @@ internal val dark=darkColorScheme(
                 IconButton(onClick={month=ym.plusMonths(1).toString()}){Icon(Icons.Outlined.ChevronRight,"다음 달")}
             }
             Column(Modifier.horizontalScroll(rememberScrollState()).width(336.dp)) {
-                Row {listOf("월","화","수","목","금","토","일").forEach{Box(Modifier.weight(1f),contentAlignment=Alignment.Center){Hint(it)}}}
-                val offset=ym.atDay(1).dayOfWeek.value-1
+                CalendarWeekdayHeader()
+                val offset=ym.atDay(1).dayOfWeek.value%7
                 repeat((offset+ym.lengthOfMonth()+6)/7){w->Row {
                     repeat(7){d->val day=w*7+d-offset+1
                         if(day !in 1..ym.lengthOfMonth())Spacer(Modifier.weight(1f).height(48.dp))else {
                             val selected=ym.atDay(day).toString()
                             Box(Modifier.weight(1f).height(48.dp).clip(RoundedCornerShape(12.dp))
                                 .background(if(selected==date)MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                                .clickable{onChange(selected);open=false}.semantics{contentDescription=selected},contentAlignment=Alignment.Center){Text(day.toString())}
+                                .clickable{onChange(selected);open=false}.semantics{contentDescription=selected},contentAlignment=Alignment.Center){Text(day.toString(),color=calendarDayColor(ym.atDay(day).dayOfWeek))}
                         }
                     }
                 }}

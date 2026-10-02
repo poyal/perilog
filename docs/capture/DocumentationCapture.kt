@@ -6,6 +6,7 @@ import android.os.SystemClock
 import android.view.inputmethod.InputMethodManager
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -33,6 +34,8 @@ class DocumentationCapture {
         Product(id="cassette",name="카세트",kind="소모품",color=0xFF647789),
         Product(id="line",name="손투석 라인",kind="소모품",color=0xFF8772B5))
     private val composition=listOf(0,1,4).map { Item(products[it].id,products[it].name,1) }
+    private val departments=listOf(Department("kidney","신장내과",0xFF2167B8),Department("heart","심장내과",0xFF47956E))
+    private val careItems=listOf(CareTemplate("blood","피검사",iconKey="blood"),CareTemplate("medicine","약 처방",iconKey="medicine"))
     private fun seed(completeToday:Boolean=false) {
         val history=(1..14).map { n->
             Treatment(id="day-$n",date=today.minusDays(n.toLong()).toString(),weightGrams=62000+(n%5)*100,
@@ -41,23 +44,34 @@ class DocumentationCapture {
         }
         val current=Treatment(id="today",date=today.toString(),weightGrams=62300,systolic=120,diastolic=80,
             initialDrain=if(completeToday)2300 else null,machineUf=if(completeToday)600 else null,
-            items=composition,usageConfirmed=true,saved=true,sourceDate=today.minusDays(1).toString(),createdAt=1000L)
+            items=composition,usageConfirmed=true,saved=true,createdAt=1000L)
         val entries=history+current
         val receipt=Receipt(id="delivery",date=today.minusDays(20).toString(),createdAt=1,
             lines=products.map{ReceiptLine(id="lot-${it.id}",productId=it.id,quantity=if(it.kind=="투석액")30 else 40,
-                expiry=if(it.id=="d15")today.plusDays(3).toString()else null)},memo="월 정기 물품 입고")
+                expiry=null)},memo="월 정기 물품 입고")
         runBlocking { app.repository.restore(Snapshot(products=products,
             templates=listOf(UsageTemplate(id="night",name="밤 투석 · 1.5 + 2.5",items=composition),
                 UsageTemplate(id="manual",name="추가투석 · 1.5 + 라인",items=listOf(Item("d15","투석액 1.5%",1),Item("line","손투석 라인",1)))),
             treatments=entries,usages=entries.map{Usage(it.id,it.date,it.items,it.kind,it.createdAt)},receipts=listOf(receipt),
-            preferences=Preferences(celebrate=false,darkMode="LIGHT"))) }
+            preferences=Preferences(celebrate=false,darkMode="LIGHT"),departments=departments,careTemplates=careItems,
+            appointments=listOf(Appointment(id="next-visit",date=today.plusDays(7).toString(),departments=departments,
+                departmentTimes=mapOf("kidney" to "09:30","heart" to "10:20"),
+                careItems=careItems.map{CareTask(it.id,it.name,it.iconKey)},memo="진료 전 피검사 · 기록 수첩 챙기기")),
+            contacts=listOf(Contact("room","투석실","032-000-0000",emoji="🏥"),
+                Contact("center","고객센터","1577-0000",emoji="☎️",allowSms=false),
+                Contact("nurse","간호사","010-0000-0000",emoji="🧑‍⚕️")))) }
     }
     private fun show(node:SemanticsNodeInteraction):SemanticsNodeInteraction {val parents=node.onAncestors().filter(hasScrollAction())
         for(index in parents.fetchSemanticsNodes().indices.reversed())runCatching{parents[index].performScrollTo()}
         runCatching{node.performScrollTo()}
         return node}
     private fun click(text:String) {show(ui.onNodeWithText(text)).performClick()}
-    private fun tab(text:String) {ui.onNodeWithText(text,useUnmergedTree=true).performClick()}
+    private fun tab(text:String) {
+        ui.runOnIdle { (ui.activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(ui.activity.window.decorView.windowToken,0) }
+        val matcher=hasText(text) and SemanticsMatcher.keyIsDefined(SemanticsProperties.Selected)
+        ui.waitUntil(10000){ui.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()}
+        ui.onNode(matcher).performClick()
+    }
     private fun back() {ui.onNodeWithContentDescription("뒤로").performClick()}
     private fun input(label:String,value:String) {ui.onNode(hasSetTextAction() and (hasText(label) or hasContentDescription(label))).performScrollTo().performTextReplacement(value)}
     private fun shot(name:String) {
@@ -88,7 +102,7 @@ class DocumentationCapture {
         ui.waitUntil(10000){ui.onAllNodesWithText("오늘도 기록을 마쳤어요").fetchSemanticsNodes().isNotEmpty()}
         ui.waitUntil(10000){ui.onAllNodesWithText("기록을 저장했어요").fetchSemanticsNodes().isEmpty()}
         shot("06-completed")
-        click("추가투석");click("구성 변경");click("추가투석 · 1.5 + 라인")
+        tab("기록");ui.onNodeWithContentDescription("기록 추가").performClick();click("추가투석 기록 추가");click("구성 변경");click("추가투석 · 1.5 + 라인")
         input("배액무게","2150")
         ui.onNodeWithText("배액 기록 · 선택").performScrollTo()
         shot("07-manual-treatment")
@@ -100,7 +114,8 @@ class DocumentationCapture {
         tab("통계");shot("10-statistics")
         show(ui.onNodeWithContentDescription("표시 방식")).performClick();click("표");shot("11-statistics-table")
         tab("재고");shot("12-inventory")
-        click("입고 이력");shot("13-receipt-history")
+        click("이력");show(ui.onNodeWithContentDescription("이력 종류")).performClick()
+        ui.onNode(hasText("입고") and hasClickAction() and hasAnyAncestor(isPopup())).performClick();shot("13-receipt-history")
         click("+ 일괄 입고 등록")
         shot("14-bulk-receipt")
         ui.onNodeWithText("취소").performClick();back()
@@ -136,5 +151,20 @@ class DocumentationCapture {
         runBlocking { app.repository.preferences(app.repository.snapshot().preferences.copy(darkMode="LIGHT")) }
         ui.onNodeWithContentDescription("설정").performClick();click("페리로그 정보")
         shot("25-about")
+        back();back();tab("홈")
+        show(ui.onNodeWithContentDescription("간호사 연락처"));shot("31-home-hospital-contacts")
+        show(ui.onNodeWithContentDescription("투석실 연락처")).performClick();shot("35-contact-actions")
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK);ui.waitForIdle()
+        ui.onNodeWithContentDescription("설정").performClick()
+        click("병원 일정 관리");shot("39-appointment-list")
+        show(ui.onNodeWithContentDescription("next-visit 일정 수정")).performClick()
+        show(ui.onNode(hasSetTextAction() and hasText("신장내과 예약시간 · HH:mm")));shot("32-appointment-editor");back();back()
+        click("치료 구성 관리");shot("33-treatment-items");back()
+        click("연락처 관리");show(ui.onNodeWithContentDescription("투석실 수정")).performClick();shot("34-contact-editor");back();back()
+        show(ui.onNodeWithText("표시와 안내"));shot("30-settings-toggles");back()
+        tab("재고");click("투석액 1.5%");shot("37-stock-detail")
+        click("수량 추가·차감");input("변경 수량","1");input("변경 사유 · 필수","포장 손상")
+        shot("36-stock-adjustment");click("조정 저장");click("확인");back()
+        click("이력");shot("38-stock-history")
     }
 }

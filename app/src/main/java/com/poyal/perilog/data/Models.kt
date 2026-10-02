@@ -40,6 +40,7 @@ data class Usage(@PrimaryKey val id: String, val date: String, val items: List<I
     val createdAt: Long, val cancelled: Boolean = false)
 
 @Serializable
+// Kept for old backups; expiry no longer affects stock or appears in the app.
 data class ReceiptLine(val id: String = newId(), val productId: String, val quantity: Int, val expiry: String? = null)
 
 @Entity(tableName = "receipts") @Serializable
@@ -50,12 +51,40 @@ data class Receipt(@PrimaryKey val id: String = newId(), val date: String = toda
 data class StockCount(@PrimaryKey val id: String = newId(), val productId: String, val date: String = today(),
     val quantity: Int, val memo: String = "현재 재고 확인", val createdAt: Long = System.currentTimeMillis())
 
+@Entity(tableName = "adjustments") @Serializable
+data class StockAdjustment(@PrimaryKey val id: String = newId(), val productId: String, val date: String = today(),
+    val delta: Int, val memo: String, val createdAt: Long = System.currentTimeMillis(), val cancelled: Boolean = false)
+
 @Entity(tableName = "audit") @Serializable
 data class Audit(@PrimaryKey val id: String = newId(), val at: Long = System.currentTimeMillis(),
     val action: String, val targetId: String, val before: String, val after: String)
 
 @Entity(tableName = "drafts") @Serializable
 data class Draft(@PrimaryKey val id: String, val treatment: Treatment)
+
+@Entity(tableName = "departments") @Serializable
+data class Department(@PrimaryKey val id: String = newId(), val name: String,
+    val color: Long = 0xFF2167B8)
+
+@Serializable
+data class CareTask(val id: String = newId(), val name: String = "", val iconKey: String = "medical")
+
+@Entity(tableName = "care_templates") @Serializable
+data class CareTemplate(@PrimaryKey val id: String = newId(), val name: String,
+    // Kept to decode and migrate backups made before individual care items.
+    val tasks: List<CareTask> = emptyList(), @ColumnInfo(defaultValue="'medical'") val iconKey: String = "medical")
+
+@Entity(tableName = "appointments") @Serializable
+data class Appointment(@PrimaryKey val id: String = newId(), val date: String = "", val time: String = "",
+    val departments: List<Department> = emptyList(), val care: CareTemplate? = null, val memo: String = "",
+    val createdAt: Long = System.currentTimeMillis(),
+    @ColumnInfo(defaultValue="'[]'") val careItems: List<CareTask> = emptyList(),
+    @ColumnInfo(defaultValue="'{}'") val departmentTimes: Map<String,String> = emptyMap())
+
+@Entity(tableName = "contacts") @Serializable
+data class Contact(@PrimaryKey val id: String = newId(), val name: String, val phone: String = "",
+    val createdAt: Long = System.currentTimeMillis(), @ColumnInfo(defaultValue="'👤'") val emoji: String = "👤",
+    @ColumnInfo(defaultValue="1") val allowCall: Boolean = true, @ColumnInfo(defaultValue="1") val allowSms: Boolean = true)
 
 @Entity(tableName = "settings")
 data class SettingsRow(@PrimaryKey val id: Int = 1, val payload: String)
@@ -77,4 +106,6 @@ data class Snapshot(val formatVersion: Int = 1, val appVersion: String = "1.0.1"
     val templates: List<UsageTemplate> = emptyList(), val treatments: List<Treatment> = emptyList(),
     val usages: List<Usage> = emptyList(), val receipts: List<Receipt> = emptyList(),
     val counts: List<StockCount> = emptyList(), val audit: List<Audit> = emptyList(), val drafts: List<Draft> = emptyList(),
-    val preferences: Preferences = Preferences())
+    val preferences: Preferences = Preferences(), val departments: List<Department> = emptyList(),
+    val careTemplates: List<CareTemplate> = emptyList(), val appointments: List<Appointment> = emptyList(),
+    val contacts: List<Contact> = emptyList(), val adjustments: List<StockAdjustment> = emptyList())

@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.poyal.perilog.data.*
+import com.poyal.perilog.domain.totalUf
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import kotlin.math.abs
@@ -24,8 +25,7 @@ import kotlin.math.max
 private data class Metric(val name:String,val unit:String,val values:(Treatment)->List<Double?>)
 private val weight=Metric("체중","kg"){listOf(it.weightGrams?.div(1000.0))}
 private val pressure=Metric("혈압","mmHg"){listOf(it.systolic?.toDouble(),it.diastolic?.toDouble())}
-private val initialDrain=Metric("초기배액량","mL"){listOf(it.initialDrain?.toDouble())}
-private val machineUf=Metric("기계 제수량","mL"){listOf(it.machineUf?.toDouble())}
+private val totalUf=Metric("총 제수량","mL"){listOf(it.totalUf()?.toDouble())}
 private fun number(n:Double)=if(n%1.0==0.0)n.toLong().toString()else String.format(java.util.Locale.US,"%.1f",n)
 
 @Composable fun StatsScreen(s:Snapshot,vm:JournalViewModel,open:(String)->Unit) {
@@ -52,9 +52,7 @@ private fun number(n:Double)=if(n%1.0==0.0)n.toLong().toString()else String.form
         }
         Paper {
             Section("투석 기록")
-            MetricChart(initialDrain,entries,from,to,table,open)
-            HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
-            MetricChart(machineUf,entries,from,to,table,open)
+            MetricChart(totalUf,entries,from,to,table,open)
         }
     }
 }

@@ -11,6 +11,7 @@ import android.view.inputmethod.InputMethodManager
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.text.AnnotatedString
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -61,12 +62,21 @@ class AppFlowTest {
         runCatching{n.performScrollTo()}
         return n}
     private fun click(text:String) {show(node(text)).performClick()}
-    private fun select(label:String,value:String) {show(compose.onNodeWithContentDescription(label)).performClick();click(value)}
+    private fun select(label:String,value:String) {
+        show(compose.onNodeWithContentDescription(label)).performClick()
+        show(compose.onNode(hasText(value) and hasClickAction() and hasAnyAncestor(isPopup()))).performClick()
+    }
     private fun selectedValue(label:String,value:String) {compose.onNodeWithContentDescription(label).assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription,value))}
-    private fun tab(text:String) {compose.onNodeWithText(text,useUnmergedTree=true).performClick()}
+    private fun tab(text:String) {
+        hideKeyboard()
+        val matcher=hasText(text) and SemanticsMatcher.keyIsDefined(SemanticsProperties.Selected)
+        await("Navigation tab $text after keyboard dismissal"){compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()}
+        compose.onNode(matcher).performClick()
+    }
     private fun field(label:String)=compose.onNode(hasSetTextAction() and (hasText(label) or hasContentDescription(label)))
     private fun input(label:String,value:String) {show(field(label)).performTextReplacement(value)}
     private fun back() {compose.onNodeWithContentDescription("뒤로").performClick()}
+    private fun deviceBack() {compose.runOnIdle{compose.activity.onBackPressedDispatcher.onBackPressed()};compose.waitForIdle()}
     private fun hideKeyboard() {compose.runOnIdle{(compose.activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(compose.activity.window.decorView.windowToken,0)};compose.waitForIdle()}
     private fun showKeyboard(label:String,phase:String) {
         await("$phase window focus",30000){compose.activity.hasWindowFocus()}
@@ -121,11 +131,71 @@ class AppFlowTest {
         click("기록 저장");await{snapshot().treatments.size==1}
         node("오늘도 기록을 마쳤어요").assertExists()
         assertEquals(900,snapshot().treatments.single().totalUf());stock(8)
-        click("추가투석");click("구성 변경");click("밤 구성");click("기록 저장")
+        tab("기록");compose.onNodeWithContentDescription("기록 추가").performClick();click("추가투석 기록 추가")
+        await("Additional treatment editor after records navigation"){compose.onAllNodesWithText("구성 변경").fetchSemanticsNodes().isNotEmpty()}
+        click("구성 변경");click("밤 구성");click("기록 저장")
         await{snapshot().treatments.size==2}
         assertTrue(snapshot().treatments.single{it.kind=="MANUAL"}.complete())
         assertNull(snapshot().treatments.single{it.kind=="MANUAL"}.manualDrain);stock(6)
         tab("재고");node("6").assertExists()
+    }
+    @Test fun deletingRecordCancelsUsageAndUndoRestoresItWithoutAllocationWarnings() {
+        runBlocking {
+            val s=snapshot()
+            app.repository.restore(s.copy(receipts=s.receipts.map{r->r.copy(lines=r.lines.map{it.copy(quantity=1)})}))
+            app.repository.save(Treatment(id="delete-undo",items=listOf(Item(p.id,p.name,2))),true)
+        }
+        val before=snapshot();stock(-1)
+        await{compose.onAllNodesWithText("이어서 입력하기").fetchSemanticsNodes().isNotEmpty()}
+        node("재고 확인 필요").assertDoesNotExist()
+        tab("재고")
+        await{compose.onAllNodesWithText("-1").fetchSemanticsNodes().isNotEmpty()}
+        compose.onAllNodesWithText("미배정",substring=true).assertCountEquals(0)
+        show(node(p.name)).performClick()
+        node("사용 내역 중 1EA의 입고·재고를 확인해 주세요.").assertDoesNotExist()
+        back();tab("기록")
+        show(compose.onNodeWithTag("record-menu-delete-undo")).performClick();click("삭제")
+        node("연결된 물품 사용도 함께 취소해 재고에 반영해요. ‘되돌리기’로 기록과 사용 내역을 함께 복구할 수 있어요.").assertExists()
+        click("확인");await{snapshot().treatments.isEmpty()}
+        stock(1);assertTrue(snapshot().usages.single().cancelled)
+        node("기록 삭제 후 유지한 사용 내역").assertDoesNotExist()
+        click("되돌리기");await{snapshot().treatments.size==1}
+        stock(-1);assertEquals(before.treatments,snapshot().treatments);assertEquals(before.usages,snapshot().usages)
+        show(compose.onNodeWithTag("record-menu-delete-undo")).performClick();click("삭제");click("확인")
+        await{snapshot().treatments.isEmpty()};stock(1);assertTrue(snapshot().usages.single().cancelled)
+    }
+    @Test fun stockMenuCanAdjustWithReasonCancelAndSetObservedQuantity() {
+        val expiry=LocalDate.now().plusDays(2).toString()
+        runBlocking {
+            val receipt=snapshot().receipts.single()
+            app.repository.receipt(receipt.copy(lines=receipt.lines.map{it.copy(expiry=expiry)}))
+        }
+        tab("재고");show(node(p.name)).performClick()
+        node("재고 상세").assertExists();field("직접 확인한 수량").assertDoesNotExist()
+        compose.onAllNodesWithText("사용기한",substring=true).assertCountEquals(0)
+        deviceBack();node("재고 관리").assertExists()
+        show(compose.onNodeWithContentDescription("${p.name} 재고 메뉴")).performClick()
+        click("수량 추가·차감");node("조정 저장").assertIsNotEnabled()
+        input("변경 수량","2");node("조정 저장").assertIsNotEnabled()
+        input("변경 사유 · 필수","포장 손상")
+        input("변경 수량","1.5");node("조정 저장").assertIsNotEnabled()
+        input("변경 수량","2");compose.activityRule.scenario.recreate()
+        await{compose.onAllNodes(hasSetTextAction() and hasText("포장 손상")).fetchSemanticsNodes().isNotEmpty()}
+        field("변경 수량").assertTextContains("2");stock(10)
+        show(node("적용 후 현재 재고 8 EA")).assertIsDisplayed()
+        click("조정 저장");click("확인");await{snapshot().adjustments.size==1};stock(8)
+        assertTrue(snapshot().counts.isEmpty() && snapshot().usages.isEmpty())
+        assertEquals(expiry,inventory(snapshot()).products.getValue(p.id).lots.single().expiry)
+        show(node(p.name)).performClick();click("이 품목 이력");show(node("포장 손상")).assertIsDisplayed()
+        click("조정 취소");click("확인");await{snapshot().adjustments.single().cancelled};stock(10)
+        deviceBack();node("재고 상세").assertExists()
+        click("수량 추가·차감");click("추가");input("변경 수량","1");input("변경 사유 · 필수","누락 수량 추가")
+        click("조정 저장");click("확인");await{snapshot().adjustments.size==2};stock(11)
+        assertEquals(listOf(-2,1),snapshot().adjustments.sortedBy{it.createdAt}.map{it.delta})
+        back();show(compose.onNodeWithContentDescription("${p.name} 재고 메뉴")).performClick();click("수량 맞추기")
+        input("직접 확인한 수량","7");stock(11);click("현재 수량 저장");click("확인")
+        await{snapshot().counts.size==1};stock(7)
+        assertEquals(2,snapshot().adjustments.size);assertEquals(10,snapshot().receipts.single().lines.single().quantity)
     }
     @Test fun productAndBulkReceiptCanBeCreatedEditedAndCancelled() {
         runBlocking { app.repository.restore(Snapshot(preferences=Preferences(celebrate=false))) }
@@ -138,10 +208,49 @@ class AppFlowTest {
         await{snapshot().receipts.size==1}
         assertEquals(12,inventory(snapshot()).products.values.single().balance)
         assertNull(snapshot().receipts.single().lines.single().expiry)
-        click("입고 이력");click("수정");input("입고 수량","15");click("함께 저장")
+        click("이력");click("수정");input("입고 수량","15");click("함께 저장")
         await{snapshot().receipts.single().lines.single().quantity==15}
         click("입고 취소");click("확인");await{snapshot().receipts.single().cancelled}
         assertEquals(0,inventory(snapshot()).products.values.single().balance)
+    }
+    @Test fun stockHistoryFiltersAllEventsAndSurvivesReceiptEditingAndRecreation() {
+        val q=Product(id="history-line",name="라인 · 테스트",kind="소모품")
+        val receipt=snapshot().receipts.single()
+        runBlocking {
+            app.repository.product(q)
+            app.repository.receipt(receipt.copy(lines=receipt.lines+ReceiptLine(productId=q.id,quantity=4)))
+            app.repository.save(Treatment(id="history-use",items=listOf(Item(p.id,p.name,2))),true)
+            app.repository.adjustment(StockAdjustment(id="history-loss",productId=p.id,delta=-1,memo="포장 손상",cancelled=true))
+            app.repository.adjustment(StockAdjustment(id="history-add",productId=p.id,delta=3,memo="누락 수량 추가"))
+            app.repository.count(StockCount(id="history-count",productId=p.id,quantity=5))
+        }
+        tab("재고");click("이력");show(node("5건")).assertIsDisplayed()
+        listOf("RECEIPT:${receipt.id}","USAGE:history-use","LOSS:history-loss","ADD:history-add","COUNT:history-count").forEach{
+            compose.onNodeWithTag("stock-history-$it").assertExists()
+        }
+        show(node("기준 5 EA")).assertIsDisplayed();show(node("−2 EA")).assertIsDisplayed();show(node("+3 EA")).assertIsDisplayed()
+        select("이력 종류","사용");compose.onNodeWithTag("stock-history-USAGE:history-use").assertExists()
+        compose.onNodeWithTag("stock-history-RECEIPT:${receipt.id}").assertDoesNotExist()
+        select("이력 종류","전체");select("이력 품목",q.name)
+        node("+4 EA").assertExists();node(p.name).assertDoesNotExist()
+        select("이력 기간","7D");node("선택한 조건에 해당하는 재고 이력이 없어요.").assertExists()
+        select("이력 기간","전체 기간");select("이력 품목","전체 품목");select("이력 상태","취소된 내역")
+        compose.onNodeWithTag("stock-history-LOSS:history-loss").assertExists()
+        compose.onNodeWithTag("stock-history-USAGE:history-use").assertDoesNotExist()
+        compose.activityRule.scenario.recreate()
+        await{compose.onAllNodesWithTag("stock-history-LOSS:history-loss").fetchSemanticsNodes().isNotEmpty()}
+        selectedValue("이력 상태","취소된 내역");node("취소됨").assertExists()
+        select("이력 상태","유효한 내역");select("이력 종류","입고");select("이력 품목",q.name)
+        click("수정");input("입고 메모","수정한 입고 메모");click("함께 저장")
+        await{snapshot().receipts.single().memo=="수정한 입고 메모"}
+        selectedValue("이력 종류","입고");selectedValue("이력 품목",q.name);selectedValue("이력 상태","유효한 내역")
+        show(node("수정한 입고 메모")).assertIsDisplayed();stock(5)
+        select("이력 종류","사용");select("이력 품목",p.name);click("기록 보기")
+        await{compose.onAllNodesWithText("구성 변경").fetchSemanticsNodes().isNotEmpty()}
+        back();selectedValue("이력 종류","사용");selectedValue("이력 품목",p.name)
+        click("사용 취소");click("확인");await{snapshot().usages.single().cancelled}
+        assertFalse(snapshot().treatments.single().usageConfirmed);stock(5)
+        select("이력 상태","취소된 내역");compose.onNodeWithTag("stock-history-USAGE:history-use").assertExists()
     }
     @Test fun templateQuantityCanBeClearedRetypedAndOnlyThisRecordAdjusted() {
         openTemplates();click("수정");input("${p.name} 수량","")
@@ -232,6 +341,76 @@ class AppFlowTest {
         show(compose.onAllNodesWithText(today()).onFirst()).performClick();back()
         selectedValue("통계 기간","30D");selectedValue("표시 방식","표")
     }
+    @Test fun newRecordsStartEmptyAndDateChangesKeepDraftInputs() {
+        runBlocking {
+            app.repository.preferences(snapshot().preferences.copy(basis=listOf(Basis("1970-01-01",2100),Basis(today(),2000))))
+            app.repository.save(Treatment(id="previous",date=yesterday,weightGrams=61000,systolic=110,diastolic=75,
+                initialDrain=2300,machineUf=600,basisMl=1900,items=listOf(Item(p.id,p.name,2)),
+                usageTemplateId="night",usageTemplateName="밤 구성",usageTemplateColor=0xFF2167B8),true)
+            app.repository.save(Treatment(id="previous-manual",kind="MANUAL",manualDrain=2150,drainUnit="kg",
+                items=listOf(Item(p.id,p.name,2)),usageTemplateId="night"),true)
+        }
+        click("오늘 기록 시작")
+        listOf("몸무게","수축기 혈압","이완기 혈압","초기배액량","기계 제수량").forEach{label->
+            field(label).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
+        }
+        node("사용한 품목을 선택해 주세요.").assertExists()
+        click("어제")
+        field("몸무게").assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
+        node("사용한 품목을 선택해 주세요.").assertExists()
+        click("오늘");beforeAndTemplate();input("초기배액량","2300");input("기계 제수량","600")
+        click("어제")
+        field("몸무게").assertTextContains("62.3");field("수축기 혈압").assertTextContains("120")
+        field("이완기 혈압").assertTextContains("80");field("초기배액량").assertTextContains("2300")
+        field("기계 제수량").assertTextContains("600")
+        await {snapshot().drafts.singleOrNull()?.treatment?.let{it.date==yesterday && it.basisMl==2100 && it.items.singleOrNull()?.quantity==2}==true}
+        val draft=snapshot().drafts.single().treatment
+        assertEquals("night",draft.usageTemplateId);assertEquals("밤 구성",draft.usageTemplateName)
+        assertNull(draft.sourceDate);stock(6)
+        compose.activityRule.scenario.recreate()
+        await {compose.onAllNodes(hasSetTextAction() and hasText("62.3")).fetchSemanticsNodes().isNotEmpty()}
+        back();click("어제 기록하기")
+        field("몸무게").assertTextContains("62.3");field("초기배액량").assertTextContains("2300")
+        field("기계 제수량").assertTextContains("600");node("밤 구성").assertExists()
+        click("이 초안 버리기");click("확인");await {snapshot().drafts.isEmpty()}
+        tab("기록");compose.onNodeWithContentDescription("기록 추가").performClick();click("추가투석 기록 추가")
+        await("New additional treatment editor"){compose.onAllNodesWithText("구성 변경").fetchSemanticsNodes().isNotEmpty()}
+        node("사용한 품목을 선택해 주세요.").assertExists()
+        field("배액무게").assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
+        back();tab("기록");click("표")
+        show(compose.onNodeWithTag("record-row-previous")).performClick()
+        click("수정");field("몸무게").assertTextContains("61")
+        show(compose.onNodeWithContentDescription("제수량 도움말")).performClick()
+        field("이 기록의 이전 주입 기준").assertTextContains("1900");click("닫기")
+        click("오늘")
+        show(compose.onNodeWithContentDescription("제수량 도움말")).performClick()
+        field("이 기록의 이전 주입 기준").assertTextContains("1900");click("닫기")
+        stock(6)
+    }
+    @Test fun statisticsUseTotalUfAndExcludeMissingValuesFromAverage() {
+        runBlocking {
+            val base=Treatment(initialDrain=2300,machineUf=600,basisMl=2000)
+            app.repository.save(base.copy(id="positive"),true)
+            app.repository.save(base.copy(id="negative",initialDrain=1800,machineUf=0),true)
+            app.repository.save(base.copy(id="zero",initialDrain=2000,machineUf=0),true)
+            app.repository.save(base.copy(id="missing-drain",initialDrain=null),true)
+            app.repository.save(base.copy(id="missing-machine",machineUf=null),true)
+            app.repository.save(base.copy(id="missing-basis",basisMl=null),true)
+            app.repository.save(base.copy(id="manual",kind="MANUAL",manualDrain=5000,previousFill=2000),true)
+        }
+        tab("통계")
+        show(node("총 제수량")).assertIsDisplayed()
+        node("초기배액량").assertDoesNotExist();node("기계 제수량").assertDoesNotExist()
+        show(node("평균 233.3 mL")).assertIsDisplayed()
+        select("표시 방식","표")
+        show(node("900 mL")).assertIsDisplayed();show(node("-200 mL")).assertIsDisplayed()
+        show(node("0 mL")).assertIsDisplayed()
+        compose.onAllNodesWithText("— mL").assertCountEquals(3)
+        node("3000 mL").assertDoesNotExist()
+        show(node("900 mL")).performClick()
+        show(node("900 mL")).assertIsDisplayed();back()
+        selectedValue("표시 방식","표")
+    }
     @Test fun recordTableFiltersPeriodAndKeepsSelectionAfterEditing() {
         runBlocking {
             app.repository.save(Treatment(id="recent",date=yesterday,weightGrams=62300,systolic=120,diastolic=80,initialDrain=2300,machineUf=600),true)
@@ -255,11 +434,14 @@ class AppFlowTest {
     @Test fun backupRoundTripAndBrokenFilePreserveData()=runBlocking {
         val t=Treatment(id="backup-treatment",kind="MANUAL",items=listOf(Item(p.id,p.name,2)),manualDrain=2195,drainUnit="kg",basisMl=null)
         app.repository.save(t,true)
+        val adjustment=StockAdjustment(productId=p.id,delta=3,memo="누락 수량 추가")
+        app.repository.adjustment(adjustment)
         val file=File(app.cacheDir,"round-trip.json");app.backup.export(Uri.fromFile(file))
         val imported=app.backup.read(Uri.fromFile(file))
         app.repository.save(t.copy(items=listOf(Item(p.id,p.name,3))),true);app.backup.restore(imported)
         val restored=app.repository.snapshot()
-        assertEquals(8,inventory(restored).products.getValue(p.id).balance)
+        assertEquals(11,inventory(restored).products.getValue(p.id).balance)
+        assertEquals(listOf(adjustment),restored.adjustments)
         assertEquals("kg",restored.treatments.single().drainUnit);assertEquals(2195,restored.treatments.single().manualDrain)
         assertTrue(File(app.filesDir,"protection").listFiles()!!.isNotEmpty())
         file.writeText("{broken")
@@ -301,6 +483,7 @@ class AppFlowTest {
         back();node("페리로그").assertExists();screenshot("dark-home.png")
     }
     private fun screenshot(name:String) {
+        if(InstrumentationRegistry.getArguments().getString("skipScreenshots")=="true")return
         val bitmap=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
         val dir=File(app.filesDir,"e2e-artifacts").apply{mkdirs()}
         File(dir,name).outputStream().use{bitmap.compress(Bitmap.CompressFormat.PNG,100,it)}

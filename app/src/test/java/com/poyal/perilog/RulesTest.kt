@@ -39,14 +39,6 @@ class RulesTest {
         assertEquals(0xFF2167B8,s.templates.single().color)
         assertEquals(2000,s.preferences.basisOn("2026-10-01"))
     }
-    @Test fun expiryAlertBoundariesRespectZeroAndUndated() {
-        assertEquals("사용기한 7일 남음",expiryState("2026-10-08",1,"2026-10-01",7))
-        assertNull(expiryState("2026-10-09",1,"2026-10-01",7))
-        assertEquals("오늘까지",expiryState("2026-10-01",1,"2026-10-01",0))
-        assertEquals("사용기한 지남",expiryState("2026-09-30",1,"2026-10-01",7))
-        assertNull(expiryState(null,10,"2026-10-01",7))
-        assertNull(expiryState("2026-10-01",0,"2026-10-01",7))
-    }
     @Test fun totalsUsePreviousSettingAndPreserveMissingAndNegative() {
         val t=Treatment(initialDrain=2300,machineUf=600,basisMl=2000)
         assertEquals(900,t.totalUf())
@@ -63,15 +55,28 @@ class RulesTest {
         assertTrue(listOf(t,machine).dayComplete(t.date))
         assertFalse(listOf(t,machine,t.copy(id="draft",saved=false)).dayComplete(t.date))
     }
-    @Test fun previousCompositionUsesActualSameTypeAndNeverFuture() {
-        val old=Treatment(date="2026-09-29",saved=true,usageConfirmed=true,items=listOf(Item("p","edited",3)),weightGrams=61000)
+    @Test fun newRecordsStayEmptyWithPastSameDayFutureRecordsAndDrafts() {
+        val old=Treatment(date="2026-09-29",saved=true,usageConfirmed=true,items=listOf(Item("p","edited",3)),
+            weightGrams=61000,systolic=120,diastolic=80,initialDrain=2300,machineUf=600,
+            usageTemplateId="night",usageTemplateName="밤 구성",usageTemplateColor=0xFF8772B5)
         val future=old.copy(id="future",date="2026-10-01",items=listOf(Item("p","future",9)))
         val manual=old.copy(id="manual",kind="MANUAL",date="2026-09-30")
-        val s=Snapshot(treatments=listOf(old,future,manual))
-        assertEquals(3,newTreatment(s,"MACHINE","2026-09-30").items.single().quantity)
-        assertTrue(newTreatment(s,"MACHINE","2026-09-28").items.isEmpty())
-        assertNull(newTreatment(s,"MACHINE","2026-09-30").initialDrain)
-        assertEquals(manual.items,newTreatment(s,"MANUAL","2026-09-30").items)
+        val draft=old.copy(id="draft",date="2026-09-30",saved=false)
+        val s=Snapshot(treatments=listOf(old,future,manual),drafts=listOf(Draft(draft.id,draft)),
+            preferences=Preferences(basis=listOf(Basis("1970-01-01",2000),Basis("2026-09-30",2100)),lastDrainUnit="kg"))
+        listOf("MACHINE","MANUAL").forEach{kind->
+            listOf("2026-09-28","2026-09-30","2026-10-02").forEach{date->
+                val t=newTreatment(s,kind,date)
+                assertEquals(date,t.date);assertEquals(kind,t.kind)
+                assertNull(t.weightGrams);assertNull(t.systolic);assertNull(t.diastolic)
+                assertNull(t.initialDrain);assertNull(t.machineUf);assertNull(t.manualDrain)
+                assertNull(t.previousFill);assertNull(t.dwellMinutes);assertNull(t.sourceDate)
+                assertTrue(t.items.isEmpty());assertFalse(t.usageConfirmed);assertFalse(t.saved)
+                assertNull(t.usageTemplateId);assertNull(t.usageTemplateName);assertNull(t.usageTemplateColor)
+                assertEquals(if(kind=="MACHINE")s.preferences.basisOn(date)else null,t.basisMl)
+                assertEquals(if(kind=="MANUAL")"kg"else"mL",t.drainUnit)
+            }
+        }
     }
     @Test fun chosenCompositionSurvivesQuantityChangesDuplicateTemplatesAndBackup() {
         val first=UsageTemplate(id="first",name="첫 구성",items=listOf(Item(p.id,p.name,2)))
@@ -81,10 +86,6 @@ class RulesTest {
         val s=Snapshot(templates=listOf(first,chosen),treatments=listOf(t))
         assertEquals(chosen.name,t.compositionName(s))
         assertEquals(chosen.color,t.compositionColor(s))
-        val next=newTreatment(s,"MACHINE","2026-10-01")
-        assertEquals(chosen.id,next.usageTemplateId)
-        assertEquals(chosen.color,next.usageTemplateColor)
-        assertEquals(3,next.items.single().quantity)
         assertEquals(chosen.name,t.compositionName(Snapshot()))
         assertEquals(chosen.color,t.compositionColor(Snapshot()))
         assertEquals("새 이름",t.compositionName(s.copy(templates=listOf(chosen.copy(name="새 이름")))))
@@ -101,14 +102,14 @@ class RulesTest {
         assertEquals("개별 사용 구성",t.copy(items=listOf(Item(p.id,p.name,1))).compositionName(s))
         assertEquals("사용 없음",t.copy(items=emptyList()).compositionName(s))
     }
-    @Test fun fefoExcludesExpiredAndKeepsUndatedLast() {
+    @Test fun stockUsesReceiptOrderAndIgnoresLegacyExpiry() {
         val r=Receipt(date="2026-09-01",createdAt=1,lines=listOf(
             ReceiptLine("expired","p",2,"2026-09-30"),ReceiptLine("later","p",2,"2026-10-10"),
             ReceiptLine("earlier","p",2,"2026-10-05"),ReceiptLine("undated","p",2)))
         val result=inventory(Snapshot(products=listOf(p),receipts=listOf(r),usages=listOf(usage("u","2026-10-01",3))),"2026-10-01")
-        assertEquals(listOf("earlier","later"),result.allocations.map{it.lotId})
+        assertEquals(listOf("expired","later"),result.allocations.map{it.lotId})
         assertEquals(5,result.products.getValue("p").balance)
-        assertEquals(2,result.products.getValue("p").lots.find{it.id=="expired"}!!.remaining)
+        assertEquals(0,result.products.getValue("p").lots.find{it.id=="expired"}!!.remaining)
     }
     @Test fun usageBeforeStockCountCannotDebitObservedCurrentStock() {
         val s=Snapshot(products=listOf(p),counts=listOf(StockCount(productId="p",date="2026-10-01",quantity=10,createdAt=20)),
@@ -128,6 +129,40 @@ class RulesTest {
         val u=usage("u","2026-10-01",2)
         assertEquals(4,inventory(Snapshot(products=listOf(p),receipts=listOf(r),usages=listOf(u.copy(cancelled=true))),"2026-10-01").products.getValue("p").balance)
         assertEquals(-2,inventory(Snapshot(products=listOf(p),receipts=listOf(r.copy(cancelled=true)),usages=listOf(u)),"2026-10-01").products.getValue("p").balance)
+    }
+    @Test fun adjustmentsKeepReceiptLotsAndIgnoreLegacyExpiryMetadata() {
+        val receipt=Receipt(date="2026-09-01",createdAt=1,lines=listOf(
+            ReceiptLine("expired","p",2,"2026-09-30"),ReceiptLine("dated","p",3,"2026-10-10"),ReceiptLine("undated","p",4)))
+        val loss=StockAdjustment(id="loss",productId="p",date="2026-10-01",delta=-3,memo="포장 손상",createdAt=2)
+        val add=StockAdjustment(id="add",productId="p",date="2026-10-01",delta=2,memo="누락 수량 추가",createdAt=3)
+        val s=Snapshot(products=listOf(p),receipts=listOf(receipt),adjustments=listOf(loss,add))
+        validate(s)
+        val result=inventory(s,"2026-10-01")
+        assertEquals(8,result.products.getValue("p").balance)
+        val lots=result.products.getValue("p").lots.associateBy{it.id}
+        assertEquals(0,lots.getValue("expired").remaining)
+        assertEquals(2,lots.getValue("dated").remaining);assertEquals("2026-10-10",lots.getValue("dated").expiry)
+        assertEquals(4,lots.getValue("undated").remaining);assertNull(lots.getValue("add").expiry)
+        assertTrue(result.allocations.isEmpty())
+        assertEquals(11,inventory(s.copy(adjustments=listOf(loss.copy(cancelled=true),add)),"2026-10-01").products.getValue("p").balance)
+        assertEquals(s,codec.decodeFromString<Snapshot>(codec.encodeToString(s)))
+    }
+    @Test fun adjustmentsFollowEventDateAndObservedCountWithoutClampingShortages() {
+        val older=StockAdjustment(id="old",productId="p",date="2026-09-30",delta=-20,memo="과거 손실",createdAt=1)
+        val later=StockAdjustment(id="later",productId="p",date="2026-10-02",delta=-2,memo="포장 손상",createdAt=30)
+        val future=StockAdjustment(id="future",productId="p",date="2026-10-03",delta=100,memo="추가",createdAt=40)
+        val s=Snapshot(products=listOf(p),counts=listOf(StockCount(id="count",productId="p",date="2026-10-01",quantity=5,createdAt=20)),
+            adjustments=listOf(future,later,older))
+        assertEquals(5,inventory(s,"2026-10-01").products.getValue("p").balance)
+        assertEquals(3,inventory(s,"2026-10-02").products.getValue("p").balance)
+        assertEquals(-2,inventory(s.copy(counts=emptyList(),adjustments=listOf(later)),"2026-10-02").products.getValue("p").balance)
+    }
+    @Test fun invalidAdjustmentCannotEnterBackupOrInventory() {
+        val valid=StockAdjustment(id="adjust",productId="p",date="2026-10-01",delta=1,memo="추가")
+        listOf(valid.copy(delta=0),valid.copy(delta=100001),valid.copy(delta=-100001),valid.copy(memo=" "),valid.copy(productId="missing")).forEach{bad->
+            try{validate(Snapshot(products=listOf(p),adjustments=listOf(bad)));fail("invalid adjustment must be rejected")}
+            catch(_:IllegalArgumentException){}
+        }
     }
     @Test fun backupRoundTripKeepsOriginalUnitsAndBasis() {
         val t=Treatment(kind="MANUAL",date="2026-10-01",manualDrain=2195,drainUnit="kg",basisMl=null)

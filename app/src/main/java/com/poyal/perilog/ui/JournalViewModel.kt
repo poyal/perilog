@@ -25,6 +25,7 @@ class JournalViewModel(application: Application,private val savedState:SavedStat
     val message=MutableSharedFlow<String>(extraBufferCapacity=8)
     val editor=MutableStateFlow(savedState.get<String>("editor")?.let{codec.decodeFromString<Treatment>(it)})
     val calendarDay=MutableStateFlow(today())
+    val localNow=MutableStateFlow(java.time.LocalDateTime.now())
     val inputErrors=mutableStateMapOf<String,String>()
     val recordFilters=RecordFilters()
     val statsFilters=StatsFilters()
@@ -32,8 +33,9 @@ class JournalViewModel(application: Application,private val savedState:SavedStat
     private var draftJob: Job?=null
     init {
         viewModelScope.launch { repository.snapshots.first(); ready.value=true }
-        viewModelScope.launch { while(isActive) { calendarDay.value=today();delay(30000) } }
+        viewModelScope.launch { while(isActive) { refreshClock();delay(30000) } }
     }
+    fun refreshClock() { localNow.value=java.time.LocalDateTime.now();calendarDay.value=localNow.value.toLocalDate().toString() }
     fun act(success: String?=null, block: suspend () -> Unit) {
         viewModelScope.launch { serial.withLock {
             if(inputErrors.isNotEmpty()) { message.emit("입력 형식을 확인해 주세요: ${inputErrors.values.joinToString()}");return@withLock }
@@ -58,17 +60,7 @@ class JournalViewModel(application: Application,private val savedState:SavedStat
     fun changeDate(date: String) {
         val t=editor.value ?: return
         if(t.saved) { change(t.copy(date=date)); return }
-        val old=newTreatment(state.value,t.kind,t.date)
-        val fresh=newTreatment(state.value,t.kind,date)
-        val usingPrevious=t.items==old.items && t.usageTemplateId==old.usageTemplateId
-        change(t.copy(date=date,basisMl=fresh.basisMl,
-            weightGrams=if(t.weightGrams==old.weightGrams)fresh.weightGrams else t.weightGrams,
-            systolic=if(t.systolic==old.systolic)fresh.systolic else t.systolic,
-            diastolic=if(t.diastolic==old.diastolic)fresh.diastolic else t.diastolic,
-            items=if(usingPrevious)fresh.items else t.items,
-            usageTemplateId=if(usingPrevious)fresh.usageTemplateId else t.usageTemplateId,
-            usageTemplateName=if(usingPrevious)fresh.usageTemplateName else t.usageTemplateName,
-            usageTemplateColor=if(usingPrevious)fresh.usageTemplateColor else t.usageTemplateColor,sourceDate=fresh.sourceDate))
+        change(t.copy(date=date,basisMl=if(t.kind=="MACHINE")state.value.preferences.basisOn(date)else null))
     }
     fun discard(id: String,done: ()->Unit) { draftJob?.cancel(); act { repository.discardDraft(id);editor.value=null;savedState.remove<String>("editor");done() } }
     fun save(confirm: Boolean,onSaved: () -> Unit) {

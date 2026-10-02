@@ -3,7 +3,6 @@ package com.poyal.perilog.ui
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -11,7 +10,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -39,7 +37,7 @@ import com.poyal.perilog.domain.*
         if(current.kind=="MACHINE") {
             Paper {
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    StageBadge("1",beforeComplete);Section("활력 상태");Spacer(Modifier.weight(1f))
+                    CompletionBadge(beforeComplete);Section("활력 상태");Spacer(Modifier.weight(1f))
                     TextButton(onClick={beforeExpanded=!beforeExpanded}){Text(if(beforeExpanded)"접기"else"수정")}
                 }
                 if(!beforeExpanded)AdaptivePair(first={MeasurementSummary(current.weightGrams?.let{"${it/1000.0} kg"} ?: "—","몸무게")},second={MeasurementSummary("${current.systolic ?: "—"} / ${current.diastolic ?: "—"}","혈압 · mmHg")})
@@ -52,7 +50,7 @@ import com.poyal.perilog.domain.*
         }
         Paper {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                if(current.kind=="MACHINE")StageBadge("2",compositionComplete)
+                if(current.kind=="MACHINE")CompletionBadge(compositionComplete)
                 Section("사용 구성");Spacer(Modifier.weight(1f))
                 TextButton(onClick={picker=!picker;quantities=false}){Text(if(picker)"구성 선택 접기"else"구성 변경")}
             }
@@ -88,7 +86,7 @@ import com.poyal.perilog.domain.*
         }
         if(current.kind=="MACHINE")Paper {
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                StageBadge("3",recordComplete);Section("투석 기록")
+                CompletionBadge(recordComplete);Section("투석 기록")
             }
             AdaptivePair(first={NumberInput("초기배액량",current.initialDrain,{update(current.copy(initialDrain=it))},"mL",large=true)},second={
                 NumberInput("기계 제수량",current.machineUf,{update(current.copy(machineUf=it))},"mL",signed=true,large=true)
@@ -135,12 +133,6 @@ import com.poyal.perilog.domain.*
             Hint("초기배액량, 기계 제수량, 이전 주입 기준이 모두 있어야 제수량을 계산해요.")
         }},containerColor=MaterialTheme.colorScheme.surface,confirmButton={TextButton(onClick={calculation=false}){Text("닫기")}})
     if(discard)Confirm("초안을 버릴까요?","기존에 저장한 기록과 사용 내역은 유지됩니다.",{discard=false}){vm.discard(current.id){discard=false;back()}}
-}
-@Composable private fun StageBadge(label:String,done:Boolean) {
-    Surface(shape=CircleShape,color=if(done)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-        border=if(done)null else BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),modifier=Modifier.size(32.dp)){
-        Box(contentAlignment=Alignment.Center){Text(label,color=if(done)MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,fontWeight=FontWeight.Bold)}
-    }
 }
 @Composable private fun MeasurementSummary(value:String,label:String) {
     Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)){

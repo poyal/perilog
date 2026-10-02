@@ -17,37 +17,39 @@ import androidx.compose.ui.unit.dp
 import com.poyal.perilog.data.*
 import com.poyal.perilog.domain.*
 import kotlinx.serialization.encodeToString
-import java.time.LocalDate
-import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 @Composable fun StockScreen(s:Snapshot,vm:JournalViewModel,navigate:(String)->Unit) {
     var filter by rememberSaveable{mutableStateOf("전체")}
     val stock=remember(s){inventory(s)}
-    Page("재고 관리","내가 사용하는 물품을 한눈에",brand=true,actions={IconButton(onClick={navigate("settings")}){Icon(Icons.Outlined.Settings,"설정")}}) {
+    Page("재고 관리","내가 사용하는 물품을 한눈에",brand=true,actions={SettingsIconButton {navigate("settings")}}) {
         AdaptivePair(first={Action("입고 등록",{navigate("receipt/new")},icon=Icons.Outlined.Add)},second={
-            OutlinedButton(onClick={navigate("receipts")},Modifier.fillMaxWidth().heightIn(min=54.dp)){Icon(Icons.Outlined.ReceiptLong,null,Modifier.size(20.dp));Spacer(Modifier.width(8.dp));Text("입고 이력")}
+            OutlinedButton(onClick={navigate("stockHistory")},Modifier.fillMaxWidth().heightIn(min=54.dp)){Icon(Icons.Outlined.History,null,Modifier.size(20.dp));Spacer(Modifier.width(8.dp));Text("이력")}
         })
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("전체","투석액","소모품").forEach{FilterChip(filter==it,{filter=it},{Text(it)})}}
         if(s.products.isEmpty())Paper{Section("내 물품을 등록해 보세요");Hint("투석액·카세트·라인을 나만의 색상으로 구분해요.");Action("첫 품목 등록",{navigate("products")})}
         s.products.filter{it.active && (filter=="전체" || it.kind==filter)}.forEach{p->
+            var menu by remember(p.id){mutableStateOf(false)}
             val b=stock.products.getValue(p.id)
             Paper(Modifier.clickable{navigate("stock/${p.id}")}) {
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                     ColorDot(p.color,28,p.name)
                     Text(p.name,Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
-                    Column(horizontalAlignment=Alignment.End){Text(if(b.registered)b.balance.toString()else"—",style=MaterialTheme.typography.headlineMedium);Hint(if(b.registered)"EA"else"미등록")}
-                    Icon(Icons.Outlined.ChevronRight,null,Modifier.size(18.dp))
-                }
-                val near=b.lots.filter{expiryState(it.expiry,it.remaining,today(),s.preferences.expiryDays)!=null}
-                if(near.isNotEmpty())near.forEach{lot->
-                    val days=ChronoUnit.DAYS.between(LocalDate.now(),LocalDate.parse(lot.expiry))
-                    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                        Icon(Icons.Outlined.Schedule,null,Modifier.size(18.dp),tint=MaterialTheme.colorScheme.secondary)
-                        Text(if(days<0)"기한 지남 ${lot.remaining}EA"else"임박 ${lot.remaining}EA · ${if(days==0L)"오늘까지"else"${days}일 남음"}",color=MaterialTheme.colorScheme.secondary)
+                    Column(horizontalAlignment=Alignment.End) {
+                        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                            Text(if(b.registered)b.balance.toString()else"—",style=MaterialTheme.typography.headlineMedium)
+                            if(b.registered)Hint("EA")
+                        }
+                        if(!b.registered)Hint("미등록")
                     }
-                }else Hint(if(b.lots.any{it.remaining>0 && it.expiry!=null})"사용기한별 재고 보기"else"사용기한 무관")
-                if(b.unallocated>0)Text("확인 필요 · 미배정 ${b.unallocated}EA",color=MaterialTheme.colorScheme.secondary)
+                    Box {
+                        IconButton(onClick={menu=true}){Icon(Icons.Outlined.MoreVert,"${p.name} 재고 메뉴")}
+                        DropdownMenu(expanded=menu,onDismissRequest={menu=false}) {
+                            DropdownMenuItem(text={Text("수량 맞추기")},onClick={menu=false;navigate("count/${p.id}")},leadingIcon={Icon(Icons.Outlined.Balance,null)})
+                            DropdownMenuItem(text={Text("수량 추가·차감")},onClick={menu=false;navigate("adjustment/${p.id}")},leadingIcon={Icon(Icons.Outlined.SwapVert,null)})
+                        }
+                    }
+                }
             }
         }
         Paper {
@@ -58,7 +60,7 @@ import java.util.Locale
     }
 }
 
-@Composable fun StockDetailScreen(s:Snapshot,vm:JournalViewModel,id:String,back:()->Unit) {
+@Composable fun StockCountScreen(s:Snapshot,vm:JournalViewModel,id:String,back:()->Unit) {
     val p=s.products.find{it.id==id} ?: return
     val b=inventory(s).products.getValue(p.id)
     var qty by rememberSaveable(id){mutableStateOf<Int?>(null)}
@@ -66,12 +68,10 @@ import java.util.Locale
     val initialDate=rememberSaveable(id){date}
     var memo by rememberSaveable(id){mutableStateOf("")}
     var confirm by rememberSaveable{mutableStateOf(false)}
-    EditorPage("재고 상세","${p.name} · EA",qty!=null || date!=initialDate || memo.isNotBlank(),back,{confirm=true},qty!=null && date<=today(),"현재 수량 저장",vm.busy.collectAsState().value) {
+    EditorPage("수량 맞추기","${p.name} · EA",qty!=null || date!=initialDate || memo.isNotBlank(),back,{confirm=true},qty!=null && qty!! in 0..1000000 && date<=today(),"현재 수량 저장",vm.busy.collectAsState().value) {
         Paper {
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)){ColorDot(p.color,28,p.name);Section(p.name)}
             Text(if(b.registered)"${b.balance} EA"else"아직 재고를 등록하지 않았어요",style=MaterialTheme.typography.headlineMedium)
-            b.lots.filter{it.remaining>0}.forEach{Hint("${it.date} 입고 · ${it.expiry ?: "기한 무관"} · ${it.remaining}EA")}
-            if(b.unallocated>0)Hint("사용 내역 중 ${b.unallocated}EA의 입고·재고를 확인해 주세요.")
         }
         Paper {
             Section("현재 수량 맞추기")
@@ -79,7 +79,6 @@ import java.util.Locale
             DateControl(date,{date=it})
             NumberInput("직접 확인한 수량",qty,{qty=it},"EA")
             OutlinedTextField(memo,{memo=it},label={Text("사유 · 메모")},modifier=Modifier.fillMaxWidth())
-            Hint("새 기준의 재고는 ‘사용기한 무관’이에요. 기한별 수량을 유지하려면 입고 또는 사용 내역을 수정해 주세요.")
         }
         val history=s.counts.filter{it.productId==id}.sortedByDescending{it.createdAt}
         if(history.isNotEmpty())Paper{Section("수량 확인 이력");history.forEach{Hint("${it.date} · ${it.quantity}EA · ${it.memo}")}}
@@ -128,7 +127,7 @@ import java.util.Locale
         }
     }
 }
-@Composable private fun ColorPalette(palette:List<Long>,selectedColor:Long,onColor:(Long)->Unit) {
+@Composable fun ColorPalette(palette:List<Long>,selectedColor:Long,onColor:(Long)->Unit) {
     FlowRow(horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
         (palette+selectedColor).distinct().forEach{color->
             val hex=String.format(Locale.US,"#%06X",color and 0xFFFFFF)
@@ -211,7 +210,7 @@ import java.util.Locale
                     TextButton(onClick={expanded=!expanded}){Text(if(item.batchId==null)"사용 재고 자동 배정"else"사용 재고 직접 선택됨")}
                     if(expanded) {
                         TextButton(onClick={onChange(items.map{if(it.productId==p.id)it.copy(batchId=null)else it});expanded=false}){Text("자동 배정")}
-                        stock?.products?.get(p.id)?.lots?.forEach{lot->TextButton(onClick={onChange(items.map{if(it.productId==p.id)it.copy(batchId=lot.id)else it});expanded=false}){Text("${lot.date} 입고 · ${lot.expiry ?: "기한 무관"} · ${lot.remaining}EA")}}
+                        stock?.products?.get(p.id)?.lots?.forEach{lot->TextButton(onClick={onChange(items.map{if(it.productId==p.id)it.copy(batchId=lot.id)else it});expanded=false}){Text("${lot.date} 재고 · ${lot.remaining}EA")}}
                     }
                 }
             }
@@ -219,20 +218,6 @@ import java.util.Locale
     }}
 }
 
-@Composable fun ReceiptsScreen(s:Snapshot,vm:JournalViewModel,navigate:(String)->Unit,back:()->Unit) {
-    var cancelling by rememberSaveable{mutableStateOf<String?>(null)}
-    Page("입고 이력","한 번에 들어온 물품을 함께 확인해요",back) {
-        Action("+ 일괄 입고 등록",{navigate("receipt/new")},s.products.isNotEmpty())
-        if(s.products.isEmpty())Paper{Hint("품목을 먼저 등록해 주세요.")}
-        s.receipts.sortedWith(compareByDescending<Receipt>{it.date}.thenByDescending{it.createdAt}).forEach{r->Paper {
-            Section("${r.date}${if(r.cancelled)" · 취소됨"else""}")
-            r.lines.forEach{line->val p=s.products.find{it.id==line.productId};ProductLine(s,Item(line.productId,p?.name ?: "품목",line.quantity));Hint(line.expiry?.let{"${it}까지"} ?: "사용기한 무관")}
-            if(r.memo.isNotEmpty())Hint(r.memo)
-            if(!r.cancelled)Row{TextButton(onClick={navigate("receipt/${r.id}")}){Text("수정")};TextButton(onClick={cancelling=r.id}){Text("입고 취소")}}
-        }}
-    }
-    cancelling?.let{id->s.receipts.find{it.id==id}?.let{r->Confirm("입고를 취소할까요?","실제 사용 이력은 유지돼요. 재고가 부족해지면 확인 안내를 표시합니다.",{cancelling=null}){vm.act("입고를 취소했어요"){vm.repository.receipt(r.copy(cancelled=true));cancelling=null}}}}
-}
 @Composable fun ReceiptEditor(s:Snapshot,vm:JournalViewModel,id:String,back:()->Unit) {
     var r by rememberJsonState("receipt:$id"){s.receipts.find{it.id==id} ?: Receipt(lines=s.products.filter{it.active}.map{ReceiptLine(productId=it.id,quantity=0)})}
     val original=rememberSaveable(id){codec.encodeToString(r)}
@@ -246,14 +231,11 @@ import java.util.Locale
             Paper {
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)){ColorDot(p?.color ?: 0xFF647789,22,p?.name);Text(p?.name ?: "품목",Modifier.weight(1f),fontWeight=FontWeight.Bold);IconButton(onClick={r=r.copy(lines=r.lines.filterNot{it.id==line.id})}){Icon(Icons.Outlined.Close,"${p?.name} 입고 줄 삭제")}}
                 NumberInput("입고 수량",line.quantity.takeIf{it>0},{q->r=r.copy(lines=r.lines.map{if(it.id==line.id)it.copy(quantity=q?:0)else it})},"EA")
-                Row(verticalAlignment=Alignment.CenterVertically){Switch(line.expiry!=null,{dated->r=r.copy(lines=r.lines.map{if(it.id==line.id)it.copy(expiry=if(dated)today()else null)else it})});Spacer(Modifier.width(8.dp));Text(if(line.expiry==null)"사용기한 무관"else"사용기한 날짜 지정",Modifier.weight(1f))}
-                if(line.expiry!=null)DateControl(line.expiry,{date->r=r.copy(lines=r.lines.map{if(it.id==line.id)it.copy(expiry=date)else it})},"기한")
-                TextButton(onClick={r=r.copy(lines=r.lines+ReceiptLine(productId=line.productId,quantity=0))}){Text("이 품목의 다른 사용기한 추가")}
             }
         }}
         Paper {
             TextButton(onClick={add=!add}){Text(if(add)"품목 선택 접기"else"다른 품목 추가")}
-            if(add)s.products.forEach{p->MenuRow(p.name){r=r.copy(lines=r.lines+ReceiptLine(productId=p.id,quantity=0));add=false}}
+            if(add)s.products.filter{p->r.lines.none{it.productId==p.id}}.forEach{p->MenuRow(p.name){r=r.copy(lines=r.lines+ReceiptLine(productId=p.id,quantity=0));add=false}}
             OutlinedTextField(r.memo,{r=r.copy(memo=it)},label={Text("입고 메모")},modifier=Modifier.fillMaxWidth())
             Hint("빈 수량과 0EA는 저장에서 제외해요.")
         }

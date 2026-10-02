@@ -35,7 +35,7 @@ def packaged(root, tag):
     for name in names:
         if checksums[name] != sha256(files[name]):
             raise ValueError(f"Local checksum mismatch: {name}")
-    notes = (root / "readme" / "releases" / f"{tag}.md").read_text()
+    notes = (root / "docs" / "releases" / f"{tag}.md").read_text()
     if not notes.strip():
         raise ValueError("Missing release notes")
     return files, notes

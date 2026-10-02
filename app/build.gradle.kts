@@ -41,7 +41,7 @@ android {
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true; buildConfig = true }
     if (providers.gradleProperty("captureScreenshots").isPresent) {
-        sourceSets.getByName("androidTest").java.srcDir("../readme/capture")
+        sourceSets.getByName("androidTest").java.srcDir("../docs/capture")
     }
     if (providers.gradleProperty("updateFixture").isPresent) {
         sourceSets.getByName("androidTest").assets.srcDir("../.tools/update-fixture")

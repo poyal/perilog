@@ -10,7 +10,7 @@
 
 Android 12 이상 · 로그인 없음 · 기록은 기기 내부 저장
 
-**[앱 다운로드](https://github.com/poyal/perilog/releases/latest)** · [전체 화면 보기](readme/화면-안내.md) · [문의·오류 신고](https://github.com/poyal/perilog/issues)
+**[앱 다운로드](https://github.com/poyal/perilog/releases/latest)** · [전체 화면 보기](docs/화면-안내.md) · [문의·오류 신고](https://github.com/poyal/perilog/issues)
 
 처음 사용하신다면 **설치 → 물품·재고·사용 구성 준비 → 오늘 기록 시작 → 백업** 순서로 따라 하세요. 아래 화면의 수치와 제품 구성은 사용법을 설명하기 위한 예시입니다. 이미지를 누르면 크게 볼 수 있습니다.
 
@@ -56,8 +56,8 @@ Android 12 이상 · 로그인 없음 · 기록은 기기 내부 저장
 <table>
   <tr><th>오늘 남은 항목</th><th>기록을 마친 날</th></tr>
   <tr>
-    <td><a href="readme/screenshots/01-home.png"><img src="readme/screenshots/01-home.png" alt="홈에서 오늘 남은 기록 확인" width="260"></a></td>
-    <td><a href="readme/screenshots/06-completed.png"><img src="readme/screenshots/06-completed.png" alt="오늘 기록 완료와 기록 일수" width="260"></a></td>
+    <td><a href="docs/screenshots/01-home.png"><img src="docs/screenshots/01-home.png" alt="홈에서 오늘 남은 기록 확인" width="260"></a></td>
+    <td><a href="docs/screenshots/06-completed.png"><img src="docs/screenshots/06-completed.png" alt="오늘 기록 완료와 기록 일수" width="260"></a></td>
   </tr>
 </table>
 
@@ -84,8 +84,8 @@ Android 12 이상 · 로그인 없음 · 기록은 기기 내부 저장
 <table>
   <tr><th>품목과 색상</th><th>사용 구성 편집</th></tr>
   <tr>
-    <td><a href="readme/screenshots/15-product-settings.png"><img src="readme/screenshots/15-product-settings.png" alt="품목 이름·종류·색상 설정" width="260"></a></td>
-    <td><a href="readme/screenshots/22-template-editor.png"><img src="readme/screenshots/22-template-editor.png" alt="사용할 품목과 EA 수량을 정하는 구성 편집" width="260"></a></td>
+    <td><a href="docs/screenshots/15-product-settings.png"><img src="docs/screenshots/15-product-settings.png" alt="품목 이름·종류·색상 설정" width="260"></a></td>
+    <td><a href="docs/screenshots/22-template-editor.png"><img src="docs/screenshots/22-template-editor.png" alt="사용할 품목과 EA 수량을 정하는 구성 편집" width="260"></a></td>
   </tr>
 </table>
 
@@ -118,9 +118,9 @@ Android 12 이상 · 로그인 없음 · 기록은 기기 내부 저장
 <table>
   <tr><th>활력 상태 입력</th><th>사용 구성 선택</th><th>투석 결과 입력</th></tr>
   <tr>
-    <td><a href="readme/screenshots/02-before-treatment.png"><img src="readme/screenshots/02-before-treatment.png" alt="몸무게와 혈압 입력" width="230"></a></td>
-    <td><a href="readme/screenshots/03-usage-template.png"><img src="readme/screenshots/03-usage-template.png" alt="저장한 사용 구성 선택" width="230"></a></td>
-    <td><a href="readme/screenshots/04-after-treatment.png"><img src="readme/screenshots/04-after-treatment.png" alt="초기배액량·기계 제수량 입력과 계산 결과" width="230"></a></td>
+    <td><a href="docs/screenshots/02-before-treatment.png"><img src="docs/screenshots/02-before-treatment.png" alt="몸무게와 혈압 입력" width="230"></a></td>
+    <td><a href="docs/screenshots/03-usage-template.png"><img src="docs/screenshots/03-usage-template.png" alt="저장한 사용 구성 선택" width="230"></a></td>
+    <td><a href="docs/screenshots/04-after-treatment.png"><img src="docs/screenshots/04-after-treatment.png" alt="초기배액량·기계 제수량 입력과 계산 결과" width="230"></a></td>
   </tr>
 </table>
 
@@ -150,7 +150,7 @@ Android 12 이상 · 로그인 없음 · 기록은 기기 내부 저장
 
 무게는 입력한 단위로 보관합니다. 무게를 부피로 자동 환산하거나 용기 무게를 자동으로 빼지 않으며, 기계투석 제수량에 합산하지 않습니다.
 
-<a href="readme/screenshots/07-manual-treatment.png"><img src="readme/screenshots/07-manual-treatment.png" alt="추가투석의 사용 물품과 선택 입력인 배액 기록" width="280"></a>
+<a href="docs/screenshots/07-manual-treatment.png"><img src="docs/screenshots/07-manual-treatment.png" alt="추가투석의 사용 물품과 선택 입력인 배액 기록" width="280"></a>
 
 <a id="records"></a>
 
@@ -172,9 +172,9 @@ Android 12 이상 · 로그인 없음 · 기록은 기기 내부 저장
 <table>
   <tr><th>기록 목록</th><th>기간별 기록 표</th><th>통계 그래프</th></tr>
   <tr>
-    <td><a href="readme/screenshots/08-record-list.png"><img src="readme/screenshots/08-record-list.png" alt="날짜별 기록과 사용 구성 이름" width="230"></a></td>
-    <td><a href="readme/screenshots/23-record-table.png"><img src="readme/screenshots/23-record-table.png" alt="기간별 수치를 비교하는 기록 표" width="230"></a></td>
-    <td><a href="readme/screenshots/10-statistics.png"><img src="readme/screenshots/10-statistics.png" alt="기간별 혈압·몸무게 그래프" width="230"></a></td>
+    <td><a href="docs/screenshots/08-record-list.png"><img src="docs/screenshots/08-record-list.png" alt="날짜별 기록과 사용 구성 이름" width="230"></a></td>
+    <td><a href="docs/screenshots/23-record-table.png"><img src="docs/screenshots/23-record-table.png" alt="기간별 수치를 비교하는 기록 표" width="230"></a></td>
+    <td><a href="docs/screenshots/10-statistics.png"><img src="docs/screenshots/10-statistics.png" alt="기간별 혈압·몸무게 그래프" width="230"></a></td>
   </tr>
 </table>
 
@@ -200,8 +200,8 @@ Android 12 이상 · 로그인 없음 · 기록은 기기 내부 저장
 <table>
   <tr><th>남은 재고</th><th>품목별 일괄 입고</th></tr>
   <tr>
-    <td><a href="readme/screenshots/12-inventory.png"><img src="readme/screenshots/12-inventory.png" alt="품목별 EA 수량과 기한 안내" width="260"></a></td>
-    <td><a href="readme/screenshots/14-bulk-receipt.png"><img src="readme/screenshots/14-bulk-receipt.png" alt="품목별 수량과 사용기한 입력" width="260"></a></td>
+    <td><a href="docs/screenshots/12-inventory.png"><img src="docs/screenshots/12-inventory.png" alt="품목별 EA 수량과 기한 안내" width="260"></a></td>
+    <td><a href="docs/screenshots/14-bulk-receipt.png"><img src="docs/screenshots/14-bulk-receipt.png" alt="품목별 수량과 사용기한 입력" width="260"></a></td>
   </tr>
 </table>
 
@@ -226,8 +226,8 @@ Android 12 이상 · 로그인 없음 · 기록은 기기 내부 저장
 <table>
   <tr><th>어두운 화면</th><th>표시·알림·잠금 설정</th></tr>
   <tr>
-    <td><a href="readme/screenshots/20-dark-mode.png"><img src="readme/screenshots/20-dark-mode.png" alt="다크모드의 홈 화면" width="260"></a></td>
-    <td><a href="readme/screenshots/30-settings-toggles.png"><img src="readme/screenshots/30-settings-toggles.png" alt="테마 선택과 세 가지 설정 토글" width="260"></a></td>
+    <td><a href="docs/screenshots/20-dark-mode.png"><img src="docs/screenshots/20-dark-mode.png" alt="다크모드의 홈 화면" width="260"></a></td>
+    <td><a href="docs/screenshots/30-settings-toggles.png"><img src="docs/screenshots/30-settings-toggles.png" alt="테마 선택과 세 가지 설정 토글" width="260"></a></td>
   </tr>
 </table>
 
@@ -257,7 +257,7 @@ Android 12 이상 · 로그인 없음 · 기록은 기기 내부 저장
 
 **가져오기는 현재 데이터를 전체 교체합니다.** 복원 직전 데이터는 앱 내부 보호 백업에 남으며 설정에서 외부로 내보낼 수 있습니다. 앱을 삭제하면 내부 기록과 보호 백업도 삭제됩니다. 백업 JSON은 암호화하지 않으며, 앱 잠금도 외부 백업 파일에는 적용되지 않습니다.
 
-<a href="readme/screenshots/19-backup.png"><img src="readme/screenshots/19-backup.png" alt="전체 데이터 내보내기·가져오기와 자동 백업 설정" width="280"></a>
+<a href="docs/screenshots/19-backup.png"><img src="docs/screenshots/19-backup.png" alt="전체 데이터 내보내기·가져오기와 자동 백업 설정" width="280"></a>
 
 <a id="updates"></a>
 
@@ -274,7 +274,7 @@ Android 12 이상 · 로그인 없음 · 기록은 기기 내부 저장
 
 정보 페이지나 업데이트 기능이 없는 예전 앱은 [최신 릴리즈](https://github.com/poyal/perilog/releases/latest)에서 APK를 내려받아 기존 앱 위에 설치합니다. 업데이트 전에 전체 데이터를 내보내 두고, **기존 앱을 삭제하거나 데이터를 초기화하지 마세요.**
 
-<a href="readme/screenshots/25-about.png"><img src="readme/screenshots/25-about.png" alt="페리로그 버전·제작자·문의와 업데이트 확인" width="280"></a>
+<a href="docs/screenshots/25-about.png"><img src="docs/screenshots/25-about.png" alt="페리로그 버전·제작자·문의와 업데이트 확인" width="280"></a>
 
 <a id="faq"></a>
 
@@ -293,6 +293,6 @@ Android 12 이상 · 로그인 없음 · 기록은 기기 내부 저장
 ## 문의와 참고 자료
 
 - [오류 신고·기능 제안](https://github.com/poyal/perilog/issues) · [이메일 문의](mailto:poyal.work@gmail.com)
-- [전체 화면 안내](readme/화면-안내.md) · [텍스트 사용 안내](readme/사용-안내.md)
-- [버전별 변경 내역](https://github.com/poyal/perilog/releases) · [검증 기록](readme/검증-기록.md)
-- [개발·빌드 안내](readme/개발-안내.md) · [릴리즈 운영 가이드](readme/로컬-검증-후-배포-운영-가이드.md)
+- [전체 화면 안내](docs/화면-안내.md) · [텍스트 사용 안내](docs/사용-안내.md)
+- [버전별 변경 내역](https://github.com/poyal/perilog/releases) · [검증 기록](docs/검증-기록.md)
+- [개발·빌드 안내](docs/개발-안내.md) · [릴리즈 운영 가이드](docs/로컬-검증-후-배포-운영-가이드.md)

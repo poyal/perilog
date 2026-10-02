@@ -81,8 +81,8 @@ class PublishTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / ".release").mkdir()
-            (root / "readme/releases").mkdir(parents=True)
-            (root / "readme/releases/v2.0.0.md").write_text("notes")
+            (root / "docs/releases").mkdir(parents=True)
+            (root / "docs/releases/v2.0.0.md").write_text("notes")
             names = list(self.files)[:2]
             for name in names: (root / ".release" / name).write_bytes(self.files[name])
             sums = "".join(f"{publisher.sha256(self.files[n])}  {n}\n" for n in names)

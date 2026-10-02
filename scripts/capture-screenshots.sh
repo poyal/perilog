@@ -15,7 +15,7 @@ fi
   -Pandroid.testInstrumentationRunnerArguments.class=com.poyal.perilog.capture.DocumentationCapture \
   -Pandroid.testInstrumentationRunnerArguments.timeout_msec=240000 \
   -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true
-mkdir -p readme/screenshots
+mkdir -p docs/screenshots
 for name in $("$ADB" -s "$PERILOG_SERIAL" shell run-as com.poyal.perilog.debug ls files/manual-screenshots); do
-  "$ADB" -s "$PERILOG_SERIAL" exec-out run-as com.poyal.perilog.debug cat "files/manual-screenshots/$name" > "readme/screenshots/$name"
+  "$ADB" -s "$PERILOG_SERIAL" exec-out run-as com.poyal.perilog.debug cat "files/manual-screenshots/$name" > "docs/screenshots/$name"
 done

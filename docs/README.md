@@ -13,6 +13,7 @@
 - [v1.0.4 변경 내용](releases/v1.0.4.md)
 - [v1.0.5 변경 내용](releases/v1.0.5.md)
 - [v1.0.6 변경 내용](releases/v1.0.6.md)
+- [v1.0.7 변경 내용](releases/v1.0.7.md)
 - [실제 실행 화면과 촬영 정보](화면-안내.md)
 - [문서 캡처 코드](capture/DocumentationCapture.kt)
 

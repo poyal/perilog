@@ -1,6 +1,7 @@
 package com.poyal.perilog
 
 import android.os.Bundle
+import android.content.Intent
 import android.os.Build
 import android.content.res.Configuration
 import androidx.core.view.WindowCompat
@@ -20,6 +21,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.poyal.perilog.ui.*
 import kotlinx.coroutines.launch
+import com.poyal.perilog.widget.*
+import com.poyal.perilog.data.codec
+import kotlinx.serialization.encodeToString
 
 class MainActivity: FragmentActivity() {
     private var themeMode by mutableStateOf("SYSTEM")
@@ -28,9 +32,12 @@ class MainActivity: FragmentActivity() {
     private var authMessage by mutableStateOf("")
     private var authenticating=false
     private var backgrounded=false
+    private var widgetRequest by mutableStateOf<WidgetOpenRequest?>(null)
     private val app get()=application as PerilogApplication
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        widgetRequest=if(savedInstanceState==null)WidgetNavigation.read(intent)
+            else savedInstanceState.getString("widget_request")?.let { runCatching {codec.decodeFromString<WidgetOpenRequest>(it)}.getOrNull() }
         // Android 15 can retain the old content-insets applier when reusing a
         // decor view. Reset it before enableEdgeToEdge obtains that view;
         // afterwards edge-to-edge enforcement makes this setter a no-op.
@@ -39,7 +46,7 @@ class MainActivity: FragmentActivity() {
         }
         enableEdgeToEdge()
         setContent { PerilogTheme(themeMode) { Box(Modifier.fillMaxSize()) {
-            JournalApp(unlocked = unlocked)
+            JournalApp(unlocked = unlocked,widgetRequest=widgetRequest,onWidgetHandled={widgetRequest=null})
             if(!unlocked) Surface(Modifier.fillMaxSize()) {
                 Column(Modifier.padding(32.dp),verticalArrangement=Arrangement.Center,horizontalAlignment=Alignment.CenterHorizontally) {
                     Text(getString(R.string.app_name),style=MaterialTheme.typography.headlineLarge)
@@ -57,6 +64,14 @@ class MainActivity: FragmentActivity() {
             if(lockEnabled) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE) else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
             if(!lockEnabled) unlocked=true
         } }
+    }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        WidgetNavigation.read(intent)?.let {widgetRequest=it}
+    }
+    override fun onSaveInstanceState(outState: Bundle) {
+        widgetRequest?.let {outState.putString("widget_request",codec.encodeToString(it))}
+        super.onSaveInstanceState(outState)
     }
     override fun onStart() {
         super.onStart()

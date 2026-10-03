@@ -60,6 +60,11 @@ import kotlinx.coroutines.withContext
     }
     Page("설정","내 기록과 사용 방식을 관리해요",back) {
         Paper {
+            MenuRow("사용 안내","전체 사용법 · 검색 · 실제 화면",Icons.Outlined.MenuBook){navigate("guide")}
+            HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
+            MenuRow("홈 화면 위젯","어제·오늘 기록 · 병원 일정",Icons.Outlined.Widgets){navigate("widgets")}
+        }
+        Paper {
             Section("병원 일정·연락처")
             HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
             MenuRow("병원 일정 관리","예약 날짜·시간·메모를 관리해요",Icons.Outlined.Event){navigate("appointments")}
@@ -110,6 +115,7 @@ import kotlinx.coroutines.withContext
             Section("데이터 내보내기 · 가져오기")
             Text("기록 ${s.treatments.size}건 · 품목 ${s.products.size}개 · 입고 ${s.receipts.count{!it.cancelled}}건")
             Hint("병원 일정 ${s.appointments.size}건 · 진료과 ${s.departments.size}개 · 치료 구성 ${s.careTemplates.size}개 · 연락처 ${s.contacts.size}개도 함께 보관해요.")
+            Hint("저장한 입고 요청 ${s.replenishmentPlans.size}건과 연결된 입고도 함께 보관해요.")
             Action("전체 데이터 내보내기",{export.launch("perilog-${today()}.json")})
             SecondaryButton(onClick={import.launch(arrayOf("application/json","text/plain","application/octet-stream"))},Modifier.fillMaxWidth()){Text("백업 파일 가져오기")}
             Hint("가져오기는 전체 교체예요. 파일을 확인하고 현재 데이터를 보호 백업한 뒤 복원해요. 백업 JSON에는 암호가 없으므로 보관 위치를 확인해 주세요.")

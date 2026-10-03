@@ -76,18 +76,31 @@ private val contactEmojis=listOf(
     }
 }
 
-@Composable private fun ContactRow(c:Contact,vm:JournalViewModel) {
+@Composable private fun ContactRow(c:Contact,vm:JournalViewModel,onEdit:()->Unit,onDelete:()->Unit) {
+    var menu by remember(c.id){mutableStateOf(false)}
     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
         ContactAvatar(c)
         Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-            Section(c.name);Text(formattedPhone(c.phone),style=MaterialTheme.typography.bodyLarge);ContactActions(c,vm)
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                Box(Modifier.weight(1f)){Section(c.name)}
+                Box {
+                    IconButton(onClick={menu=true}){Icon(Icons.Outlined.MoreVert,"${c.name} 더보기")}
+                    DropdownMenu(expanded=menu,onDismissRequest={menu=false}) {
+                        DropdownMenuItem(text={Text("수정")},leadingIcon={Icon(Icons.Outlined.Edit,null)},
+                            onClick={menu=false;onEdit()},modifier=Modifier.semantics{contentDescription="${c.name} 수정"})
+                        DropdownMenuItem(text={Text("삭제")},leadingIcon={Icon(Icons.Outlined.DeleteOutline,null)},
+                            onClick={menu=false;onDelete()},modifier=Modifier.semantics{contentDescription="${c.name} 삭제"})
+                    }
+                }
+            }
+            Text(formattedPhone(c.phone),style=MaterialTheme.typography.bodyLarge);ContactActions(c,vm)
         }
     }
 }
 
 @Composable fun HomeContacts(s:Snapshot,vm:JournalViewModel,navigate:(String)->Unit) {
     var connecting by rememberSaveable{mutableStateOf<String?>(null)}
-    val contacts=s.contacts.sortedWith(compareBy<Contact>{it.createdAt}.thenBy{it.id})
+    val contacts=s.orderedContacts()
     Paper {
         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             Icon(Icons.Outlined.ContactPhone,null,tint=MaterialTheme.colorScheme.primary);Section("연락처")
@@ -127,19 +140,45 @@ private val contactEmojis=listOf(
 @Composable fun ContactsScreen(s:Snapshot,vm:JournalViewModel,navigate:(String)->Unit,back:()->Unit) {
     var deleting by rememberSaveable{mutableStateOf<String?>(null)}
     Page("연락처 관리","등록한 이름과 번호를 홈에서 바로 확인해요",back) {
-        Action("+ 연락처 등록",{navigate("contact/new")})
-        if(s.contacts.isEmpty())Paper{Hint("투석실·고객센터·간호사 등 자주 연락하는 곳을 직접 등록해 주세요.")}
-        s.contacts.sortedWith(compareBy<Contact>{it.createdAt}.thenBy{it.id}).forEach { c -> Paper {
-            ContactRow(c,vm)
-            Row {
-                TextButton(onClick={navigate("contact/${c.id}")},modifier=Modifier.semantics{contentDescription="${c.name} 수정"}){Text("수정")}
-                TextButton(onClick={deleting=c.id},modifier=Modifier.semantics{contentDescription="${c.name} 삭제"}){Text("삭제")}
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+            Action("+ 연락처 등록",{navigate("contact/new")},modifier=Modifier.weight(1f).fillMaxHeight())
+            if(s.contacts.size>1)SecondaryButton(onClick={navigate("contacts/order")},modifier=Modifier.weight(1f).fillMaxHeight(),
+                contentPadding=PaddingValues(horizontal=10.dp,vertical=12.dp)) {
+                Icon(Icons.Outlined.SwapVert,null,Modifier.size(20.dp));Spacer(Modifier.width(6.dp));Text("순서 변경")
             }
-        }}
+        }
+        if(s.contacts.isEmpty())Paper{Hint("투석실·고객센터·간호사 등 자주 연락하는 곳을 직접 등록해 주세요.")}
+        s.orderedContacts().forEach { c -> key(c.id) {Paper {
+            ContactRow(c,vm,onEdit={navigate("contact/${c.id}")},onDelete={deleting=c.id})
+        }}}
     }
     deleting?.let{id->Confirm("연락처를 삭제할까요?","선택한 연락처가 홈에서도 사라져요.",{deleting=null}){
         vm.act("연락처를 삭제했어요"){vm.repository.deleteContact(id);deleting=null}
     }}
+}
+
+@Composable fun ContactOrderScreen(s:Snapshot,vm:JournalViewModel,back:()->Unit) {
+    var order by rememberJsonState("contact-order") { s.orderedContacts().map {it.id} }
+    val original=rememberSaveable { order }
+    val contacts=(order+s.orderedContacts().map {it.id}).distinct().mapNotNull {id->s.contacts.find {it.id==id} }
+    fun move(index:Int,step:Int) {
+        val ids=contacts.map {it.id}.toMutableList()
+        val other=index+step
+        if(other in ids.indices) {val id=ids.removeAt(index);ids.add(other,id);order=ids}
+    }
+    EditorPage("연락처 순서 변경","홈의 연락처도 같은 순서로 표시해요",order!=original,back,{
+        vm.act("연락처 순서를 저장했어요") {vm.repository.reorderContacts(contacts.map {it.id});back()}
+    },true,"순서 저장",vm.busy.collectAsState().value) {
+        Paper {Hint("위·아래 버튼으로 순서를 바꾼 뒤 저장해 주세요.")}
+        contacts.forEachIndexed { index,c -> key(c.id) {Paper {
+            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                Text("${index+1}",style=MaterialTheme.typography.titleMedium)
+                Column(Modifier.weight(1f)) {Section("${c.emoji} ${c.name}");Hint(formattedPhone(c.phone))}
+                IconButton(onClick={move(index,-1)},enabled=index>0) {Icon(Icons.Outlined.ArrowUpward,"${c.name} 위로")}
+                IconButton(onClick={move(index,1)},enabled=index<contacts.lastIndex) {Icon(Icons.Outlined.ArrowDownward,"${c.name} 아래로")}
+            }
+        }} }
+    }
 }
 
 @Composable fun ContactEditor(s:Snapshot,vm:JournalViewModel,id:String,creating:Boolean,back:()->Unit) {

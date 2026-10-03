@@ -69,6 +69,7 @@ internal fun filterRecords(s:Snapshot,f:RecordFilters)=s.visibleRecords().filter
             IconButton(back){Icon(Icons.AutoMirrored.Outlined.ArrowBack,"뒤로")}
             Text("기록 표",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge)
             TextButton(onClick={filterOpen=true}){Icon(Icons.Outlined.FilterList,null);Text("필터")}
+            HelpIconButton()
         }
         Text((if(filters.period.value)"${filters.from.value.replace('-','.')} ~ ${filters.to.value.replace('-','.')}"else"전체 기간")+" · ${entries.size}건",
             Modifier.padding(horizontal=16.dp,vertical=6.dp),style=MaterialTheme.typography.bodySmall)

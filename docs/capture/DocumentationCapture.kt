@@ -81,6 +81,15 @@ class DocumentationCapture {
         val image=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
         File(directory,"$name.png").outputStream().use{image.compress(Bitmap.CompressFormat.PNG,100,it)}
     }
+    @Test fun captureReleaseInformation() {
+        seed()
+        ui.waitUntil(10000){ui.onAllNodesWithText("기록하기").fetchSemanticsNodes().isNotEmpty()}
+        ui.onNodeWithContentDescription("설정").performClick();click("페리로그 정보")
+        shot("25-about")
+        runBlocking { app.repository.preferences(app.repository.snapshot().preferences.copy(darkMode="DARK")) }
+        SystemClock.sleep(800);shot("26-about-dark")
+        show(ui.onNodeWithText("업데이트"));shot("29-about-update")
+    }
     @Test fun captureChartsAndTable() {
         seed(completeToday=true)
         ui.waitUntil(10000){ui.onAllNodesWithText("오늘 기록 확인").fetchSemanticsNodes().isNotEmpty()}
@@ -99,7 +108,7 @@ class DocumentationCapture {
         seed()
         ui.waitUntil(10000){ui.onAllNodesWithText("기록하기").fetchSemanticsNodes().isNotEmpty()}
         ui.onNodeWithContentDescription("설정").performClick()
-        click("연락처 관리");show(ui.onNodeWithContentDescription("투석실 수정")).performClick()
+        click("연락처 관리");show(ui.onNodeWithContentDescription("투석실 더보기")).performClick();click("수정")
         shot("34-contact-editor")
     }
     @Test fun captureManual() {
@@ -187,7 +196,7 @@ class DocumentationCapture {
         click("날짜 선택");show(ui.onNodeWithText("예약일 ",substring=true));shot("40-appointment-calendar");click("날짜 선택 접기")
         show(ui.onNode(hasSetTextAction() and hasText("신장내과 예약시간 · HH:mm")));shot("32-appointment-editor");back();back()
         click("치료 구성 관리");shot("33-treatment-items");back()
-        click("연락처 관리");show(ui.onNodeWithContentDescription("투석실 수정")).performClick();shot("34-contact-editor");back();back()
+        click("연락처 관리");show(ui.onNodeWithContentDescription("투석실 더보기")).performClick();click("수정");shot("34-contact-editor");back();back()
         show(ui.onNodeWithText("표시와 안내"));shot("30-settings-toggles");back()
         tab("재고");click("투석액 1.5%");shot("37-stock-detail")
         click("수량 추가·차감");input("변경 수량","1");input("변경 사유 · 필수","포장 손상")

@@ -1,0 +1,6 @@
+<resources>
+    <item name="widget_surface_system" type="drawable">@drawable/widget_surface_dark</item>
+    <item name="widget_panel_system" type="drawable">@drawable/widget_panel_dark</item>
+    <item name="widget_accent_system" type="drawable">@drawable/widget_accent_dark</item>
+    <item name="widget_chip_system" type="drawable">@drawable/widget_chip_dark</item>
+</resources>

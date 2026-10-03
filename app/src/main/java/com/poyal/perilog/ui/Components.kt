@@ -87,12 +87,18 @@ internal val dark=darkColorScheme(
         Icon(Icons.Outlined.Settings,"설정",Modifier.size(28.dp))
     }
 }
+@Composable fun HelpIconButton() {
+    LocalHelpAction.current?.let { help ->
+        IconButton(onClick=help,modifier=Modifier.size(48.dp)) {Icon(Icons.Outlined.HelpOutline,"이 화면 사용 안내",Modifier.size(26.dp))}
+    }
+}
 @Composable fun ScreenHeader(title:String,subtitle:String="",back:(()->Unit)?=null,brand:Boolean=false,actions:@Composable RowScope.()->Unit={}) {
     Row(Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
         if(back!=null) IconButton(onClick=back,Modifier.size(48.dp)){Icon(Icons.AutoMirrored.Outlined.ArrowBack,"뒤로")}
         if(brand) Bow(44)
         Column(Modifier.weight(1f)) {Text(title,style=MaterialTheme.typography.headlineSmall);if(subtitle.isNotEmpty())Text(subtitle,style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)}
         actions()
+        HelpIconButton()
     }
 }
 @Composable fun Page(title:String,subtitle:String="",back:(()->Unit)?=null,brand:Boolean=false,

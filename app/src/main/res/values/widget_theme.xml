@@ -1,0 +1,6 @@
+<resources>
+    <item name="widget_surface_system" type="drawable">@drawable/widget_surface_light</item>
+    <item name="widget_panel_system" type="drawable">@drawable/widget_panel_light</item>
+    <item name="widget_accent_system" type="drawable">@drawable/widget_accent_light</item>
+    <item name="widget_chip_system" type="drawable">@drawable/widget_chip_light</item>
+</resources>

@@ -23,14 +23,15 @@ import kotlinx.coroutines.delay
 @Composable fun HomeScreen(s:Snapshot,vm:JournalViewModel,date:String,settings:()->Unit,edit:(String?,String,String)->Unit,navigate:(String)->Unit,stockScreen:()->Unit) {
     val now by vm.localNow.collectAsState()
     val entries=s.visibleRecords()
-    val complete=entries.dayComplete(date)
+    val daily=s.dailyProgress(date)
+    val complete=daily.complete
     val todayEntries=entries.filter{it.date==date}
-    val machine=todayEntries.find{it.kind=="MACHINE" && !it.complete()} ?: todayEntries.find{it.kind=="MACHINE"}
-    val before=machine?.let{it.saved && it.weightGrams!=null && it.systolic!=null && it.diastolic!=null}==true
-    val usage=machine?.usageConfirmed==true
-    val after=machine?.let{it.saved && it.initialDrain!=null && it.machineUf!=null}==true
-    val progress=listOf(before,usage,after).count{it}
-    val resume=if(machine==null || !machine.complete())machine else todayEntries.firstOrNull{!it.complete()} ?: machine
+    val machine=daily.machine
+    val before=daily.vitality
+    val usage=daily.usage
+    val after=daily.treatment
+    val progress=daily.count
+    val resume=daily.resume
     val yesterday=s.yesterdaySummary(date)
     var celebration by remember{mutableStateOf(false)}
     LaunchedEffect(complete,date) {

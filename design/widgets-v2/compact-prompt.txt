@@ -1,0 +1,36 @@
+Use case: ui-mockup. Refine the attached Korean Perilog LIGHT / DARK widget comparison board. Preserve the attractive styling, the two-theme comparison, visible panel borders, and exactly SIX widgets with the same data in both themes. This revision is expressly COMPACT AND NON-SCROLLING. Render a high resolution landscape comparison image, about 3000x1900. This is a design proposal, no actual app screenshot claim.
+
+Overall board: title "페리로그 위젯", subtitle "작은 크기에도, 한눈에". Left half label "라이트" on pale blue-gray background. Right half label "다크" on deep navy background. Each half: one wide widget labeled "기록 · 4×2" on top, below a compact square widget labeled "기록 · 2×2" beside a compact square widget labeled "병원 일정 · 2×2". ALL THREE widget rectangles must be the SAME HEIGHT per theme. Inset both halves from canvas edges. Wide widget width about 1060 and height500, smaller widgets510×500. Thus compactwidgets nearly square; do not make wide widgets shorter than compact ones. Keep labels outside widgets. Footer "디자인 시안 · 예시 데이터".
+
+Keep theme palettes and unmistakable group boundaries from reference: light white outercards with blue-gray thin borders, muted white/gray yesterday panel, pale blue today panel with blue border. Dark outer #172536, yesterday #1B2A3C, today #223D59, clear steel-blue outlines. Navy/offwhite type, saturated blue filled checks, hollowgray unfinishedcircle. Clean Korean sans-serif Pretendard. Rounded corners. No glass/3D/glow. No excessive tiny divider lines.
+
+Changes to visual SCALE: reduce title, icon, checkcircle, internalpadding sizes by roughly20% compared to reference. Make content fit naturally in fixed two-row launcher widgets with NO scrollbars, NO scroll arrows, NO clipped rows or fade masking. Do not reduce readability via very faint type. Aim ~12sp body and10.5sp chiptext at ~172dp compact size, with reasonable contrast. Remove oversized titles, D-day, and unnecessary row chevrons. Use compact density while remaining calm and legible.
+
+WIDE RECORD widget in each theme:
+header "어제·오늘 기록", small checklistoutlineicon and refreshicon.
+two separately BORDERED day panels left/right with visiblegap.
+leftheader "어제 10.2"; rightheader "오늘 10.3".
+Each has three modest blue statuscircles and the exact three labels "활력 상태", "사용 구성", "투석 기록". Yesterday all3 complete blue circles whitechecks, today first2 complete thirdhollow. Labels may wrap to2lines to remain readable.
+No progressbar, no count, no missinginputs.
+
+COMPACT RECORD widget:
+header "어제·오늘", smallrefreshicon.
+Columnheads "활력", "구성", "투석", with narrow day/datecolumn first.
+Two rounded BORDERED rows: yesterday "어제" and "10.2", threebluechecks; today "오늘" and "10.3", twobluechecks and onehollowcircle.
+Todayrow pale blue / darkbluetinted. Preserve the whitespace needed to read the grid, aligncolumns. No counts or extra missinginputlabels. Entire widget fits without scroll.
+
+COMPACT HOSPITAL widget: Most important change.
+Must show ALL the following fixed sample content in a SINGLE nearly square 2×2 tile, no scroll, no truncation, no "+N". Reduce header and D-day scale to make room.
+Header "병원 일정", tinycalendaroutlineicon, smallrefreshicon.
+A compact bordered DATE BAND with medium-size "D-3" and smaller "10.6 (화)" on ONE line. No giant Dday.
+Next separate bordered APPOINTMENT PANEL, contains two compact clean rows with alignedtime anddepartment:
+"09:30  신장내과"
+"11:20  내분비내과"
+Do not include row chevrons. Use two equal lines, no scrollbar.
+Below a distinct bordered TREATMENT PANEL with small label "처치", then FOUR small chips in a tight two-column by two-row arrangement:
+firstrow "피검사" and "드레싱"
+secondrow "소변검사" and "체성분검사".
+Chips modestoutline style; verysmall matching lineicons optional but preserve readability and ALL four names. No item count. This demonstrates more treatment content fitting when the UI is scaleddown.
+Never display notes/memo. No scrollbar anywhere. No bottom buttons, no timestamps, no pagingdots or "+더보기". All content visibly contained within the square widget with thin but adequate interiorpadding.
+
+Everything duplicated exactly light anddark. Verify both hospitaltiles contain the2appointmentlines and all4procedurechips, text notcrowded oroverflowing. Preserve a clear date/appointment/treatment grouping rather than a flat block oftext. Make the result polished and faithfully compact, not merely the old reference with scrollbars painted out.

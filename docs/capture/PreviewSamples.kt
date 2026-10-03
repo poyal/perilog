@@ -20,6 +20,34 @@ import java.time.LocalDateTime
 /** Manual emulator setup, compiled only with -PcaptureScreenshots. Keeps existing edits. */
 @RunWith(AndroidJUnit4::class)
 class PreviewSamples {
+    /** Optional widget appointments; stable IDs keep all existing appointments and edits. */
+    @Test fun loadWidgetAppointments() = runBlocking {
+        require(BuildConfig.DEBUG && Build.HARDWARE in listOf("ranchu","goldfish"))
+        val app=ApplicationProvider.getApplicationContext<PerilogApplication>()
+        val before=app.repository.snapshot()
+        val kidney=Department(id="preview-widget-kidney",name="신장내과 (샘플)")
+        val endo=Department(id="preview-widget-endo",name="내분비내과 (샘플)",color=0xFF47956E)
+        val samples=listOf(
+            Appointment(id="preview-widget-care-visit",date=LocalDate.now().plusDays(1).toString(),departments=listOf(kidney,endo),
+                departmentTimes=mapOf(kidney.id to "09:30",endo.id to "11:20"),memo="처치 위젯 확인용 가상 예약",
+                careItems=listOf(CareTask(id="preview-blood",name="피검사",iconKey="blood"),CareTask(id="preview-healing",name="드레싱",iconKey="healing"),
+                    CareTask(id="preview-lab",name="소변검사",iconKey="lab"),CareTask(id="preview-body",name="체성분검사",iconKey="medical"))),
+            Appointment(id="preview-widget-next",date=LocalDate.now().plusDays(3).toString(),departments=listOf(kidney,endo),
+                departmentTimes=mapOf(kidney.id to "09:30",endo.id to "11:20"),memo="위젯 확인용 가상 예약"),
+            Appointment(id="preview-widget-later",date=LocalDate.now().plusDays(17).toString(),departments=listOf(kidney),
+                departmentTimes=mapOf(kidney.id to "10:00"),memo="위젯 확인용 가상 예약"))
+        val added=samples.filter {a->before.appointments.none {it.id==a.id}}
+        if(added.isNotEmpty()) {
+            app.backup.protect()
+            listOf(kidney,endo).filter {d->before.departments.none {it.id==d.id}}.forEach {app.repository.department(it)}
+            added.forEach {app.repository.appointment(it)}
+        }
+        val after=app.repository.snapshot()
+        check(before.appointments.all {it in after.appointments})
+        check(before.departments.all {it in after.departments})
+        check(after.copy(appointments=before.appointments,departments=before.departments,exportedAt=before.exportedAt)==before)
+        InstrumentationRegistry.getInstrumentation().sendStatus(0,Bundle().apply {putString("added_widget_appointments",added.size.toString())})
+    }
     /** Optional contact examples. Stable IDs preserve existing contacts and sample edits. */
     @Test fun loadContacts() = runBlocking {
         require(BuildConfig.DEBUG && Build.HARDWARE in listOf("ranchu","goldfish")) {

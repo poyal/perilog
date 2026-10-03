@@ -110,6 +110,7 @@ fun inventory(s: Snapshot, through: String = today()): StockResult {
 fun validate(s: Snapshot) {
     require(s.formatVersion == 1) { "지원하지 않는 백업 버전입니다." }
     validateAppointments(s)
+    validateReplenishment(s)
     fun unique(ids: List<String>) { require(ids.all { it.isNotBlank() } && ids.distinct().size == ids.size) { "중복되거나 빈 ID가 있습니다." } }
     unique(s.products.map{it.id}); unique(s.templates.map{it.id}); unique(s.treatments.map{it.id})
     unique(s.usages.map{it.id}); unique(s.receipts.map{it.id}); unique(s.counts.map{it.id}); unique(s.audit.map{it.id})

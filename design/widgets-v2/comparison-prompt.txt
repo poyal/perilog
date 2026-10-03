@@ -1,0 +1,39 @@
+Use case: ui-mockup. Edit the attached Perilog widget design reference into ONE high-resolution side-by-side LIGHT / DARK comparison board, incorporating the requested improvements. Use a wide landscape canvas approximately 3000 x 1900 so small Korean text stays readable. Preserve the reference's attractive restrained blue/navy visual language, rounded rectangles, check circles, and 3-stage record statuses. This is a design proposal, not a screenshot of a released app.
+
+Board composition: exactly TWO equal theme columns. LEFT labeled "라이트", RIGHT labeled "다크". Each theme column contains exactly THREE widgets: top a wide "기록 · 4×2", bottom left a compact "기록 · 2×2", bottom right "병원 일정 · 2×2". SIX widgets in total. The two themes must use IDENTICAL layout, information, proportions, and states so comparison is direct. All actual widget rectangles should have the same height. Wide widget approximately 1030×470, each small widget490×470, smallgap50. Each theme's background differs: light very pale blue-gray #EEF3F8, dark deep muted navy #0D1723. Overall title at top "페리로그 위젯", subtitle "영역 구분을 더한 라이트 · 다크". Minimal footer "디자인 시안 · 예시 데이터". No phone frames, no wallpaper photos, no decorative graphics.
+
+CRITICAL NEW REQUIREMENT: CLEARLY DEFINED REGIONS without losing the airy modern style.
+- Widget outside borders: light #CAD9E8 at 1dp, dark #41566E at 1dp, large corner radii.
+- Both day regions in the 4×2 get their own visibly bordered rounded PANEL, with a genuine 8dp gap between them. Yesterday panel light neutral #F6F8FB; today pale blue #EAF3FF with a clear blue-tinted border. In dark yesterday #1B2A3C, today #223D59 with blue border. This separation must be more visible than the reference. Keep small short divider lines between the three status columns, no heavy spreadsheet grid.
+- In the compact 2×2 record widget, yesterday and today rows each get a softly rounded distinctly bordered container, separate by6dp, today tintedblue. Three shared column headers align precisely above their statuses.
+- In the hospital widget, separate the D-day/date BAND, the appointment times LIST, and the treatment BAND using visible fine borders and different subtle tonal backgrounds. This is the most information-dense widget; keep typography legible and reduce D-day size to make room for treatment items.
+- Do NOT add giant progress bars, remaining-field text, counters, notes, or extra action buttons.
+
+LIGHT palette white outercards, navy #163756 primarytype, slate #60758B secondarytype, saturated blue #2476CF filled circles and accent. DARK palette outercard #172536, offwhite #EEF4FB type, mutedlightblue #B7C7D9 secondary, brighter blue #79B8FF for accent; completed circles vivid mediumblue with white checks; hollow incomplete circle has clearly visible gray-blue outline. Subtle shadows only. Typography Korean Pretendard/NotoSansKR, crisp exact wording.
+
+4×2 RECORD contents in BOTH themes:
+Header outline checklist icon + "어제·오늘 기록", refresh iconright.
+Two bordered day panels sidebyside. Left title "어제" date "10.2" rightchevron; right title "오늘" date "10.3" rightchevron.
+Three equal statuscolumns each. Labels exactly "활력 상태", "사용 구성", "투석 기록". Yesterday three filled blue checkcircles. Today firsttwo filledbluecheckcircles and third hollowgraycircle. The labels may use two lines to be legible at real widget size. No count and no progressbar.
+
+2×2 RECORD contents in BOTH themes:
+Header "어제·오늘" and refreshicon.
+Shared matrix column headers, after narrow datecolumn: "활력", "구성", "투석".
+Yesterday roundedrow: "어제" with smaller "10.2", then three bluecheckcircles.
+Today rounded tintedrow: "오늘" with smaller "10.3", then two bluecheckcircles and one hollowcircle.
+All three columns align. Preserve BOTH days.
+
+2×2 HOSPITAL contents in BOTH themes:
+Header calendar outlineicon + "병원 일정", refreshicon.
+Compact separate dateband: medium-large blue "D-3" followed by "10.6 (화)".
+Distinct appointmentlist region with these TWO lines:
+"09:30  신장내과"
+"11:20  내분비내과"
+Distinct treatmentband BELOW the appointmentlist, visible within the widget:
+small label "처치"
+two small clean chips with simple line icons: "피검사", "드레싱".
+Treatments are part of the visit, not tied to an individual department. DO NOT display any memo/notes. Must include BOTH procedures, not replace them with a count.
+The appointment and treatment body can vertically scroll if there are more items; hint with a very subtle scrollbar in its right inset, without large UI clutter. All four sample items (two department rows, two procedurechips) must be readable in this screenshot.
+Avoid huge D-day consuming the available height. Overall 2×2 stays nearly square and is never taller than the record widgets.
+
+CHECK: six widgets total, left light/right dark, complete matching data, record three stages only, treatment section present in BOTH hospitalcards, clear borders/panel grouping in BOTH themes. Do not omit the treatmentchips to preserve whitespace.

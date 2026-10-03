@@ -32,6 +32,7 @@ class JournalViewModel(application: Application,private val savedState:SavedStat
     val statsFilters=StatsFilters(savedState["statsFilters"])
     private val serial=Mutex()
     private var draftJob: Job?=null
+    private var pendingDraft: Treatment?=null
     init {
         savedState.setSavedStateProvider("recordFilters"){recordFilters.save()}
         savedState.setSavedStateProvider("statsFilters"){statsFilters.save()}
@@ -48,9 +49,9 @@ class JournalViewModel(application: Application,private val savedState:SavedStat
             finally { busy.value=false }
         } }
     }
-    fun edit(id: String?=null,kind: String="MACHINE",date: String=today()) {
+    fun edit(id: String?=null,kind: String="MACHINE",date: String=today(),source:Snapshot=state.value) {
         draftJob?.cancel()
-        val s=state.value
+        val s=source
         editor.value=(s.drafts.find{it.id==id}?.treatment ?: s.treatments.find{it.id==id} ?: newTreatment(s,kind,date)).withUsageTemplate(s)
         savedState["editor"]=codec.encodeToString(editor.value!!)
     }
@@ -58,17 +59,23 @@ class JournalViewModel(application: Application,private val savedState:SavedStat
         editor.value=t
         savedState["editor"]=codec.encodeToString(t)
         draftJob?.cancel()
-        draftJob=viewModelScope.launch { delay(350); serial.withLock { repository.draft(t) } }
+        pendingDraft=t
+        draftJob=viewModelScope.launch { delay(350); serial.withLock { repository.draft(t);if(pendingDraft==t)pendingDraft=null } }
+    }
+    suspend fun flushDraft() {
+        draftJob?.cancelAndJoin()
+        serial.withLock { pendingDraft?.let { repository.draft(it);pendingDraft=null } }
     }
     fun changeDate(date: String) {
         val t=editor.value ?: return
         if(t.saved) { change(t.copy(date=date)); return }
         change(t.copy(date=date,basisMl=if(t.kind=="MACHINE")state.value.preferences.basisOn(date)else null))
     }
-    fun discard(id: String,done: ()->Unit) { draftJob?.cancel(); act { repository.discardDraft(id);editor.value=null;savedState.remove<String>("editor");done() } }
+    fun discard(id: String,done: ()->Unit) { draftJob?.cancel();pendingDraft=null; act { repository.discardDraft(id);editor.value=null;savedState.remove<String>("editor");done() } }
     fun save(confirm: Boolean,onSaved: () -> Unit) {
         val t=editor.value ?: return
         draftJob?.cancel()
+        pendingDraft=null
         act("기록을 저장했어요") { repository.save(t,confirm); editor.value=null;savedState.remove<String>("editor"); onSaved() }
     }
     fun markCelebrated(date:String) = act { repository.markCelebrated(date) }

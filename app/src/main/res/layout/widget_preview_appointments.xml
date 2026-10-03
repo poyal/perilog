@@ -1,0 +1,36 @@
+<!-- RemoteViews previews use framework ImageViews, so android:tint is intentional. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools" tools:ignore="UseAppTint" android:layout_width="match_parent" android:layout_height="match_parent" android:padding="6dp" android:background="@drawable/widget_surface_light" android:orientation="vertical" android:baselineAligned="false">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="30dp" android:gravity="center_vertical" android:baselineAligned="false">
+        <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_widget_calendar" android:tint="#1675DE" android:importantForAccessibility="no" />
+        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="5dp" android:text="@string/widget_preview_appointments_text_0" android:textColor="#12304F" android:textSize="13sp" android:textStyle="bold" />
+        <ImageView android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_widget_refresh" android:tint="#1675DE" android:importantForAccessibility="no" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:background="@drawable/widget_accent_light" android:paddingHorizontal="6dp" android:gravity="center_vertical" android:baselineAligned="false">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/widget_preview_appointments_text_1" android:textSize="17sp" android:textColor="#12304F" android:textStyle="bold" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/widget_preview_date" android:textSize="9sp" android:textColor="#12304F" android:layout_marginStart="8dp" />
+    </LinearLayout>
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:padding="5dp" android:background="@drawable/widget_panel_light" android:text="@string/widget_preview_appointments_text_2" android:textSize="9sp" android:textColor="#12304F" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:padding="3dp" android:background="@drawable/widget_accent_light" android:orientation="vertical" android:baselineAligned="false">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/widget_preview_care" android:textSize="9sp" android:textColor="#12304F" android:textStyle="bold" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:baselineAligned="false">
+            <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center_vertical" android:padding="2dp" android:layout_margin="0dp" android:background="@drawable/widget_chip_light" android:baselineAligned="false">
+                <ImageView android:layout_width="10dp" android:layout_height="10dp" android:src="@drawable/ic_widget_blood" android:tint="#1675DE" android:importantForAccessibility="no" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/widget_preview_blood" android:textSize="9sp" android:textColor="#12304F" android:layout_marginStart="2dp" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center_vertical" android:padding="2dp" android:layout_margin="0dp" android:background="@drawable/widget_chip_light" android:baselineAligned="false">
+                <ImageView android:layout_width="10dp" android:layout_height="10dp" android:src="@drawable/ic_widget_healing" android:tint="#1675DE" android:importantForAccessibility="no" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/widget_preview_dressing" android:textSize="9sp" android:textColor="#12304F" android:layout_marginStart="2dp" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:baselineAligned="false">
+            <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center_vertical" android:padding="2dp" android:layout_margin="0dp" android:background="@drawable/widget_chip_light" android:baselineAligned="false">
+                <ImageView android:layout_width="10dp" android:layout_height="10dp" android:src="@drawable/ic_widget_lab" android:tint="#1675DE" android:importantForAccessibility="no" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/widget_preview_lab" android:textSize="9sp" android:textColor="#12304F" android:layout_marginStart="2dp" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center_vertical" android:padding="2dp" android:layout_margin="0dp" android:background="@drawable/widget_chip_light" android:baselineAligned="false">
+                <ImageView android:layout_width="10dp" android:layout_height="10dp" android:src="@drawable/ic_widget_medical" android:tint="#1675DE" android:importantForAccessibility="no" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/widget_preview_body" android:textSize="9sp" android:textColor="#12304F" android:layout_marginStart="2dp" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

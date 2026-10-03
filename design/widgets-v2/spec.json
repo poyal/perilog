@@ -1,0 +1,89 @@
+{
+  "status": "approved-and-implemented",
+  "generator": "built-in image_gen",
+  "comparison": "light-dark-compact-icons.png",
+  "record": {
+    "gridSizes": [
+      "4x1",
+      "4x2",
+      "2x2"
+    ],
+    "headerIcon": "Outlined checked document in both sizes and both themes",
+    "days": [
+      "yesterday",
+      "today"
+    ],
+    "stages": [
+      "활력 상태",
+      "사용 구성",
+      "투석 기록"
+    ],
+    "compactLabels": [
+      "활력",
+      "구성",
+      "투석"
+    ],
+    "remainingInputFields": false,
+    "dayTap": "Open that day's record",
+    "grouping": "Separate bordered day panels or rows; tinted today background",
+    "adaptiveLayouts": [
+      "one-row: side-by-side dates and horizontal stages; compact date/stage strip for very short landscape hosts",
+      "wide/short: side-by-side days with horizontal stages",
+      "wide/tall: side-by-side days with vertical stage rows",
+      "narrow/short: shared stage headings and compact day rows",
+      "narrow/tall: stacked day cards with three icon columns"
+    ]
+  },
+  "appointments": {
+    "gridSizes": [
+      "2x2"
+    ],
+    "visit": "nearest upcoming visit",
+    "fields": [
+      "D-day",
+      "date",
+      "department times",
+      "department names",
+      "all selected care items"
+    ],
+    "memo": false,
+    "grouping": "Distinct date, appointment, and treatment regions",
+    "scrolling": false,
+    "sampleCapacity": {
+      "departments": 2,
+      "careItems": 4
+    },
+    "layout": "Measure actual font metrics and launcher space; choose one or two care columns, compact gaps before reducing text; split department/care panels on short wide hosts. On tall hosts, allow up to 0.75dp less text size to avoid broken care names.",
+    "overflow": "Preserve all selected and legacy care items without scrolling or ellipsis. Long lists use smaller text; increasing the widget size improves readability."
+  },
+  "implementationNotes": [
+    "Light and dark share data and layout; change colors only.",
+    "Use launcher-provided dimensions; records can shrink to one grid row while appointments default to two.",
+    "Generated board is a visual proposal, not a pixel-exact size specification.",
+    "Verify actual 2x2 text sizes, non-scrolling content fit, and touch areas in the emulator before updating guides.",
+    "2026-10-04 adaptive revision: Android sizing/layout/quality guidance; SizeMode.Exact retained.",
+    "Compare real host captures 63-66 at short and tall launcher sizes."
+  ],
+  "research": [
+    {
+      "title": "Android widget sizing",
+      "url": "https://developer.android.com/design/ui/mobile/guides/widgets/sizing"
+    },
+    {
+      "title": "Android widget layouts",
+      "url": "https://developer.android.com/design/ui/mobile/guides/widgets/layouts"
+    },
+    {
+      "title": "Widget quality",
+      "url": "https://developer.android.com/docs/quality-guidelines/widget-quality"
+    },
+    {
+      "title": "Glance real host testing",
+      "url": "https://developer.android.com/develop/ui/compose/glance/testing"
+    },
+    {
+      "title": "Flexible widget layouts and one-row sizing",
+      "url": "https://developer.android.com/develop/ui/views/appwidgets/layouts"
+    }
+  ]
+}

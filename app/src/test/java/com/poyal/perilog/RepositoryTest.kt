@@ -24,6 +24,24 @@ class RepositoryTest {
     private val p=Product(id="p",name="테스트 물품")
     @Before fun setup() {db=Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(),JournalDb::class.java).allowMainThreadQueries().build();repo=Repository(db)}
     @After fun close() {db.close()}
+    @Test fun contactOrderSurvivesBackupSettingsEditsAndNewContactsWithoutChangingContactData()=runBlocking {
+        val a=Contact(id="a",name="병원",phone="02-123-4567",createdAt=1)
+        val b=Contact(id="b",name="간호사",phone="010-1234-5678",createdAt=2,allowCall=false)
+        repo.createContact(a);repo.createContact(b)
+        val oldSettings=repo.snapshot().preferences
+        repo.reorderContacts(listOf("b","a"));repo.preferences(oldSettings.copy(darkMode="DARK"))
+        assertEquals(listOf(b,a),repo.snapshot().orderedContacts())
+        assertTrue(runCatching {repo.reorderContacts(listOf("b","b"))}.isFailure)
+        assertEquals(listOf(b,a),repo.snapshot().orderedContacts())
+        val c=Contact(id="c",name="고객센터",phone="1588-1234",createdAt=0)
+        repo.createContact(c)
+        assertEquals(listOf(b,a,c),repo.snapshot().orderedContacts())
+        repo.restore(codec.decodeFromString<Snapshot>(codec.encodeToString(Snapshot.serializer(),repo.snapshot())))
+        assertEquals(listOf(b,a,c),repo.snapshot().orderedContacts())
+        repo.deleteContact("b")
+        assertEquals(listOf(a,c),repo.snapshot().orderedContacts());assertEquals(listOf("a"),repo.snapshot().preferences.contactOrder)
+        assertTrue(codec.decodeFromString<Preferences>("{}").contactOrder.isEmpty())
+    }
     @Test fun contactCreationCannotOverwriteAndEditingCannotRecreateDeletedContact()=runBlocking {
         val first=Contact(id="first",name="투석실",phone="02-123-4567",emoji="🏥",allowSms=false)
         val second=Contact(id="second",name="간호사",phone="010-1234-5678")
@@ -209,6 +227,7 @@ class RepositoryTest {
     @Test fun versionFourMigrationPreservesContactsAppointmentsAndConvertsCareItems()=migrationPreservesData(4)
     @Test fun versionFiveMigrationKeepsLegacySharedTimeAndAllExistingData()=migrationPreservesData(5)
     @Test fun versionSixMigrationPreservesDepartmentTimesAndCreatesEmptyAdjustments()=migrationPreservesData(6)
+    @Test fun versionSevenMigrationPreservesExistingDataAndAddsRequests()=migrationPreservesData(7)
     private fun migrationPreservesData(version:Int)=runBlocking {
         val context=ApplicationProvider.getApplicationContext<Context>()
         val file=File("schemas/com.poyal.perilog.data.JournalDb/$version.json").takeIf{it.exists()}
@@ -227,6 +246,7 @@ class RepositoryTest {
         val count=StockCount(id="legacy-count",productId=p.id,date=today(),quantity=8)
         val audit=Audit(id="legacy-audit",action="확인",targetId=t.id,before="",after="확인됨")
         val preferences=Preferences(darkMode="DARK",lastDrainUnit="kg")
+        val adjustment=StockAdjustment(id="legacy-adjustment",productId=p.id,delta=2,memo="이전 조정")
         val department=Department(id="legacy-dept",name="신장내과",color=0xFF47956E)
         val care=CareTemplate(id="legacy-care",name="정기 방문",tasks=listOf(CareTask(id="blood",name="피검사",iconKey="blood"),CareTask(id="room",name="투석실 방문",iconKey="dialysis")))
         val appointment=Appointment(id="legacy-reservation",date="2026-10-10",time="09:30",departments=listOf(department),care=care,memo="예약 메모",
@@ -259,6 +279,7 @@ class RepositoryTest {
             insert("counts",codec.encodeToJsonElement(count).jsonObject)
             insert("audit",codec.encodeToJsonElement(audit).jsonObject)
             insert("settings",buildJsonObject{put("id",1);put("payload",codec.encodeToJsonElement(preferences).toString())})
+            if(version>=7)insert("adjustments",codec.encodeToJsonElement(adjustment).jsonObject)
             if(version>=4) {
                 insert("departments",codec.encodeToJsonElement(department).jsonObject)
                 (if(version>=5)care.individualItems() else listOf(care)).forEach { insert("care_templates",codec.encodeToJsonElement(it).jsonObject) }
@@ -270,8 +291,9 @@ class RepositoryTest {
         val upgraded=JournalDb.open(context)
         try {
             val restored=Repository(upgraded).snapshot()
-            assertEquals(7,upgraded.openHelper.readableDatabase.version)
-            assertTrue(restored.adjustments.isEmpty())
+            assertEquals(8,upgraded.openHelper.readableDatabase.version)
+            assertEquals(if(version>=7)listOf(adjustment)else emptyList<StockAdjustment>(),restored.adjustments)
+            assertTrue(restored.replenishmentPlans.isEmpty())
             assertEquals(listOf(p),restored.products)
             assertEquals(listOf(t),restored.treatments)
             assertEquals(listOf(u),restored.usages)

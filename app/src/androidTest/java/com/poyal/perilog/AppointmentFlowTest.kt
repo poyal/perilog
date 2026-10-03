@@ -36,6 +36,10 @@ class AppointmentFlowTest {
         runCatching{n.performScrollTo()};return n
     }
     private fun click(text:String){show(node(text)).performClick()}
+    private fun contactMenu(name:String,action:String) {
+        show(ui.onNodeWithContentDescription("$name 더보기")).performClick()
+        ui.onNodeWithContentDescription("$name $action").performClick()
+    }
     private fun input(label:String,value:String) {
         show(ui.onNode(hasSetTextAction() and hasText(label))).performTextReplacement(value)
         ui.runOnIdle{(ui.activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
@@ -169,7 +173,7 @@ class AppointmentFlowTest {
         settings();click("연락처 관리");click("+ 연락처 등록")
         input("연락처 이름","테스트 연락처");input("전화번호","010-0000-0000");click("저장")
         await{snapshot().contacts.size==1}
-        show(ui.onNodeWithContentDescription("테스트 연락처 수정")).performClick()
+        contactMenu("테스트 연락처","수정")
         input("연락처 이름","수정한 연락처");input("전화번호","02-000-0000")
         click("문자 허용");click("이모지 선택");show(ui.onNodeWithContentDescription("청진기 이모지")).performClick()
         ui.activityRule.scenario.recreate()
@@ -178,7 +182,7 @@ class AppointmentFlowTest {
         assertFalse(snapshot().contacts.single().allowSms);assertEquals("🩺",snapshot().contacts.single().emoji)
         back();back();show(avatar("수정한 연락처")).performClick();show(node("02-000-0000")).assertIsDisplayed()
         ui.onNodeWithContentDescription("수정한 연락처 전화").assertExists();ui.onNodeWithContentDescription("수정한 연락처 문자").assertDoesNotExist();closeContact()
-        settings();click("연락처 관리");show(ui.onNodeWithContentDescription("수정한 연락처 삭제")).performClick();click("확인")
+        settings();click("연락처 관리");contactMenu("수정한 연락처","삭제");click("확인")
         await{snapshot().contacts.isEmpty()};back();back()
         node("수정한 연락처").assertDoesNotExist();ui.onNodeWithContentDescription("수정한 연락처 전화").assertDoesNotExist()
         show(node("연락처 등록")).assertIsDisplayed()
@@ -258,7 +262,7 @@ class AppointmentFlowTest {
         val original=Contact(id="existing-contact",name="기존 연락처",phone="02-000-0000",emoji="🏥",allowSms=false)
         runBlocking{app.repository.createContact(original)}
         settings();click("연락처 관리")
-        show(ui.onNodeWithContentDescription("기존 연락처 수정")).performClick()
+        contactMenu("기존 연락처","수정")
         input("연락처 이름","수정한 기존 연락처");click("저장")
         await{snapshot().contacts.single().name=="수정한 기존 연락처"}
         val edited=snapshot().contacts.single()
@@ -278,10 +282,10 @@ class AppointmentFlowTest {
         val added=snapshot().contacts.single{it.id!=original.id}
         assertEquals("새 연락처",added.name);assertEquals("010-2222-2222",added.phone)
         assertEquals("👤",added.emoji);assertTrue(added.allowCall);assertTrue(added.allowSms)
-        show(ui.onNodeWithContentDescription("새 연락처 수정")).performClick()
+        contactMenu("새 연락처","수정")
         input("연락처 이름","버릴 수정");back();click("확인")
         assertEquals(added,snapshot().contacts.single{it.id==added.id})
-        show(ui.onNodeWithContentDescription("새 연락처 삭제")).performClick();click("확인")
+        contactMenu("새 연락처","삭제");click("확인")
         await{snapshot().contacts.size==1};assertEquals(edited,snapshot().contacts.single())
     }
     @Test fun newDataFullFileBackupRestoresAfterReset()=runBlocking {

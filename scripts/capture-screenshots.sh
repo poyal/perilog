@@ -12,7 +12,7 @@ if [ -n "$PERILOG_DEBUG_PATH" ]; then
   "$ADB" -s "$PERILOG_SERIAL" shell pm clear com.poyal.perilog.debug >/dev/null
 fi
 ./scripts/build.sh :app:connectedDebugAndroidTest -PcaptureScreenshots \
-  -Pandroid.testInstrumentationRunnerArguments.class=com.poyal.perilog.capture.DocumentationCapture \
+  -Pandroid.testInstrumentationRunnerArguments.class=com.poyal.perilog.capture.DocumentationCapture,com.poyal.perilog.capture.ReplenishmentCapture \
   -Pandroid.testInstrumentationRunnerArguments.timeout_msec=240000 \
   -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true
 mkdir -p docs/screenshots

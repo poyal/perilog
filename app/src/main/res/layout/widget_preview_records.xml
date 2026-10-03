@@ -1,0 +1,26 @@
+<!-- RemoteViews previews use framework ImageViews, so android:tint is intentional. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools" tools:ignore="UseAppTint" android:layout_width="match_parent" android:layout_height="match_parent" android:padding="8dp" android:background="@drawable/widget_surface_light" android:orientation="vertical" android:baselineAligned="false">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="30dp" android:gravity="center_vertical" android:baselineAligned="false">
+        <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_widget_records" android:tint="#1675DE" android:importantForAccessibility="no" />
+        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="5dp" android:text="@string/widget_preview_records_text_0" android:textColor="#12304F" android:textSize="15sp" android:textStyle="bold" />
+        <ImageView android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_widget_refresh" android:tint="#1675DE" android:importantForAccessibility="no" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:layout_marginTop="4dp" android:baselineAligned="false">
+        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:orientation="vertical" android:background="@drawable/widget_panel_light" android:padding="8dp" android:baselineAligned="false">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/widget_preview_yesterday" android:textSize="13sp" android:textColor="#12304F" android:textStyle="bold" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:gravity="center_vertical" android:baselineAligned="false">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="@string/widget_preview_vitality" android:textSize="11sp" android:textColor="#12304F" android:drawableTop="@drawable/ic_widget_done" android:drawablePadding="7dp" />
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="@string/widget_preview_usage" android:textSize="11sp" android:textColor="#12304F" android:drawableTop="@drawable/ic_widget_done" android:drawablePadding="7dp" />
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="@string/widget_preview_treatment" android:textSize="11sp" android:textColor="#12304F" android:drawableTop="@drawable/ic_widget_done" android:drawablePadding="7dp" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:orientation="vertical" android:background="@drawable/widget_accent_light" android:padding="8dp" android:layout_marginStart="6dp" android:baselineAligned="false">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/widget_preview_today" android:textSize="13sp" android:textColor="#12304F" android:textStyle="bold" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:gravity="center_vertical" android:baselineAligned="false">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="@string/widget_preview_vitality" android:textSize="11sp" android:textColor="#12304F" android:drawableTop="@drawable/ic_widget_done" android:drawablePadding="7dp" />
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="@string/widget_preview_usage" android:textSize="11sp" android:textColor="#12304F" android:drawableTop="@drawable/ic_widget_done" android:drawablePadding="7dp" />
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="@string/widget_preview_treatment" android:textSize="11sp" android:textColor="#12304F" android:drawableTop="@drawable/ic_widget_ring" android:drawablePadding="7dp" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

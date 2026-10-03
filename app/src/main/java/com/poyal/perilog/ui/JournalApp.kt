@@ -20,8 +20,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.isActive
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.poyal.perilog.widget.WidgetOpenRequest
+import com.poyal.perilog.domain.dailyProgress
 
-@Composable fun JournalApp(vm:JournalViewModel=viewModel(), unlocked:Boolean=true) {
+@Composable fun JournalApp(vm:JournalViewModel=viewModel(), unlocked:Boolean=true,
+    widgetRequest:WidgetOpenRequest?=null,onWidgetHandled:()->Unit={}) {
     val updates = vm.app.updates
     val updateState by updates.state.collectAsStateWithLifecycle()
     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -55,14 +58,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
     val route=stack.last()
     val rootTabs=listOf("home","records","stats","stock")
     val editing=route.contains('/')
-    val management=editing || route in listOf("appointments","departments","careTemplates","contacts","stockHistory","receipts","recordTable")
+    val management=editing || route in listOf("appointments","departments","careTemplates","contacts","stockHistory","receipts","recordTable","requests","guide","widgets")
     val snackbar=remember{SnackbarHostState()}
     LaunchedEffect(Unit){vm.message.collect{snackbar.showSnackbar(it)}}
     LaunchedEffect(route){snackbar.currentSnackbarData?.dismiss()}
     fun navigate(to:String){
         focus.clearFocus();keyboard?.hide()
         // Each new contact owns its saved state, including across activity recreation.
-        val destination=if(to=="contact/new")"contact/new/${com.poyal.perilog.data.newId()}"else to
+        val destination=when(to) {
+            "contact/new"->"contact/new/${com.poyal.perilog.data.newId()}"
+            "request/new"->"request/new/${com.poyal.perilog.data.newId()}"
+            else->to
+        }
         if(destination in rootTabs){stack.filter{it!=destination}.forEach{screenState.removeState(it)};stack=listOf(destination);tab=destination}
         else if(destination!=route)stack=stack+destination
     }
@@ -70,10 +77,45 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
     fun editor(id:String?=null,kind:String="MACHINE",day:String=com.poyal.perilog.data.today()){
         vm.edit(id,kind,day);editingId=vm.editor.value?.id;navigate("edit")
     }
+    LaunchedEffect(widgetRequest?.id,ready,unlocked,busy) {
+        val request=widgetRequest ?: return@LaunchedEffect
+        if(!ready || !unlocked || busy)return@LaunchedEffect
+        if(vm.inputErrors.isNotEmpty()) {
+            onWidgetHandled()
+            vm.message.emit("입력 중인 숫자 형식을 먼저 확인해 주세요. 작성한 내용은 유지했어요.")
+            return@LaunchedEffect
+        }
+        val fresh=try {vm.flushDraft();vm.repository.snapshot()} catch(e:Exception) {
+            if(e is kotlinx.coroutines.CancellationException)throw e
+            onWidgetHandled();vm.message.emit("작성 중인 기록을 보관하지 못했어요. 다시 시도해 주세요.")
+            return@LaunchedEffect
+        }
+        val target=request.target
+        // Consume once before changing routes; activity recreation must not repeat an old tap.
+        onWidgetHandled()
+        when(target.screen) {
+            "record" -> {
+                if(target.valid()) {
+                    val day=fresh.dailyProgress(target.value)
+                    // Treatment input owns one ViewModel editor. Persist the previous draft and
+                    // remove old editor entries while retaining other forms' SaveableStateProvider.
+                    focus.clearFocus();keyboard?.hide()
+                    if("edit" in stack)screenState.removeState("edit")
+                    vm.edit(day.resume?.id,day.resume?.kind ?: "MACHINE",target.value,fresh)
+                    editingId=vm.editor.value?.id
+                    stack=stack.filterNot {it=="edit"}.ifEmpty {listOf("home")}+"edit"
+                } else navigate("home")
+            }
+            "appointment" -> navigate(if(fresh.appointments.any {it.id==target.value})"appointment/${target.value}"else"appointments")
+            "appointments" -> navigate("appointments")
+            "newAppointment" -> navigate("appointment/new")
+            else -> navigate("home")
+        }
+    }
     LaunchedEffect(ready,route){if(ready && route=="edit" && vm.editor.value==null){if(editingId!=null && (s.treatments.any{it.id==editingId} || s.drafts.any{it.id==editingId}))vm.edit(editingId)else back()}}
-    val readOnly=route.startsWith("stock/") || route.startsWith("stockHistory/")
+    val readOnly=route.startsWith("stock/") || route.startsWith("stockHistory/") || route.startsWith("guide/") || route.startsWith("requestDetail/")
     BackHandler(stack.size>1 && (!editing || readOnly)){back()}
-    CompositionLocalProvider(LocalInputErrors provides vm.inputErrors){PerilogTheme(s.preferences.darkMode){
+    CompositionLocalProvider(LocalInputErrors provides vm.inputErrors,LocalHelpAction provides {navigate("guide/${if(route=="edit" && vm.editor.value?.kind=="MANUAL")"manual"else guideForRoute(route)}")}){PerilogTheme(s.preferences.darkMode){
         val colors=MaterialTheme.colorScheme
         if (ready && unlocked) UpdatePrompt(updateState, updates::dismissPrompt) {
             updates.dismissPrompt(); navigate("about"); updates.download()
@@ -93,16 +135,24 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
                     route=="recordTable"->RecordTableScreen(s,vm,::back){t->editor(t.id,t.kind,t.date)}
                     route=="stats"->StatsScreen(s,vm){editor(it)}
                     route=="stock"->StockScreen(s,vm,::navigate)
+                    route=="requests"->ReplenishmentListScreen(s,::navigate,::back)
+                    route=="guide"->GuideScreen(null,::navigate,::back)
+                    route.startsWith("guide/")->GuideScreen(route.substringAfter('/'),::navigate,::back)
+                    route.startsWith("requestDetail/")->ReplenishmentDetailScreen(s,route.substringAfter('/'),::navigate,::back)
+                    route.startsWith("requestReceive/")->RequestReceiptScreen(s,vm,route.substringAfter('/'),::back)
+                    route.startsWith("request/")->ReplenishmentEditor(s,vm,route.substringAfterLast('/'),if(route.startsWith("request/copy/"))route.split('/')[2]else null,::navigate,::back)
                     route=="products"->ProductsScreen(s,::navigate,::back)
                     route=="templates"->TemplatesScreen(s,vm,::navigate,::back)
                     route=="stockHistory" || route=="receipts"->StockHistoryScreen(s,vm,null,::navigate,::back){editor(it)}
                     route=="about"->AboutScreen(updates,::back)
                     route=="settings"->SettingsScreen(s,vm,::navigate,::back)
-                    route=="edit"->TreatmentScreen(s,vm,::back)
+                    route=="widgets"->WidgetSettingsScreen(::back)
+                    route=="edit"->key(editingId){TreatmentScreen(s,vm,::back)}
                     route=="appointments"->AppointmentsScreen(s,vm,now,::navigate,::back)
                     route=="departments"->DepartmentsScreen(s,vm,::navigate,::back)
                     route=="careTemplates"->CareTemplatesScreen(s,vm,::navigate,::back)
                     route=="contacts"->ContactsScreen(s,vm,::navigate,::back)
+                    route=="contacts/order"->ContactOrderScreen(s,vm,::back)
                     route.startsWith("appointment/next/")->AppointmentEditor(s,vm,route.substringAfterLast('/'),true,::navigate,::back)
                     route.startsWith("appointment/")->AppointmentEditor(s,vm,route.substringAfter('/'),false,::navigate,::back)
                     route.startsWith("department/")->DepartmentEditor(s,vm,route.substringAfter('/'),::back)

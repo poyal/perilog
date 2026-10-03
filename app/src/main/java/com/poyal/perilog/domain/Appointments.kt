@@ -36,6 +36,10 @@ fun Appointment.selectedCareItems(): List<CareTask> = careItems.ifEmpty {
 }
 
 fun dialNumber(phone: String): String = phone.filter { it.isDigit() || it == '+' }
+fun Snapshot.orderedContacts(): List<Contact> {
+    val positions=preferences.contactOrder.withIndex().associate { it.value to it.index }
+    return contacts.sortedWith(compareBy<Contact> { positions[it.id] ?: Int.MAX_VALUE }.thenBy { it.createdAt }.thenBy { it.id })
+}
 fun validPhone(phone: String): Boolean = phone.trim().matches(Regex("\\+?[0-9() \\-]+")) &&
     dialNumber(phone).count { it.isDigit() } in 3..20
 
@@ -67,4 +71,5 @@ fun validateAppointments(s: Snapshot) {
         require(it.careItems.all { task -> task.name.isNotBlank() && task.iconKey.isNotBlank() }) { "치료 항목 이름과 아이콘을 확인해 주세요." }
     }
     s.contacts.forEach { require(it.name.isNotBlank() && validPhone(it.phone)) { "연락처 이름과 전화번호를 확인해 주세요." } }
+    require(s.preferences.contactOrder.all { it.isNotBlank() } && s.preferences.contactOrder.distinct().size==s.preferences.contactOrder.size) { "연락처 순서가 올바르지 않습니다." }
 }

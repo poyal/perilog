@@ -1,0 +1,26 @@
+Use case: ui-mockup.
+Create ONE polished Korean Android home-screen widget redesign presentation board for the existing app "페리로그", containing exactly THREE widgets. This is a high fidelity flat product UI design proposal, not an implemented screenshot. Crisp readable Korean sans-serif like Pretendard, precision grid, restrained contemporary Android Material design.
+Canvas square or slightly portrait, about 1536 x 1536. Solid very pale cool gray-blue background #EEF3F8. At top left editorial small blue text "페리로그", then headline "작게, 필요한 정보만", subtitle "홈 화면 위젯 디자인". Generous margins. No phone frames, no wallpaper imagery, no illustrations, no decorative charts or medical data.
+Geometry: one 4×2 widget across the top, with width 1020 and height 470 scaled pixels. Under it, TWO 2×2 widgets side by side, each width 490 height 470, gap40. ALL THREE WIDGETS MUST BE SAME HEIGHT, small ones nearly square. Outside above each widget put a simple caption "기록 · 4×2", "기록 · 2×2", "병원 일정 · 2×2". White surfaces, 26dp corner radius, faint soft shadow, no nested pill cards. Navy #163756 type, muted slate secondary #6F8295, accent blue #2476CF. Subtle pale blue #E8F3FF only for today's selected section. Screen proportions realistic at approximately 360×166 dp wide and 172×166 dp small. Carefully use usable space, no wasted vertical expanses.
+
+TOP WIDE WIDGET:
+header small blue outline checklist icon then "어제·오늘 기록" at left; simple small refresh arrow at right.
+Below header, equal-width left and right day columns, fine vertical divider. Left heading "어제" followed by secondary "10.2", right heading "오늘" in blue followed by "10.3"; today column faint blue background integrated into surface.
+Each day shows exactly THREE equal columns: a filled blue check circle above each short two-line label. Exact labels "활력 상태", "사용 구성", "투석 기록". On yesterday ALL THREE circles filled with white checks. On today first TWO circles filled blue with white checks; THIRD circle is empty thin gray outline. One subtle right chevron by each day heading to indicate tappable day. No counts, no progress bar, no remaining-input text, no action buttons.
+
+BOTTOM LEFT SMALL RECORD WIDGET:
+header "어제·오늘" at left and small refresh icon right.
+Below use a compact clean status MATRIX. First narrow column is day/date; the other three column headers are "활력", "구성", "투석", muted but readable. Two rows:
+row1 day "어제", smaller date "10.2" underneath; then exactly 3 filled blue circles with white checks aligned under headers.
+row2 day "오늘", smaller date "10.3" underneath; first two filled check circles, third hollow gray circle. Row2 a subtle very light blue background. Thin divider between rows. No charts, no count, no extra legends or footer, no remaining-field labels.
+The matrix clearly keeps both days and all three stages even in the compact widget.
+
+BOTTOM RIGHT SMALL APPOINTMENT WIDGET:
+header small outline calendar icon followed by "병원 일정", small refresh icon right.
+Body prominent BLUE "D-3", with secondary date "10.6 (화)" beside it, not overflowing.
+Below a thin divider and TWO readable lines with aligned left time and department:
+"09:30" "신장내과"
+"11:20" "내분비내과"
+Small right chevron in bottom-right indicates tapping opens appointment. Only nearest visit represented, no second date, no treatment tasks, no full-width buttons, no big "+", no timestamp.
+
+Footer outside widgets: small unobtrusive "디자인 시안 · 예시 데이터" only. Ensure immaculate Korean text accuracy, clear hierarchy, consistent margins, legible type even in small widgets. No status bar, no repeated designs, no dark versions.

@@ -1,0 +1,5 @@
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#FFFFFF" />
+    <stroke android:width="0.75dp" android:color="#D5E2F0" />
+    <corners android:radius="@android:dimen/system_app_widget_background_radius" />
+</shape>

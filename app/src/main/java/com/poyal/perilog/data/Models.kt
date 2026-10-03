@@ -45,7 +45,8 @@ data class ReceiptLine(val id: String = newId(), val productId: String, val quan
 
 @Entity(tableName = "receipts") @Serializable
 data class Receipt(@PrimaryKey val id: String = newId(), val date: String = today(), val lines: List<ReceiptLine>,
-    val memo: String = "", val createdAt: Long = System.currentTimeMillis(), val cancelled: Boolean = false)
+    val memo: String = "", val createdAt: Long = System.currentTimeMillis(), val cancelled: Boolean = false,
+    val requestPlanId: String? = null)
 
 @Entity(tableName = "counts") @Serializable
 data class StockCount(@PrimaryKey val id: String = newId(), val productId: String, val date: String = today(),
@@ -98,7 +99,8 @@ data class Preferences(val basis: List<Basis> = listOf(Basis("1970-01-01", 2000)
     val darkMode: String = "SYSTEM", val celebrate: Boolean = true, val lock: Boolean = false,
     val reminder: Boolean = false, val reminderHour: Int = 21, val reminderMinute: Int = 0,
     val palette: List<Long> = listOf(0xFF2167B8,0xFF47956E,0xFFEF8752,0xFF30343B,0xFFBA668B,0xFF8772B5,0xFFDAAB36,0xFF5B9FA6),
-    val celebratedDates: Set<String> = emptySet(), val lastDrainUnit: String = "g")
+    val celebratedDates: Set<String> = emptySet(), val lastDrainUnit: String = "g",
+    val contactOrder: List<String> = emptyList())
 
 @Serializable
 data class Snapshot(val formatVersion: Int = 1, val appVersion: String = "1.0.1",
@@ -108,4 +110,5 @@ data class Snapshot(val formatVersion: Int = 1, val appVersion: String = "1.0.1"
     val counts: List<StockCount> = emptyList(), val audit: List<Audit> = emptyList(), val drafts: List<Draft> = emptyList(),
     val preferences: Preferences = Preferences(), val departments: List<Department> = emptyList(),
     val careTemplates: List<CareTemplate> = emptyList(), val appointments: List<Appointment> = emptyList(),
-    val contacts: List<Contact> = emptyList(), val adjustments: List<StockAdjustment> = emptyList())
+    val contacts: List<Contact> = emptyList(), val adjustments: List<StockAdjustment> = emptyList(),
+    val replenishmentPlans: List<ReplenishmentPlan> = emptyList())

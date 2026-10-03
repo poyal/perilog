@@ -3,6 +3,9 @@ package com.poyal.perilog
 import android.app.Application
 import com.poyal.perilog.data.*
 import com.poyal.perilog.backup.*
+import com.poyal.perilog.widget.*
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
 
 class PerilogApplication: Application() {
     // Replaced by the instrumentation runner before any Activity is created.
@@ -13,5 +16,15 @@ class PerilogApplication: Application() {
         com.poyal.perilog.update.AndroidUpdateDownloads(this), updateScope) }
     val repository by lazy { Repository(JournalDb.open(this)) }
     val backup by lazy { BackupManager(this,repository) }
-    override fun onCreate() { super.onCreate(); BackupManager.schedule(this) }
+    @OptIn(FlowPreview::class)
+    override fun onCreate() {
+        super.onCreate(); BackupManager.schedule(this)
+        updateScope.launch(Dispatchers.IO) {
+            repository.snapshots.map { widgetDataKey(it) }.distinctUntilChanged().debounce(500).collect {
+                if(WidgetUpdates.installed(this@PerilogApplication)) try { WidgetUpdates.refresh(this@PerilogApplication) }
+                    catch(e:CancellationException) {throw e}
+                    catch(_:Exception) {WidgetUpdates.request(this@PerilogApplication)}
+            }
+        }
+    }
 }

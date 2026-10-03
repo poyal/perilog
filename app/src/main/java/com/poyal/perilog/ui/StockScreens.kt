@@ -53,6 +53,8 @@ import java.util.Locale
             }
         }
         Paper {
+            MenuRow("입고 요청 계산기","방문 사이 필요한 양 · 저장한 요청",Icons.Outlined.Calculate){navigate("requests")}
+            HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
             MenuRow("품목 관리 · 색상",icon=Icons.Outlined.Inventory2){navigate("products")}
             HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
             MenuRow("사용 구성 관리",icon=Icons.Outlined.ViewList){navigate("templates")}
@@ -227,6 +229,7 @@ import java.util.Locale
     EditorPage(if(id=="new")"입고 등록"else"입고 수정","받은 날짜와 품목별 EA 수량을 입력해요",codec.encodeToString(r)!=original,back,{
         vm.act("입고 내역을 저장했어요"){vm.repository.receipt(r.copy(lines=r.lines.filter{it.quantity>0}));back()}
     },r.lines.any{it.quantity>0} && r.date<=today(),"함께 저장",vm.busy.collectAsState().value) {
+        r.requestPlanId?.let { planId->s.replenishmentPlans.find{it.id==planId}?.let { plan->Paper {Hint("${plan.input.visitDate} 입고 요청에 연결된 실제 입고예요. 수정한 수량은 받은 양에도 반영돼요.")} } }
         Paper{DateControl(r.date,{r=r.copy(date=it)},"입고일")}
         if(s.products.isEmpty())Paper{Hint("품목 관리에서 사용하는 물품을 먼저 등록해 주세요.")}
         r.lines.forEach{line->key(line.id){val p=s.products.find{it.id==line.productId}

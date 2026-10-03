@@ -10,6 +10,10 @@ import kotlinx.serialization.encodeToString
 import com.poyal.perilog.domain.*
 
 class Converters {
+    @TypeConverter fun replenishmentInput(value: ReplenishmentInput): String = codec.encodeToString(value)
+    @TypeConverter fun replenishmentInput(value: String): ReplenishmentInput = codec.decodeFromString(value)
+    @TypeConverter fun replenishmentCalculation(value: ReplenishmentCalculation): String = codec.encodeToString(value)
+    @TypeConverter fun replenishmentCalculation(value: String): ReplenishmentCalculation = codec.decodeFromString(value)
     @TypeConverter fun items(value: List<Item>): String = codec.encodeToString(value)
     @TypeConverter fun items(value: String): List<Item> = codec.decodeFromString(value)
     @TypeConverter fun lines(value: List<ReceiptLine>): String = codec.encodeToString(value)
@@ -27,6 +31,9 @@ class Converters {
 }
 
 @Dao interface JournalDao {
+    @Query("SELECT * FROM replenishment_plans") suspend fun replenishmentPlans(): List<ReplenishmentPlan>
+    @Upsert suspend fun put(value: ReplenishmentPlan)
+    @Query("DELETE FROM replenishment_plans") suspend fun clearReplenishmentPlans()
     @Query("SELECT * FROM products") suspend fun products(): List<Product>
     @Query("SELECT * FROM templates") suspend fun templates(): List<UsageTemplate>
     @Query("SELECT * FROM treatments") suspend fun treatments(): List<Treatment>
@@ -79,7 +86,7 @@ class Converters {
 
 @Database(entities=[Product::class,UsageTemplate::class,Treatment::class,Usage::class,Receipt::class,
     StockCount::class,Audit::class,Draft::class,SettingsRow::class,Department::class,CareTemplate::class,
-    Appointment::class,Contact::class,StockAdjustment::class],version=7,exportSchema=true)
+    Appointment::class,Contact::class,StockAdjustment::class,ReplenishmentPlan::class],version=8,exportSchema=true)
 @TypeConverters(Converters::class)
 abstract class JournalDb : RoomDatabase() {
     abstract fun dao(): JournalDao
@@ -134,7 +141,13 @@ abstract class JournalDb : RoomDatabase() {
                 db.execSQL("CREATE TABLE IF NOT EXISTS adjustments (id TEXT NOT NULL PRIMARY KEY, productId TEXT NOT NULL, date TEXT NOT NULL, delta INTEGER NOT NULL, memo TEXT NOT NULL, createdAt INTEGER NOT NULL, cancelled INTEGER NOT NULL)")
             }
         }
-        fun open(context: Context) = Room.databaseBuilder(context,JournalDb::class.java,"perilog.db").addMigrations(MIGRATION_1_2,MIGRATION_2_3,MIGRATION_3_4,MIGRATION_4_5,MIGRATION_5_6,MIGRATION_6_7).build()
+        val MIGRATION_7_8=object:Migration(7,8) {
+            override fun migrate(db:SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS replenishment_plans (id TEXT NOT NULL PRIMARY KEY, input TEXT NOT NULL, calculation TEXT NOT NULL, memo TEXT NOT NULL, createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL)")
+                db.execSQL("ALTER TABLE receipts ADD COLUMN requestPlanId TEXT")
+            }
+        }
+        fun open(context: Context) = Room.databaseBuilder(context,JournalDb::class.java,"perilog.db").addMigrations(MIGRATION_1_2,MIGRATION_2_3,MIGRATION_3_4,MIGRATION_4_5,MIGRATION_5_6,MIGRATION_6_7,MIGRATION_7_8).build()
     }
 }
 
@@ -142,12 +155,12 @@ data class DeletedTreatment(val record:Treatment,val usage:Usage?)
 
 class Repository(val db: JournalDb) {
     private val d = db.dao()
-    val snapshots: Flow<Snapshot> = db.invalidationTracker.createFlow("products","templates","treatments","usages","receipts","counts","adjustments","audit","settings","drafts","departments","care_templates","appointments","contacts").map { snapshot() }
+    val snapshots: Flow<Snapshot> = db.invalidationTracker.createFlow("products","templates","treatments","usages","receipts","counts","adjustments","audit","settings","drafts","departments","care_templates","appointments","contacts","replenishment_plans").map { snapshot() }
     suspend fun snapshot(): Snapshot = db.withTransaction { read() }
     private suspend fun read() = Snapshot(products=d.products(),templates=d.templates(),treatments=d.treatments(),
         usages=d.usages(),receipts=d.receipts(),counts=d.counts(),audit=d.audit(),drafts=d.drafts(),
         preferences=d.settings()?.let { codec.decodeFromString<Preferences>(it.payload) } ?: Preferences(),
-        departments=d.departments(),careTemplates=d.careTemplates(),appointments=d.appointments(),contacts=d.contacts(),adjustments=d.adjustments())
+        departments=d.departments(),careTemplates=d.careTemplates(),appointments=d.appointments(),contacts=d.contacts(),adjustments=d.adjustments(),replenishmentPlans=d.replenishmentPlans())
     private suspend fun log(action:String,id:String,before:String,after:String) = d.put(Audit(action=action,targetId=id,before=before,after=after))
     suspend fun draft(t: Treatment) = d.put(Draft(t.id,t))
     suspend fun discardDraft(id: String) = d.deleteDraft(id)
@@ -206,6 +219,12 @@ class Repository(val db: JournalDb) {
     suspend fun count(c: StockCount) = db.withTransaction {
         val s=read(); validate(s.copy(counts=s.counts+c)); d.put(c); log("재고 실사",c.id,"",codec.encodeToString(c))
     }
+    suspend fun replenishmentPlan(value: ReplenishmentPlan) = db.withTransaction {
+        val s=read()
+        validate(s.copy(replenishmentPlans=s.replenishmentPlans.filterNot{it.id==value.id}+value))
+        log("입고 요청 저장",value.id,s.replenishmentPlans.find{it.id==value.id}?.let{codec.encodeToString(it)} ?: "",codec.encodeToString(value))
+        d.put(value)
+    }
     suspend fun adjustment(value: StockAdjustment) = db.withTransaction {
         val s=read();val previous=s.adjustments.find{it.id==value.id}
         validate(s.copy(adjustments=s.adjustments.filterNot{it.id==value.id}+value))
@@ -213,7 +232,17 @@ class Repository(val db: JournalDb) {
         log(if(value.cancelled)"재고 조정 취소"else"재고 조정",value.id,
             previous?.let{codec.encodeToString(it)} ?: "",codec.encodeToString(value))
     }
-    suspend fun preferences(p: Preferences) = db.withTransaction { validate(read().copy(preferences=p)); d.put(SettingsRow(payload=codec.encodeToString(p))) }
+    suspend fun preferences(p: Preferences) = db.withTransaction {
+        val s=read()
+        // A settings form opened before reordering contacts must not overwrite their new order.
+        val updated=p.copy(contactOrder=s.preferences.contactOrder)
+        validate(s.copy(preferences=updated)); d.put(SettingsRow(payload=codec.encodeToString(updated)))
+    }
+    suspend fun reorderContacts(ids: List<String>) = db.withTransaction {
+        val s=read()
+        require(ids.distinct().size==ids.size && ids.toSet()==s.contacts.map { it.id }.toSet()) { "연락처 목록이 바뀌었어요. 순서를 다시 확인해 주세요." }
+        d.put(SettingsRow(payload=codec.encodeToString(s.preferences.copy(contactOrder=ids))))
+    }
     suspend fun department(value: Department) = db.withTransaction {
         val s=read(); validate(s.copy(departments=s.departments.filterNot{it.id==value.id}+value)); d.put(value)
     }
@@ -237,15 +266,20 @@ class Repository(val db: JournalDb) {
     suspend fun deleteDepartment(id: String) = d.deleteDepartment(id)
     suspend fun deleteCareTemplate(id: String) = d.deleteCareTemplate(id)
     suspend fun deleteAppointment(id: String) = d.deleteAppointment(id)
-    suspend fun deleteContact(id: String) = d.deleteContact(id)
+    suspend fun deleteContact(id: String) = db.withTransaction {
+        val p=read().preferences
+        d.deleteContact(id)
+        d.put(SettingsRow(payload=codec.encodeToString(p.copy(contactOrder=p.contactOrder-id))))
+    }
     suspend fun restore(s: Snapshot) = db.withTransaction {
         validate(s)
         val careItems=s.careTemplates.flatMap{it.individualItems()}
         validate(s.copy(careTemplates=careItems))
-        d.clearDrafts(); d.clearTreatments(); d.clearUsages(); d.clearReceipts(); d.clearCounts(); d.clearAdjustments(); d.clearTemplates(); d.clearProducts(); d.clearAudit()
+        d.clearDrafts(); d.clearTreatments(); d.clearUsages(); d.clearReceipts(); d.clearReplenishmentPlans(); d.clearCounts(); d.clearAdjustments(); d.clearTemplates(); d.clearProducts(); d.clearAudit()
         d.clearAppointments(); d.clearDepartments(); d.clearCareTemplates(); d.clearContacts()
         s.products.forEach{d.put(it)}; s.templates.forEach{d.put(it)}; s.treatments.forEach{d.put(it)}; s.usages.forEach{d.put(it)}
         s.receipts.forEach{d.put(it)}; s.counts.forEach{d.put(it)}; s.adjustments.forEach{d.put(it)}; s.audit.forEach{d.put(it)}; s.drafts.forEach{d.put(it)}
+        s.replenishmentPlans.forEach{d.put(it)}
         s.departments.forEach{d.put(it)}; careItems.forEach{d.put(it)}; s.appointments.forEach{d.put(it)}; s.contacts.forEach{d.put(it)}
         d.put(SettingsRow(payload=codec.encodeToString(s.preferences)))
     }

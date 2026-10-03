@@ -163,7 +163,7 @@ class DocumentationCapture {
         ui.onNodeWithContentDescription("설정").performClick()
         click("병원 일정 관리");shot("39-appointment-list")
         show(ui.onNodeWithContentDescription("next-visit 일정 수정")).performClick()
-        click("날짜 선택");show(ui.onNodeWithText("예약일 선택해 주세요"));shot("40-appointment-calendar");click("날짜 선택 접기")
+        click("날짜 선택");show(ui.onNodeWithText("예약일 ",substring=true));shot("40-appointment-calendar");click("날짜 선택 접기")
         show(ui.onNode(hasSetTextAction() and hasText("신장내과 예약시간 · HH:mm")));shot("32-appointment-editor");back();back()
         click("치료 구성 관리");shot("33-treatment-items");back()
         click("연락처 관리");show(ui.onNodeWithContentDescription("투석실 수정")).performClick();shot("34-contact-editor");back();back()

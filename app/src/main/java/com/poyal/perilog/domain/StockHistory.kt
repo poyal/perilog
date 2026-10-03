@@ -7,7 +7,8 @@ enum class StockHistoryType(val label:String) {
 }
 data class StockHistoryLine(val productId:String,val name:String,val quantity:Int)
 data class StockHistoryEntry(val sourceId:String,val type:StockHistoryType,val date:String,val createdAt:Long,
-    val lines:List<StockHistoryLine>,val memo:String="",val cancelled:Boolean=false,val treatmentId:String?=null) {
+    val lines:List<StockHistoryLine>,val memo:String="",val cancelled:Boolean=false,val treatmentId:String?=null,
+    val description:String="") {
     val id:String get()="${type.name}:$sourceId"
     fun quantityLabel(line:StockHistoryLine):String=when(type) {
         StockHistoryType.COUNT->"기준 ${line.quantity} EA"
@@ -24,10 +25,10 @@ fun stockHistory(s:Snapshot):List<StockHistoryEntry> {
             r.lines.groupBy{it.productId}.map{(id,lines)->line(id,lines.sumOf{it.quantity})},r.memo,r.cancelled))}
         s.usages.filter{it.items.isNotEmpty()}.forEach{u->
             val t=s.treatments.find{it.id==u.id}
-            val memo=listOfNotNull(if(u.kind=="MACHINE")"기계투석"else"추가투석",t?.compositionName(s),
-                t?.memo?.takeIf{it.isNotBlank()},if(t==null)"연결된 투석 기록이 없어요."else null).joinToString(" · ")
+            val description=listOfNotNull(if(u.kind=="MACHINE")"기계투석"else"추가투석",t?.compositionName(s),
+                if(t==null)"연결된 투석 기록이 없어요."else null).joinToString(" · ")
             add(StockHistoryEntry(u.id,StockHistoryType.USAGE,u.date,u.createdAt,
-                u.items.map{line(it.productId,it.quantity,it.name)},memo,u.cancelled,t?.id))
+                u.items.map{line(it.productId,it.quantity,it.name)},t?.memo.orEmpty(),u.cancelled,t?.id,description))
         }
         s.adjustments.forEach{a->add(StockHistoryEntry(a.id,if(a.delta>0)StockHistoryType.ADD else StockHistoryType.LOSS,
             a.date,a.createdAt,listOf(line(a.productId,kotlin.math.abs(a.delta))),a.memo,a.cancelled))}

@@ -32,7 +32,7 @@ import com.poyal.perilog.domain.*
     val recordComplete=current.initialDrain!=null && current.machineUf!=null
     Page(if(current.kind=="MACHINE")"치료 기록"else"추가투석",back=back,
         footer={Action("기록 저장",{vm.save(current.items.isNotEmpty() || current.usageConfirmed,back)},!vm.busy.collectAsState().value)}) {
-        DateControl(current.date,{if(it<=today()){vm.changeDate(it);error=""}else error="미래 날짜에는 치료 기록을 등록할 수 없어요."})
+        DateControl(current.date,{if(it<=today()){vm.changeDate(it);error=""}else error="미래 날짜에는 치료 기록을 등록할 수 없어요."},showQuickDates=true)
         if(error.isNotEmpty())Text(error,color=MaterialTheme.colorScheme.error)
         if(current.kind=="MACHINE") {
             Paper {
@@ -113,11 +113,9 @@ import com.poyal.perilog.domain.*
             }else Hint("무게 그대로 보관해요. 부피 환산이나 용기 무게 자동 차감은 하지 않아요.")
         }
         Paper {
-            TextButton(onClick={options=!options}){Icon(Icons.Outlined.Notes,null);Spacer(Modifier.width(8.dp));Text(if(current.kind=="MACHINE")"평균저류시간 · 시간 · 메모 ${if(options)"접기"else"추가"}"else"시간 · 메모 ${if(options)"접기"else"추가"}")}
+            TextButton(onClick={options=!options}){Icon(Icons.Outlined.Notes,null);Spacer(Modifier.width(8.dp));Text(if(current.kind=="MACHINE")"평균저류시간 · 메모 ${if(options)"접기"else"추가"}"else"메모 ${if(options)"접기"else"추가"}")}
             if(options) {
                 if(current.kind=="MACHINE")AdaptivePair(first={NumberInput("평균저류 시간",current.dwellMinutes?.div(60),{update(current.copy(dwellMinutes=it?.let{h->h*60+(current.dwellMinutes?.rem(60)?:0)}))},"시")},second={NumberInput("분",current.dwellMinutes?.rem(60),{if(it==null || it<60)update(current.copy(dwellMinutes=it?.let{m->(current.dwellMinutes?.div(60)?:0)*60+m}))},"분")})
-                OutlinedTextField(current.startTime,{update(current.copy(startTime=it))},label={Text("시작 시각 · 예: 22:00")},modifier=Modifier.fillMaxWidth())
-                OutlinedTextField(current.endTime,{update(current.copy(endTime=it))},label={Text("종료 시각 · 예: 07:00")},modifier=Modifier.fillMaxWidth())
                 Row(verticalAlignment=Alignment.CenterVertically){Checkbox(current.interrupted,{update(current.copy(interrupted=it))});Text("중단·재시작 등 특이사항이 있었어요",Modifier.weight(1f))}
                 OutlinedTextField(current.memo,{update(current.copy(memo=it))},label={Text("메모")},modifier=Modifier.fillMaxWidth(),minLines=2)
             }

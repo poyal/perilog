@@ -83,7 +83,7 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
         a.departments.sortedBy{a.departmentTime(it)}.forEach { DepartmentTag(it,a.departmentTime(it)) }
     }
     if(a.selectedCareItems().isNotEmpty())CareTasks(a.selectedCareItems())
-    if(a.memo.isNotBlank())Text(a.memo,style=MaterialTheme.typography.bodyMedium)
+    MemoBlock(a.memo)
 }
 
 @Composable fun HomeAppointment(s:Snapshot,now:LocalDateTime,navigate:(String)->Unit) {
@@ -116,7 +116,7 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
                         next.selectedCareItems().forEach { CareTaskTag(it) }
                     }
                 }
-                if(next.memo.isNotBlank())Text(next.memo,style=MaterialTheme.typography.bodyMedium)
+                MemoBlock(next.memo)
             }
         }
     }

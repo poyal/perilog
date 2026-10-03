@@ -140,13 +140,22 @@ private val contactEmojis=listOf(
     }}
 }
 
-@Composable fun ContactEditor(s:Snapshot,vm:JournalViewModel,id:String,back:()->Unit) {
-    var c by rememberJsonState("contact:$id"){s.contacts.find{it.id==id} ?: Contact(name="")}
-    val original=rememberSaveable{codec.encodeToString(c)}
+@Composable fun ContactEditor(s:Snapshot,vm:JournalViewModel,id:String,creating:Boolean,back:()->Unit) {
+    val existing=s.contacts.find{it.id==id}
+    if(!creating && existing==null) {
+        Page("연락처 수정",back=back){Paper{Hint("연락처가 삭제되었어요. 목록에서 다시 선택해 주세요.")}}
+        return
+    }
+    var c by rememberJsonState("contact:$id:$creating"){if(creating)Contact(id=id,name="")else requireNotNull(existing)}
+    val original=rememberSaveable(id,creating){codec.encodeToString(c)}
     val valid=validPhone(c.phone)
-    var emojis by rememberSaveable{mutableStateOf(false)}
-    EditorPage(if(id=="new")"연락처 등록"else"연락처 수정","아바타와 연결 방법을 설정해요",codec.encodeToString(c)!=original,back,{
-        vm.act("연락처를 저장했어요"){vm.repository.contact(c.copy(name=c.name.trim(),phone=c.phone.trim()));back()}
+    var emojis by rememberSaveable(id,creating){mutableStateOf(false)}
+    EditorPage(if(creating)"연락처 등록"else"연락처 수정","아바타와 연결 방법을 설정해요",codec.encodeToString(c)!=original,back,{
+        val contact=c.copy(id=id,name=c.name.trim(),phone=c.phone.trim())
+        vm.act("연락처를 저장했어요"){
+            if(creating)vm.repository.createContact(contact)else vm.repository.updateContact(contact)
+            back()
+        }
     },c.name.isNotBlank() && valid,busy=vm.busy.collectAsState().value) {
         Paper {
             Section("이모지 아바타")

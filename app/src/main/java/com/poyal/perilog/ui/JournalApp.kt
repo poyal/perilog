@@ -59,7 +59,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
     val snackbar=remember{SnackbarHostState()}
     LaunchedEffect(Unit){vm.message.collect{snackbar.showSnackbar(it)}}
     LaunchedEffect(route){snackbar.currentSnackbarData?.dismiss()}
-    fun navigate(to:String){focus.clearFocus();keyboard?.hide();if(to in rootTabs){stack.filter{it!=to}.forEach{screenState.removeState(it)};stack=listOf(to);tab=to}else if(to!=route)stack=stack+to}
+    fun navigate(to:String){
+        focus.clearFocus();keyboard?.hide()
+        // Each new contact owns its saved state, including across activity recreation.
+        val destination=if(to=="contact/new")"contact/new/${com.poyal.perilog.data.newId()}"else to
+        if(destination in rootTabs){stack.filter{it!=destination}.forEach{screenState.removeState(it)};stack=listOf(destination);tab=destination}
+        else if(destination!=route)stack=stack+destination
+    }
     fun back(){if(stack.size>1){focus.clearFocus();keyboard?.hide();screenState.removeState(stack.last());stack=stack.dropLast(1)}}
     fun editor(id:String?=null,kind:String="MACHINE",day:String=com.poyal.perilog.data.today()){
         vm.edit(id,kind,day);editingId=vm.editor.value?.id;navigate("edit")
@@ -100,7 +106,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
                     route.startsWith("appointment/")->AppointmentEditor(s,vm,route.substringAfter('/'),false,::navigate,::back)
                     route.startsWith("department/")->DepartmentEditor(s,vm,route.substringAfter('/'),::back)
                     route.startsWith("care/")->CareTemplateEditor(s,vm,route.substringAfter('/'),::back)
-                    route.startsWith("contact/")->ContactEditor(s,vm,route.substringAfter('/'),::back)
+                    route.startsWith("contact/")->ContactEditor(s,vm,route.substringAfterLast('/'),route.startsWith("contact/new/"),::back)
                     route.startsWith("product/")->ProductEditor(s,vm,route.substringAfter('/'),::back)
                     route.startsWith("template/")->TemplateEditor(s,vm,route.substringAfter('/'),::back)
                     route.startsWith("receipt/")->ReceiptEditor(s,vm,route.substringAfter('/'),::back)

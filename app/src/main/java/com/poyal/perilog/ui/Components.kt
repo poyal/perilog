@@ -23,6 +23,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import com.poyal.perilog.R
 import com.poyal.perilog.data.*
@@ -126,14 +128,35 @@ internal val dark=darkColorScheme(
 @Composable inline fun <reified T:Any> rememberJsonState(key:String,noinline initial:()->T):MutableState<T> =
     rememberSaveable(key,stateSaver=Saver<T,String>(save={codec.encodeToString(it)},restore={codec.decodeFromString<T>(it)})){mutableStateOf(initial())}
 
-@Composable fun Paper(modifier:Modifier=Modifier,content:@Composable ColumnScope.()->Unit) {
+@Composable fun Paper(modifier:Modifier=Modifier,contentPadding:Dp=20.dp,content:@Composable ColumnScope.()->Unit) {
     Card(modifier.fillMaxWidth(),shape=RoundedCornerShape(24.dp),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface),
         border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),elevation=CardDefaults.cardElevation(defaultElevation=0.dp)) {
-        Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp),content=content)
+        Column(Modifier.padding(contentPadding),verticalArrangement=Arrangement.spacedBy(12.dp),content=content)
     }
 }
 @Composable fun Section(text:String) {Text(text,style=MaterialTheme.typography.titleMedium)}
 @Composable fun Hint(text:String) {Text(text,style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+@Composable fun MemoBlock(text:String) {
+    if(text.isBlank())return
+    var expanded by rememberSaveable(text){mutableStateOf(false)}
+    var overflowing by remember(text){mutableStateOf(false)}
+    Surface(Modifier.fillMaxWidth(),shape=RoundedCornerShape(12.dp),color=MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                Icon(Icons.Outlined.Notes,null,Modifier.size(18.dp),tint=MaterialTheme.colorScheme.primary)
+                Text("메모",style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.onSurface)
+            }
+            Text(text,style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurface,
+                maxLines=if(expanded)Int.MAX_VALUE else 3,overflow=TextOverflow.Ellipsis,
+                onTextLayout={if(!expanded)overflowing=it.hasVisualOverflow})
+            if(expanded || overflowing)CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 24.dp) {
+                TextButton(onClick={expanded=!expanded},modifier=Modifier.defaultMinSize(minHeight=24.dp),contentPadding=PaddingValues(0.dp)) {
+                    Text(if(expanded)"접기"else"더 보기",style=MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+    }
+}
 @Composable fun SelectionBox(label:String,value:String,options:List<String>,onSelect:(String)->Unit,modifier:Modifier=Modifier) {
     var expanded by remember{mutableStateOf(false)}
     Box(modifier) {
@@ -225,26 +248,32 @@ internal val dark=darkColorScheme(
         }
     }
 }
-@Composable fun DateControl(date:String,onChange:(String)->Unit,label:String="날짜") {
+@Composable fun DateControl(date:String,onChange:(String)->Unit,label:String="날짜",showQuickDates:Boolean=false) {
     var open by rememberSaveable{mutableStateOf(false)}
     var month by rememberSaveable{mutableStateOf(date.ifBlank{today()}.take(7))}
-    Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         Text(if(date.isBlank())"$label 선택해 주세요"else"$label ${date.replace('-', '.')}",fontWeight=FontWeight.SemiBold)
         Surface(shape=RoundedCornerShape(18.dp),color=MaterialTheme.colorScheme.surface) {
             FlowRow(Modifier.fillMaxWidth().padding(4.dp),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-                FilterChip(date==today(),{onChange(today())},{Text("오늘")},border=null)
-                FilterChip(date==LocalDate.now().minusDays(1).toString(),{onChange(LocalDate.now().minusDays(1).toString())},{Text("어제")},border=null)
+                if(showQuickDates) {
+                    FilterChip(date==today(),{onChange(today())},{Text("오늘")},border=null)
+                    FilterChip(date==LocalDate.now().minusDays(1).toString(),{onChange(LocalDate.now().minusDays(1).toString())},{Text("어제")},border=null)
+                }
                 TextButton(onClick={month=date.ifBlank{today()}.take(7);open=!open}){Icon(Icons.Outlined.CalendarMonth,null,Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(if(open)"날짜 선택 접기"else"날짜 선택")}
             }
         }
-        if(open)Paper {
+        if(open)Paper(contentPadding=8.dp) {
             val ym=YearMonth.parse(month)
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween) {
                 IconButton(onClick={month=ym.minusMonths(1).toString()}){Icon(Icons.Outlined.ChevronLeft,"이전 달")}
-                Text("${ym.year}년 ${ym.monthValue}월",fontWeight=FontWeight.Bold)
+                FlowRow(Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(4.dp,Alignment.CenterHorizontally)) {
+                    listOf("${ym.year}년","${ym.monthValue}월").forEach {
+                        Text(it,fontWeight=FontWeight.Bold,textAlign=TextAlign.Center,softWrap=false)
+                    }
+                }
                 IconButton(onClick={month=ym.plusMonths(1).toString()}){Icon(Icons.Outlined.ChevronRight,"다음 달")}
             }
-            Column(Modifier.horizontalScroll(rememberScrollState()).width(336.dp)) {
+            Column(Modifier.fillMaxWidth()) {
                 CalendarWeekdayHeader()
                 val offset=ym.atDay(1).dayOfWeek.value%7
                 repeat((offset+ym.lengthOfMonth()+6)/7){w->Row {
@@ -253,7 +282,7 @@ internal val dark=darkColorScheme(
                             val selected=ym.atDay(day).toString()
                             Box(Modifier.weight(1f).height(48.dp).clip(RoundedCornerShape(12.dp))
                                 .background(if(selected==date)MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                                .clickable{onChange(selected);open=false}.semantics{contentDescription=selected},contentAlignment=Alignment.Center){Text(day.toString(),color=calendarDayColor(ym.atDay(day).dayOfWeek))}
+                                .clickable(role=Role.Button){onChange(selected);open=false}.semantics{contentDescription=selected;this.selected=selected==date},contentAlignment=Alignment.Center){Text(day.toString(),color=calendarDayColor(ym.atDay(day).dayOfWeek))}
                         }
                     }
                 }}

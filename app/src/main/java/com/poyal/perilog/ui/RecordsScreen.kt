@@ -56,7 +56,7 @@ import kotlinx.coroutines.launch
         }
         if(adding)Paper {
             Section("기록 추가")
-            DateControl(newDate,{newDate=it})
+            DateControl(newDate,{newDate=it},showQuickDates=true)
             if(newDate>today())Hint("오늘 또는 과거 날짜를 선택해 주세요.")
             Action("기계투석 기록 추가",{edit(null,"MACHINE",newDate)},newDate<=today())
             OutlinedButton(onClick={edit(null,"MANUAL",newDate)},enabled=newDate<=today(),modifier=Modifier.fillMaxWidth()){Text("추가투석 기록 추가")}
@@ -149,37 +149,39 @@ import kotlinx.coroutines.launch
     Card(Modifier.fillMaxWidth().testTag("record-card-${t.id}"),shape=RoundedCornerShape(24.dp),
         colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface),
         elevation=CardDefaults.cardElevation(defaultElevation=1.dp)) {
-        Row(Modifier.padding(12.dp),horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.Top) {
-            Column(Modifier.weight(1f).padding(vertical=4.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                Column(verticalArrangement=Arrangement.spacedBy(2.dp)) {
-                    Section("${t.date} · ${if(t.kind=="MACHINE")"기계투석"else"추가투석"}")
-                    Hint(if(t.complete())"✓ 기록 완료"else"남은 항목: ${t.missing().joinToString()}")
-                }
-                if(t.kind=="MACHINE")Text("몸무게 ${t.weightGrams?.let{"${it/1000.0} kg"} ?: "—"} · 혈압 ${t.systolic ?: "—"}/${t.diastolic ?: "—"}",style=MaterialTheme.typography.bodyMedium)
-                FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(0.dp)) {
-                    if(t.kind=="MACHINE" || t.manualDrain!=null)Box(Modifier.heightIn(min=48.dp),contentAlignment=Alignment.CenterStart) {
-                        Text(if(t.kind=="MACHINE")"총 제수량 ${t.totalUf()?.let{"$it mL"} ?: "—"}"
-                            else"배액 ${if(t.drainUnit=="kg")t.manualDrain!!/1000.0 else t.manualDrain} ${t.drainUnit}",style=MaterialTheme.typography.bodyMedium)
+        Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.Top) {
+                Column(Modifier.weight(1f).padding(vertical=4.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                    Column(verticalArrangement=Arrangement.spacedBy(2.dp)) {
+                        Section("${t.date} · ${if(t.kind=="MACHINE")"기계투석"else"추가투석"}")
+                        Hint(if(t.complete())"✓ 기록 완료"else"남은 항목: ${t.missing().joinToString()}")
                     }
-                    AssistChip(onClick=items,label={
-                        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                            compositionColor?.let{ColorDot(it,14,"$compositionName 대표")}
-                            Text(compositionName,style=MaterialTheme.typography.bodyMedium)
+                    if(t.kind=="MACHINE")Text("몸무게 ${t.weightGrams?.let{"${it/1000.0} kg"} ?: "—"} · 혈압 ${t.systolic ?: "—"}/${t.diastolic ?: "—"}",style=MaterialTheme.typography.bodyMedium)
+                    FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(0.dp)) {
+                        if(t.kind=="MACHINE" || t.manualDrain!=null)Box(Modifier.heightIn(min=48.dp),contentAlignment=Alignment.CenterStart) {
+                            Text(if(t.kind=="MACHINE")"총 제수량 ${t.totalUf()?.let{"$it mL"} ?: "—"}"
+                                else"배액 ${if(t.drainUnit=="kg")t.manualDrain!!/1000.0 else t.manualDrain} ${t.drainUnit}",style=MaterialTheme.typography.bodyMedium)
                         }
-                    },modifier=Modifier.testTag("record-items-${t.id}"))
+                        AssistChip(onClick=items,label={
+                            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                                compositionColor?.let{ColorDot(it,14,"$compositionName 대표")}
+                                Text(compositionName,style=MaterialTheme.typography.bodyMedium)
+                            }
+                        },modifier=Modifier.testTag("record-items-${t.id}"))
+                    }
                 }
-                if(t.memo.isNotEmpty())Text(t.memo,style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
+                Box {
+                    IconButton(onClick={menu=true},modifier=Modifier.testTag("record-menu-${t.id}")) {
+                        Icon(Icons.Outlined.MoreVert,"${t.date} ${if(t.kind=="MACHINE")"기계투석"else"추가투석"} 메뉴")
+                    }
+                    DropdownMenu(expanded=menu,onDismissRequest={menu=false}) {
+                        DropdownMenuItem(text={Text("수정")},onClick={menu=false;open()},leadingIcon={Icon(Icons.Outlined.Edit,null)})
+                        DropdownMenuItem(text={Text("삭제",color=MaterialTheme.colorScheme.error)},onClick={menu=false;delete()},
+                            leadingIcon={Icon(Icons.Outlined.DeleteOutline,null,tint=MaterialTheme.colorScheme.error)})
+                    }
+                }
             }
-            Box {
-                IconButton(onClick={menu=true},modifier=Modifier.testTag("record-menu-${t.id}")) {
-                    Icon(Icons.Outlined.MoreVert,"${t.date} ${if(t.kind=="MACHINE")"기계투석"else"추가투석"} 메뉴")
-                }
-                DropdownMenu(expanded=menu,onDismissRequest={menu=false}) {
-                    DropdownMenuItem(text={Text("수정")},onClick={menu=false;open()},leadingIcon={Icon(Icons.Outlined.Edit,null)})
-                    DropdownMenuItem(text={Text("삭제",color=MaterialTheme.colorScheme.error)},onClick={menu=false;delete()},
-                        leadingIcon={Icon(Icons.Outlined.DeleteOutline,null,tint=MaterialTheme.colorScheme.error)})
-                }
-            }
+            MemoBlock(t.memo)
         }
     }
 }

@@ -29,7 +29,8 @@ class StockHistoryTest {
         assertEquals("기준 0 EA",history.first().quantityLabel(history.first().lines.single()))
         val use=history.single{it.type==StockHistoryType.USAGE}
         assertEquals("−2 EA",use.quantityLabel(use.lines.single()));assertEquals("use",use.treatmentId)
-        assertTrue(use.memo.contains("기록 메모"))
+        assertEquals("기록 메모",use.memo)
+        assertTrue(use.description.contains("기계투석"));assertFalse(use.description.contains("기록 메모"))
     }
     @Test fun filtersUseProductIdsInclusiveDatesAndCancellationWithoutChangingSources() {
         val history=stockHistory(fixture())
@@ -46,7 +47,8 @@ class StockHistoryTest {
         val s=fixture()
         val history=stockHistory(s.copy(treatments=emptyList(),usages=s.usages.map{it.copy(cancelled=true)}))
         val use=history.single{it.type==StockHistoryType.USAGE}
-        assertNull(use.treatmentId);assertTrue(use.cancelled);assertTrue(use.memo.contains("연결된 투석 기록이 없어요."))
+        assertNull(use.treatmentId);assertTrue(use.cancelled);assertTrue(use.description.contains("연결된 투석 기록이 없어요."))
+        assertEquals("",use.memo)
         assertEquals("−2 EA",use.quantityLabel(use.lines.single()))
     }
 }

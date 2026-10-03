@@ -106,7 +106,7 @@ class AppointmentFlowTest {
         assertEquals(saved.departmentTimes,snapshot().appointments.single().departmentTimes)
     }
     @Test fun appointmentInputSurvivesNestedRegistrationAndActivityRecreation() {
-        click("병원 일정 등록");click("오늘");input("예약시간 · HH:mm","16:40");input("메모","작성 중 메모")
+        click("병원 일정 등록");pickDate(LocalDate.now());input("예약시간 · HH:mm","16:40");input("메모","작성 중 메모")
         click("진료과 등록·관리");click("+ 진료과 등록");input("진료과 이름","신장내과");click("저장")
         await{snapshot().departments.size==1};back()
         ui.onNode(hasSetTextAction() and hasText("16:40")).assertExists()
@@ -181,6 +181,58 @@ class AppointmentFlowTest {
         node("수정한 연락처").assertDoesNotExist();ui.onNodeWithContentDescription("수정한 연락처 전화").assertDoesNotExist()
         show(node("연락처 등록")).assertIsDisplayed()
     }
+    @Test fun consecutiveContactRegistrationsStartEmptyAndKeepExistingContacts() {
+        settings();click("연락처 관리")
+        val saved=mutableListOf<Contact>()
+        repeat(3) { index ->
+            click("+ 연락처 등록")
+            listOf("연락처 이름","전화번호").forEach { label ->
+                ui.onNode(hasSetTextAction() and hasText(label)).assert(
+                    SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
+            }
+            input("연락처 이름","연락처 ${index+1}");input("전화번호","010-0000-000${index+1}")
+            if(index==0) {
+                click("문자 허용");click("이모지 선택")
+                show(ui.onNodeWithContentDescription("병원 이모지")).performClick()
+            }
+            click("저장");await{snapshot().contacts.size==index+1}
+            saved.forEach { previous -> assertEquals(previous,snapshot().contacts.single{it.id==previous.id}) }
+            val contact=snapshot().contacts.single{it.name=="연락처 ${index+1}"}
+            if(index>0) {assertEquals("👤",contact.emoji);assertTrue(contact.allowCall);assertTrue(contact.allowSms)}
+            saved+=contact
+        }
+        assertEquals(3,saved.map{it.id}.distinct().size)
+    }
+    @Test fun contactEditCancelAndNewDraftRecreationKeepIndependentState() {
+        val original=Contact(id="existing-contact",name="기존 연락처",phone="02-000-0000",emoji="🏥",allowSms=false)
+        runBlocking{app.repository.createContact(original)}
+        settings();click("연락처 관리")
+        show(ui.onNodeWithContentDescription("기존 연락처 수정")).performClick()
+        input("연락처 이름","수정한 기존 연락처");click("저장")
+        await{snapshot().contacts.single().name=="수정한 기존 연락처"}
+        val edited=snapshot().contacts.single()
+        click("+ 연락처 등록");input("연락처 이름","취소할 입력");input("전화번호","010-1111-1111")
+        click("전화 허용");back();click("확인")
+        click("+ 연락처 등록")
+        listOf("연락처 이름","전화번호").forEach { label ->
+            ui.onNode(hasSetTextAction() and hasText(label)).assert(
+                SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
+        }
+        input("연락처 이름","새 연락처");input("전화번호","잘못된 번호");node("저장").assertIsNotEnabled()
+        input("전화번호","010-2222-2222")
+        ui.activityRule.scenario.recreate()
+        await{ui.onAllNodes(hasSetTextAction() and hasText("새 연락처")).fetchSemanticsNodes().isNotEmpty()}
+        click("저장");await{snapshot().contacts.size==2}
+        assertEquals(edited,snapshot().contacts.single{it.id==original.id})
+        val added=snapshot().contacts.single{it.id!=original.id}
+        assertEquals("새 연락처",added.name);assertEquals("010-2222-2222",added.phone)
+        assertEquals("👤",added.emoji);assertTrue(added.allowCall);assertTrue(added.allowSms)
+        show(ui.onNodeWithContentDescription("새 연락처 수정")).performClick()
+        input("연락처 이름","버릴 수정");back();click("확인")
+        assertEquals(added,snapshot().contacts.single{it.id==added.id})
+        show(ui.onNodeWithContentDescription("새 연락처 삭제")).performClick();click("확인")
+        await{snapshot().contacts.size==1};assertEquals(edited,snapshot().contacts.single())
+    }
     @Test fun newDataFullFileBackupRestoresAfterReset()=runBlocking {
         val d=Department(name="테스트 진료과")
         val c=CareTemplate(name="검사",iconKey="lab")
@@ -188,7 +240,7 @@ class AppointmentFlowTest {
         val a=Appointment(date=LocalDate.now().plusDays(1).toString(),time="09:30",departments=listOf(d,eye),careItems=listOf(c.asCareTask()),
             departmentTimes=mapOf(d.id to "09:30",eye.id to "11:20"))
         val contact=Contact(name="테스트 연락처",phone="010-0000-0000",emoji="🏥",allowSms=false)
-        app.repository.department(d);app.repository.careTemplate(c);app.repository.appointment(a);app.repository.contact(contact)
+        app.repository.department(d);app.repository.careTemplate(c);app.repository.appointment(a);app.repository.createContact(contact)
         val file=File(app.cacheDir,"appointment-roundtrip.json")
         app.backup.export(Uri.fromFile(file));val saved=app.backup.read(Uri.fromFile(file))
         app.repository.restore(Snapshot());app.backup.restore(saved)
@@ -210,7 +262,7 @@ class AppointmentFlowTest {
             Contact(id="b",name="연락 B",phone="010-0000-0002",createdAt=2,emoji="🩺",allowSms=false),
             Contact(id="c",name="연락 C",phone="010-0000-0003",createdAt=3,emoji="💊"),
             Contact(id="d",name="연락 D",phone="010-0000-0004",createdAt=4,emoji="👤",allowCall=false,allowSms=false))
-        runBlocking{contacts.forEach{app.repository.contact(it)}}
+        runBlocking{contacts.forEach{app.repository.createContact(it)}}
         await{ui.onAllNodesWithContentDescription("연락 D 연락처").fetchSemanticsNodes().isNotEmpty()}
         show(avatar("연락 A"))
         val bounds=contacts.map{avatar(it.name).getUnclippedBoundsInRoot()}

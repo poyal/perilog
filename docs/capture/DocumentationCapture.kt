@@ -40,7 +40,7 @@ class DocumentationCapture {
         val history=(1..14).map { n->
             Treatment(id="day-$n",date=today.minusDays(n.toLong()).toString(),weightGrams=62000+(n%5)*100,
                 systolic=118+n%8,diastolic=76+n%5,initialDrain=2180+n*10,machineUf=460+n*12,dwellMinutes=110,
-                items=composition,usageConfirmed=true,saved=true,createdAt=100L+n)
+                items=composition,usageConfirmed=true,saved=true,memo="기록 수첩에 적어 둔 내용과 함께 확인했어요.",createdAt=100L+n)
         }
         val current=Treatment(id="today",date=today.toString(),weightGrams=62300,systolic=120,diastolic=80,
             initialDrain=if(completeToday)2300 else null,machineUf=if(completeToday)600 else null,
@@ -98,6 +98,10 @@ class DocumentationCapture {
         show(ui.onNodeWithContentDescription("제수량 도움말")).performClick()
         shot("05-calculation")
         click("닫기")
+        click("평균저류시간 · 메모 추가")
+        input("메모","기록 수첩을 함께 확인했어요.\n사용 물품을 정리했어요.\n다음 진료 때 보여 드릴 내용을 적었어요.\n필요한 준비물을 다시 확인할 예정이에요.")
+        show(ui.onNodeWithText("평균저류시간 · 메모 접기"));shot("41-treatment-memo")
+        click("평균저류시간 · 메모 접기")
         click("기록 저장")
         ui.waitUntil(10000){ui.onAllNodesWithText("오늘도 기록을 마쳤어요").fetchSemanticsNodes().isNotEmpty()}
         ui.waitUntil(10000){ui.onAllNodesWithText("기록을 저장했어요").fetchSemanticsNodes().isEmpty()}
@@ -108,6 +112,7 @@ class DocumentationCapture {
         shot("07-manual-treatment")
         back()
         tab("기록");shot("08-record-list")
+        click("더 보기");show(ui.onNodeWithText("접기"));shot("42-record-memo-expanded");click("접기")
         click("캘린더")
         if(today.dayOfMonth<8) {click("이전");click("28")}
         shot("09-calendar")
@@ -158,6 +163,7 @@ class DocumentationCapture {
         ui.onNodeWithContentDescription("설정").performClick()
         click("병원 일정 관리");shot("39-appointment-list")
         show(ui.onNodeWithContentDescription("next-visit 일정 수정")).performClick()
+        click("날짜 선택");show(ui.onNodeWithText("예약일 선택해 주세요"));shot("40-appointment-calendar");click("날짜 선택 접기")
         show(ui.onNode(hasSetTextAction() and hasText("신장내과 예약시간 · HH:mm")));shot("32-appointment-editor");back();back()
         click("치료 구성 관리");shot("33-treatment-items");back()
         click("연락처 관리");show(ui.onNodeWithContentDescription("투석실 수정")).performClick();shot("34-contact-editor");back();back()

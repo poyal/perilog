@@ -96,7 +96,8 @@ import java.time.LocalDate
                             color=if(e.cancelled)MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
                     }
                 }
-                if(e.memo.isNotBlank())Hint(e.memo)
+                if(e.description.isNotBlank())Hint(e.description)
+                MemoBlock(e.memo)
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     if(e.type==StockHistoryType.RECEIPT && !e.cancelled) {
                         TextButton(onClick={navigate("receipt/${e.sourceId}")}){Text("수정")}

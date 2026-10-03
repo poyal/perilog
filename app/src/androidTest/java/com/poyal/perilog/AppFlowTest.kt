@@ -338,7 +338,7 @@ class AppFlowTest {
     @Test fun statisticsSelectionSurvivesOpeningARecord() {
         runBlocking { app.repository.save(Treatment(weightGrams=62300,systolic=120,diastolic=80,initialDrain=2300,machineUf=600),true) }
         tab("통계");select("통계 기간","30D");select("표시 방식","표")
-        show(compose.onAllNodesWithText(today()).onFirst()).performClick();back()
+        show(compose.onAllNodes(hasText(today()) and hasClickAction()).onFirst()).performClick();back()
         selectedValue("통계 기간","30D");selectedValue("표시 방식","표")
     }
     @Test fun newRecordsStartEmptyAndDateChangesKeepDraftInputs() {
@@ -399,10 +399,13 @@ class AppFlowTest {
             app.repository.save(base.copy(id="manual",kind="MANUAL",manualDrain=5000,previousFill=2000),true)
         }
         tab("통계")
+        assertTrue(node("투석 기록").getUnclippedBoundsInRoot().top<node("활력 상태").getUnclippedBoundsInRoot().top)
+        show(node("조회 기간")).assertIsDisplayed();screenshot("updated-statistics.png")
         show(node("총 제수량")).assertIsDisplayed()
         node("초기배액량").assertDoesNotExist();node("기계 제수량").assertDoesNotExist()
         show(node("평균 233.3 mL")).assertIsDisplayed()
         select("표시 방식","표")
+        assertTrue(node("투석 기록").getUnclippedBoundsInRoot().top<node("활력 상태").getUnclippedBoundsInRoot().top)
         show(node("900 mL")).assertIsDisplayed();show(node("-200 mL")).assertIsDisplayed()
         show(node("0 mL")).assertIsDisplayed()
         compose.onAllNodesWithText("— mL").assertCountEquals(3)
@@ -410,6 +413,31 @@ class AppFlowTest {
         show(node("900 mL")).performClick()
         show(node("900 mL")).assertIsDisplayed();back()
         selectedValue("표시 방식","표")
+    }
+    @Test fun treatmentOptionsHideLegacyTimesAndKeepThemWhenMemoChanges() {
+        val original=Treatment(id="legacy-times",date=yesterday,weightGrams=54000,systolic=110,diastolic=70,
+            initialDrain=2200,machineUf=500,basisMl=2000,startTime="22:00",endTime="07:00",dwellMinutes=95,
+            memo="최종주입과 관련한 메모\n두 번째 줄\n세 번째 줄\n네 번째 줄")
+        runBlocking{app.repository.save(original,false)}
+        tab("기록")
+        show(node("메모")).assertIsDisplayed();click("더 보기")
+        show(node("접기")).assertIsDisplayed();screenshot("updated-record-memo.png")
+        compose.onNodeWithTag("record-menu-${original.id}").performScrollTo().performClick();click("수정")
+        node("오늘").assertExists();node("어제").assertExists()
+        click("평균저류시간 · 메모 추가")
+        node("시작 시각 · 예: 22:00").assertDoesNotExist();node("종료 시각 · 예: 07:00").assertDoesNotExist()
+        field("평균저류 시간").assertTextContains("1");field("분").assertTextContains("35")
+        input("메모","수정한 투석 메모");hideKeyboard();screenshot("updated-treatment-options.png");click("기록 저장")
+        await{snapshot().treatments.single().memo=="수정한 투석 메모"}
+        val saved=snapshot().treatments.single()
+        assertEquals(original.startTime,saved.startTime);assertEquals(original.endTime,saved.endTime)
+        assertEquals(original.dwellMinutes,saved.dwellMinutes)
+        compose.onNodeWithContentDescription("기록 추가").performClick();click("추가투석 기록 추가")
+        click("메모 추가")
+        node("시작 시각 · 예: 22:00").assertDoesNotExist();node("종료 시각 · 예: 07:00").assertDoesNotExist()
+        input("메모","추가투석 메모");hideKeyboard();click("기록 저장")
+        await{snapshot().treatments.size==2}
+        assertEquals("",snapshot().treatments.single{it.kind=="MANUAL"}.startTime)
     }
     @Test fun recordTableFiltersPeriodAndKeepsSelectionAfterEditing() {
         runBlocking {

@@ -24,6 +24,42 @@ class RepositoryTest {
     private val p=Product(id="p",name="테스트 물품")
     @Before fun setup() {db=Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(),JournalDb::class.java).allowMainThreadQueries().build();repo=Repository(db)}
     @After fun close() {db.close()}
+    @Test fun contactCreationCannotOverwriteAndEditingCannotRecreateDeletedContact()=runBlocking {
+        val first=Contact(id="first",name="투석실",phone="02-123-4567",emoji="🏥",allowSms=false)
+        val second=Contact(id="second",name="간호사",phone="010-1234-5678")
+        repo.createContact(first);repo.createContact(second)
+        assertTrue(runCatching{repo.createContact(first.copy(name="덮어쓰기"))}.exceptionOrNull() is IllegalArgumentException)
+        assertEquals(first,repo.snapshot().contacts.single{it.id==first.id})
+        val edited=second.copy(name="수정한 간호사",allowCall=false)
+        repo.updateContact(edited)
+        assertEquals(setOf(first,edited),repo.snapshot().contacts.toSet())
+        repo.deleteContact(second.id)
+        assertTrue(runCatching{repo.updateContact(edited)}.exceptionOrNull() is IllegalArgumentException)
+        assertEquals(listOf(first),repo.snapshot().contacts)
+        assertTrue(runCatching{repo.createContact(Contact(name="빈 번호"))}.isFailure)
+        assertEquals(listOf(first),repo.snapshot().contacts)
+    }
+    @Test fun editingAndBackupRoundTripPreserveLegacyTreatmentTimes()=runBlocking {
+        val original=Treatment(id="legacy-times",startTime="22:00",endTime="07:00",dwellMinutes=95,memo="이전 메모")
+        repo.save(original,false)
+        val stored=repo.snapshot().treatments.single()
+        repo.save(stored.copy(memo="수정한 메모"),false)
+        val backup=codec.decodeFromString<Snapshot>(codec.encodeToString(Snapshot.serializer(),repo.snapshot()))
+        repo.restore(backup)
+        val restored=repo.snapshot().treatments.single()
+        assertEquals("22:00",restored.startTime);assertEquals("07:00",restored.endTime)
+        assertEquals(95,restored.dwellMinutes);assertEquals("수정한 메모",restored.memo)
+    }
+    @Test fun unfinishedLegacyTimeInputInADraftDoesNotBlockSavingOrBackupRestore()=runBlocking {
+        val oldDraft=Treatment(id="partial-time",startTime="22:",endTime="7",memo="작성 중 기록")
+        repo.draft(oldDraft)
+        repo.save(repo.snapshot().drafts.single().treatment.copy(memo="완료한 기록"),false)
+        val backup=repo.snapshot()
+        repo.restore(backup)
+        val saved=repo.snapshot().treatments.single()
+        assertEquals("22:",saved.startTime);assertEquals("7",saved.endTime)
+        assertEquals("완료한 기록",saved.memo);assertTrue(repo.snapshot().drafts.isEmpty())
+    }
     @Test fun productColorAndTemplateChangesDoNotRewriteActualUsage()=runBlocking {
         repo.product(p)
         repo.template(UsageTemplate(id="night",name="밤",items=listOf(Item(p.id,p.name,2)),color=0xFF8772B5))
@@ -146,7 +182,7 @@ class RepositoryTest {
         val a=Appointment(id="reservation",date="2026-10-10",time="09:30",departments=listOf(d,eye),care=c,memo="검사 후 방문",
             departmentTimes=mapOf(d.id to "09:30",eye.id to "11:00"))
         val contact=Contact(name="테스트 연락처",phone="010-0000-0000",emoji="🏥",allowSms=false)
-        repo.department(d);repo.careTemplate(c);repo.appointment(a);repo.contact(contact)
+        repo.department(d);repo.careTemplate(c);repo.appointment(a);repo.createContact(contact)
         val preferences=repo.snapshot().preferences
         repo.department(d.copy(name="수정 진료과",color=0xFF47956E))
         repo.careTemplate(c.copy(tasks=listOf(CareTask(name="주사",iconKey="injection"))))

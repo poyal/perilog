@@ -132,7 +132,8 @@ fun validate(s: Snapshot) {
         date(t.date); require(t.kind in listOf("MACHINE","MANUAL")); require(t.drainUnit in listOf("mL","g","kg"))
         listOf(t.weightGrams,t.initialDrain,t.basisMl,t.manualDrain,t.previousFill,t.dwellMinutes,t.systolic,t.diastolic).forEach { require(it == null || it in 0..10000000) { "입력값을 확인해 주세요." } }
         require(t.machineUf == null || t.machineUf in -10000000..10000000); items(t.items)
-        listOf(t.startTime,t.endTime).filter{it.isNotEmpty()}.forEach{java.time.LocalTime.parse(it)}
+        // Legacy time text is preserved, including unfinished input in old drafts.
+        // These fields are no longer editable and must not block saving a record.
         if(t.usageConfirmed) require(s.usages.any { u -> u.id == t.id && !u.cancelled && u.items == t.items && u.date == t.date }) { "사용 내역이 일치하지 않습니다." }
     }
     s.usages.forEach { date(it.date); items(it.items) }

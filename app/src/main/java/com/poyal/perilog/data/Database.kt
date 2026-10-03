@@ -224,7 +224,14 @@ class Repository(val db: JournalDb) {
     suspend fun appointment(value: Appointment) = db.withTransaction {
         val s=read(); validate(s.copy(appointments=s.appointments.filterNot{it.id==value.id}+value)); d.put(value)
     }
-    suspend fun contact(value: Contact) = db.withTransaction {
+    suspend fun createContact(value: Contact) = saveContact(value,creating=true)
+    suspend fun updateContact(value: Contact) = saveContact(value,creating=false)
+    private suspend fun saveContact(value: Contact,creating:Boolean) = db.withTransaction {
+        val exists=d.contacts().any{it.id==value.id}
+        require(if(creating)!exists else exists) {
+            if(creating)"이미 저장한 연락처예요. 목록에서 새 연락처 등록을 열어 주세요."
+            else "연락처가 삭제되었어요. 목록에서 다시 선택해 주세요."
+        }
         val s=read(); validate(s.copy(contacts=s.contacts.filterNot{it.id==value.id}+value)); d.put(value)
     }
     suspend fun deleteDepartment(id: String) = d.deleteDepartment(id)

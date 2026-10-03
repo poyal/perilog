@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 package com.poyal.perilog.ui
 
 import androidx.compose.foundation.*
@@ -43,16 +44,24 @@ private fun number(n:Double)=if(n%1.0==0.0)n.toLong().toString()else String.form
             SelectionBox("표시 방식",if(table)"표"else"라인차트",listOf("라인차트","표"),{table=it=="표"},Modifier.weight(1f))
         }
         if(range=="직접 선택"){DateControl(from,{from=it},"시작");DateControl(to,{to=it},"종료")}
-        Hint(if(from>to)"종료일을 시작일 이후로 선택해 주세요."else"$from ~ $to")
+        Paper {
+            Hint("조회 기간")
+            if(from>to)Text("종료일을 시작일 이후로 선택해 주세요.",color=MaterialTheme.colorScheme.error)
+            else FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                listOf("$from ~",to).forEach { date ->
+                    Text(date,style=MaterialTheme.typography.titleLarge.copy(fontSize=20.sp),color=MaterialTheme.colorScheme.onSurface)
+                }
+            }
+        }
+        Paper {
+            Section("투석 기록")
+            MetricChart(totalUf,entries,from,to,table,open)
+        }
         Paper {
             Section("활력 상태")
             MetricChart(pressure,entries,from,to,table,open)
             HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
             MetricChart(weight,entries,from,to,table,open)
-        }
-        Paper {
-            Section("투석 기록")
-            MetricChart(totalUf,entries,from,to,table,open)
         }
     }
 }

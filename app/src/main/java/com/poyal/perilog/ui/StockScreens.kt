@@ -81,7 +81,9 @@ import java.util.Locale
             OutlinedTextField(memo,{memo=it},label={Text("사유 · 메모")},modifier=Modifier.fillMaxWidth())
         }
         val history=s.counts.filter{it.productId==id}.sortedByDescending{it.createdAt}
-        if(history.isNotEmpty())Paper{Section("수량 확인 이력");history.forEach{Hint("${it.date} · ${it.quantity}EA · ${it.memo}")}}
+        if(history.isNotEmpty())Paper{Section("수량 확인 이력");history.forEach{
+            Column(verticalArrangement=Arrangement.spacedBy(6.dp)){Hint("${it.date} · ${it.quantity}EA");MemoBlock(it.memo)}
+        }}
     }
     if(confirm)Confirm("현재 재고 기준을 바꿀까요?","$date 기준 ${qty}EA로 맞춥니다. 이전 기록은 이력으로 남습니다.",{confirm=false}){
         confirm=false;vm.act("현재 수량을 저장했어요"){vm.repository.count(StockCount(productId=id,date=date,quantity=qty!!,memo=memo.ifBlank{"현재 재고 확인"}));back()}
@@ -95,7 +97,7 @@ import java.util.Locale
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)){
                 ColorDot(p.color,24,p.name);Text(p.name,Modifier.weight(1f),fontWeight=FontWeight.Bold);Hint(if(p.active)"사용 중"else"보관");Icon(Icons.Outlined.ChevronRight,null)
             }
-            Hint("${p.kind} · ${p.vendor}");if(p.memo.isNotEmpty())Hint(p.memo)
+            Hint("${p.kind} · ${p.vendor}");MemoBlock(p.memo)
         }}
     }
 }

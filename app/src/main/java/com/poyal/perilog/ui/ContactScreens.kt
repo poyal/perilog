@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -62,12 +64,12 @@ private val contactEmojis=listOf(
     if(!c.allowCall && !c.allowSms)Hint("이 연락처의 전화·문자 연결이 꺼져 있어요.")
     else FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
         if(c.allowCall) {
-            OutlinedButton(onClick={openContact(context,c,false,vm)},modifier=Modifier.semantics{contentDescription="${c.name} 전화"}) {
+            SecondaryButton(onClick={openContact(context,c,false,vm)},modifier=Modifier.semantics{contentDescription="${c.name} 전화"}) {
                 Icon(Icons.Outlined.Call,null,Modifier.size(20.dp));Spacer(Modifier.width(8.dp));Text("전화")
             }
         }
         if(c.allowSms) {
-            OutlinedButton(onClick={openContact(context,c,true,vm)},modifier=Modifier.semantics{contentDescription="${c.name} 문자"}) {
+            SecondaryButton(onClick={openContact(context,c,true,vm)},modifier=Modifier.semantics{contentDescription="${c.name} 문자"}) {
                 Icon(Icons.Outlined.Sms,null,Modifier.size(20.dp));Spacer(Modifier.width(8.dp));Text("문자")
             }
         }
@@ -78,7 +80,7 @@ private val contactEmojis=listOf(
     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
         ContactAvatar(c)
         Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-            Section(c.name);Text(c.phone,style=MaterialTheme.typography.bodyLarge);ContactActions(c,vm)
+            Section(c.name);Text(formattedPhone(c.phone),style=MaterialTheme.typography.bodyLarge);ContactActions(c,vm)
         }
     }
 }
@@ -113,7 +115,7 @@ private val contactEmojis=listOf(
                 Section("연결 방법 선택")
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
                     ContactAvatar(c)
-                    Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {Section(c.name);Text(c.phone)}
+                    Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {Section(c.name);Text(formattedPhone(c.phone))}
                 }
                 ContactActions(c,vm)
                 TextButton(onClick={connecting=null}){Text("닫기")}
@@ -147,11 +149,13 @@ private val contactEmojis=listOf(
         return
     }
     var c by rememberJsonState("contact:$id:$creating"){if(creating)Contact(id=id,name="")else requireNotNull(existing)}
-    val original=rememberSaveable(id,creating){codec.encodeToString(c)}
-    val valid=validPhone(c.phone)
+    val phone=rememberSaveable(id,creating,saver=TextFieldState.Saver){TextFieldState(phoneInputDigits(c.phone))}
+    val edited=c.copy(phone=phone.text.toString())
+    val original=rememberSaveable(id,creating){codec.encodeToString(edited)}
+    val valid=validPhone(edited.phone)
     var emojis by rememberSaveable(id,creating){mutableStateOf(false)}
-    EditorPage(if(creating)"연락처 등록"else"연락처 수정","아바타와 연결 방법을 설정해요",codec.encodeToString(c)!=original,back,{
-        val contact=c.copy(id=id,name=c.name.trim(),phone=c.phone.trim())
+    EditorPage(if(creating)"연락처 등록"else"연락처 수정","아바타와 연결 방법을 설정해요",codec.encodeToString(edited)!=original,back,{
+        val contact=edited.copy(id=id,name=c.name.trim(),phone=formattedPhone(edited.phone))
         vm.act("연락처를 저장했어요"){
             if(creating)vm.repository.createContact(contact)else vm.repository.updateContact(contact)
             back()
@@ -175,9 +179,11 @@ private val contactEmojis=listOf(
         }
         Paper {
             OutlinedTextField(c.name,{c=c.copy(name=it)},label={Text("연락처 이름")},modifier=Modifier.fillMaxWidth(),singleLine=true)
-            OutlinedTextField(c.phone,{c=c.copy(phone=it)},label={Text("전화번호")},modifier=Modifier.fillMaxWidth(),singleLine=true,
-                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Phone),isError=c.phone.isNotBlank() && !valid,
-                supportingText={if(c.phone.isNotBlank() && !valid)Text("전화번호의 숫자와 구분 기호를 확인해 주세요.")})
+            OutlinedTextField(state=phone,label={Text("전화번호")},modifier=Modifier.fillMaxWidth(),lineLimits=TextFieldLineLimits.SingleLine,
+                inputTransformation=phoneInputTransformation,outputTransformation=phoneOutputTransformation,
+                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Phone),isError=edited.phone.isNotBlank() && !valid,
+                supportingText={Text(if(edited.phone.isNotBlank() && !valid)"전화번호의 숫자를 확인해 주세요. 국가번호는 +로 시작할 수 있어요."
+                    else "숫자만 입력하면 하이픈이 자동으로 표시돼요. 114 같은 짧은 번호도 가능해요.")})
         }
         Paper {
             Section("허용할 연결 방법")

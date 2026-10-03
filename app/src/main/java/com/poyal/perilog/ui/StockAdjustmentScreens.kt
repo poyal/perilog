@@ -29,7 +29,7 @@ import com.poyal.perilog.domain.inventory
         }
         Action("수량 추가·차감",{navigate("adjustment/$id")},icon=Icons.Outlined.SwapVert)
         Action("수량 맞추기",{navigate("count/$id")},icon=Icons.Outlined.Balance)
-        OutlinedButton(onClick={navigate("stockHistory/$id")},modifier=Modifier.fillMaxWidth().heightIn(min=54.dp)){Text("이 품목 이력")}
+        SecondaryButton(onClick={navigate("stockHistory/$id")},modifier=Modifier.fillMaxWidth()){Text("이 품목 이력")}
     }
 }
 
@@ -62,8 +62,8 @@ import com.poyal.perilog.domain.inventory
         Paper {
             Section("어떻게 변경할까요?")
             FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                FilterChip(!adding,{adding=false},{Text("차감 · 손실")})
-                FilterChip(adding,{adding=true},{Text("추가")})
+                SelectionChip(!adding,{adding=false},{Text("차감 · 손실")})
+                SelectionChip(adding,{adding=true},{Text("추가")})
             }
             DateControl(date,{date=it})
             if(date>today())Hint("오늘 또는 과거 날짜를 선택해 주세요.")

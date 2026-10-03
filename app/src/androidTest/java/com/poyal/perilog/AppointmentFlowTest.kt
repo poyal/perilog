@@ -7,6 +7,8 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.input.key.Key
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.poyal.perilog.data.*
@@ -180,6 +182,55 @@ class AppointmentFlowTest {
         await{snapshot().contacts.isEmpty()};back();back()
         node("수정한 연락처").assertDoesNotExist();ui.onNodeWithContentDescription("수정한 연락처 전화").assertDoesNotExist()
         show(node("연락처 등록")).assertIsDisplayed()
+    }
+    @Test fun contactPhoneAcceptsSpacesHyphensAndShortNumbers() {
+        settings();click("연락처 관리");click("+ 연락처 등록")
+        input("연락처 이름","번호 입력 검사")
+        listOf("15771111","1577 1111","1577-1111").forEach { value ->
+            input("전화번호",value)
+            ui.onNode(hasSetTextAction() and hasText("전화번호")).assertTextContains("1577-1111")
+            node("저장").assertIsEnabled()
+        }
+        ui.activityRule.scenario.recreate()
+        await{ui.onAllNodes(hasSetTextAction() and hasText("번호 입력 검사")).fetchSemanticsNodes().isNotEmpty()}
+        ui.onNode(hasSetTextAction() and hasText("전화번호")).assertTextContains("1577-1111")
+        click("저장");await{snapshot().contacts.size==1}
+        assertEquals("1577-1111",snapshot().contacts.single().phone)
+        show(ui.onNodeWithContentDescription("번호 입력 검사 수정")).performClick()
+        back() // Merely opening an already formatted number must not mark the editor dirty.
+        ui.onNodeWithContentDescription("번호 입력 검사 수정").assertExists()
+        show(ui.onNodeWithContentDescription("번호 입력 검사 수정")).performClick()
+        listOf("112","119","114").forEach { value ->
+            input("전화번호",value)
+            ui.onNode(hasSetTextAction() and hasText("전화번호")).assertTextContains(value)
+            node("저장").assertIsEnabled()
+        }
+        click("저장");await{snapshot().contacts.single().phone=="114"}
+        show(ui.onNodeWithContentDescription("번호 입력 검사 수정")).performClick()
+        ui.onNode(hasSetTextAction() and hasText("전화번호")).assertTextContains("114")
+    }
+    @OptIn(ExperimentalTestApi::class)
+    @Test fun contactPhoneMiddleEditingAndBackspaceKeepDigitsAndCursor() {
+        settings();click("연락처 관리");click("+ 연락처 등록")
+        input("연락처 이름","커서 검사");input("전화번호","01012345678")
+        val phone=ui.onNode(hasSetTextAction() and hasText("전화번호"))
+        phone.assertTextContains("010-1234-5678")
+        // Select original digits 4–7, paste formatted text, then insert at that same position.
+        phone.performTextInputSelection(TextRange(3,7),relativeToOriginalText=true)
+        phone.performTextInput("9876 ")
+        phone.assertTextContains("010-9876-5678")
+        phone.performTextInputSelection(TextRange(3),relativeToOriginalText=true)
+        phone.performKeyInput { pressKey(Key.Backspace) }
+        phone.performTextInput("0")
+        phone.assertTextContains("010-9876-5678")
+        phone.performTextInputSelection(TextRange(11),relativeToOriginalText=true)
+        phone.performKeyInput { pressKey(Key.Backspace) }
+        phone.performTextInput("9")
+        phone.assertTextContains("010-9876-5679")
+        ui.runOnIdle{(ui.activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
+            .hideSoftInputFromWindow(ui.activity.window.decorView.windowToken,0)}
+        click("저장");await{snapshot().contacts.size==1}
+        assertEquals("010-9876-5679",snapshot().contacts.single().phone)
     }
     @Test fun consecutiveContactRegistrationsStartEmptyAndKeepExistingContacts() {
         settings();click("연락처 관리")

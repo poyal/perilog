@@ -55,7 +55,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
     val route=stack.last()
     val rootTabs=listOf("home","records","stats","stock")
     val editing=route.contains('/')
-    val management=editing || route in listOf("appointments","departments","careTemplates","contacts","stockHistory","receipts")
+    val management=editing || route in listOf("appointments","departments","careTemplates","contacts","stockHistory","receipts","recordTable")
     val snackbar=remember{SnackbarHostState()}
     LaunchedEffect(Unit){vm.message.collect{snackbar.showSnackbar(it)}}
     LaunchedEffect(route){snackbar.currentSnackbarData?.dismiss()}
@@ -89,7 +89,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
                 .padding(padding).consumeWindowInsets(padding).imePadding()) {
                 if(!ready)CircularProgressIndicator(Modifier.align(Alignment.Center))else key(route){screenState.SaveableStateProvider(route){when {
                     route=="home"->HomeScreen(s,vm,date,{navigate("settings")},{id,kind,day->editor(id,kind,day)},::navigate,{navigate("stock")})
-                    route=="records"->RecordsScreen(s,vm,snackbar){id,kind,day->editor(id,kind,day)}
+                    route=="records"->RecordsScreen(s,vm,snackbar,{navigate("recordTable")}){id,kind,day->editor(id,kind,day)}
+                    route=="recordTable"->RecordTableScreen(s,vm,::back){t->editor(t.id,t.kind,t.date)}
                     route=="stats"->StatsScreen(s,vm){editor(it)}
                     route=="stock"->StockScreen(s,vm,::navigate)
                     route=="products"->ProductsScreen(s,::navigate,::back)

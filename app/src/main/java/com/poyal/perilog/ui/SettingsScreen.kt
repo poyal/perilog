@@ -79,12 +79,12 @@ import kotlinx.coroutines.withContext
             Hint("새 기록에 적용할 이전 최종 주입 설정값이에요. 저장한 과거 기록의 계산은 바뀌지 않아요.")
             NumberInput("이전 최종 주입 설정",basis,{basis=it},"mL")
             DateControl(basisFrom,{basisFrom=it},"적용일")
-            OutlinedButton(onClick={basis?.let{ml->val next=p.copy(basis=(p.basis.filterNot{it.from==basisFrom}+Basis(basisFrom,ml)).sortedBy{it.from});p=next;vm.preferences(next)}},enabled=basis!=null){Text("이 날짜부터 기준 저장")}
+            SecondaryButton(onClick={basis?.let{ml->val next=p.copy(basis=(p.basis.filterNot{it.from==basisFrom}+Basis(basisFrom,ml)).sortedBy{it.from});p=next;vm.preferences(next)}},enabled=basis!=null){Text("이 날짜부터 기준 저장")}
             p.basis.sortedByDescending{it.from}.take(5).forEach{Hint("${it.from}부터 ${it.ml}mL")}
         }
         Paper {
             Section("표시와 안내")
-            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {listOf("SYSTEM" to "시스템","LIGHT" to "밝게","DARK" to "어둡게").forEach{(id,label)->FilterChip(p.darkMode==id,{p=p.copy(darkMode=id)},{Text(label)})}}
+            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {listOf("SYSTEM" to "시스템","LIGHT" to "밝게","DARK" to "어둡게").forEach{(id,label)->SelectionChip(p.darkMode==id,{p=p.copy(darkMode=id)},{Text(label)})}}
             Column {
                 SettingsSwitch("완료 축하 애니메이션",p.celebrate,{p=p.copy(celebrate=it)})
                 HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
@@ -111,7 +111,7 @@ import kotlinx.coroutines.withContext
             Text("기록 ${s.treatments.size}건 · 품목 ${s.products.size}개 · 입고 ${s.receipts.count{!it.cancelled}}건")
             Hint("병원 일정 ${s.appointments.size}건 · 진료과 ${s.departments.size}개 · 치료 구성 ${s.careTemplates.size}개 · 연락처 ${s.contacts.size}개도 함께 보관해요.")
             Action("전체 데이터 내보내기",{export.launch("perilog-${today()}.json")})
-            OutlinedButton(onClick={import.launch(arrayOf("application/json","text/plain","application/octet-stream"))},Modifier.fillMaxWidth()){Text("백업 파일 가져오기")}
+            SecondaryButton(onClick={import.launch(arrayOf("application/json","text/plain","application/octet-stream"))},Modifier.fillMaxWidth()){Text("백업 파일 가져오기")}
             Hint("가져오기는 전체 교체예요. 파일을 확인하고 현재 데이터를 보호 백업한 뒤 복원해요. 백업 JSON에는 암호가 없으므로 보관 위치를 확인해 주세요.")
         }
         Paper {
@@ -119,8 +119,8 @@ import kotlinx.coroutines.withContext
             Text(if(folder==null)"백업 폴더를 선택해 주세요"else"백업 폴더 연결됨")
             Hint(device[DeviceKeys.status] ?: "아직 자동 백업 내역이 없어요")
             device[DeviceKeys.lastBackup]?.takeIf{it>0}?.let{at->Hint("최근 성공: "+Instant.ofEpochMilli(at).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")))}
-            OutlinedButton(onClick={selectFolder.launch(null)}){Text(if(folder==null)"백업 폴더 선택"else"백업 폴더 변경")}
-            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf(1 to "매일",7 to "매주").forEach{(days,label)->FilterChip(p.backupDays==days,{p=p.copy(backupDays=days)},{Text(label)})}}
+            SecondaryButton(onClick={selectFolder.launch(null)}){Text(if(folder==null)"백업 폴더 선택"else"백업 폴더 변경")}
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf(1 to "매일",7 to "매주").forEach{(days,label)->SelectionChip(p.backupDays==days,{p=p.copy(backupDays=days)},{Text(label)})}}
             NumberInput("자동 백업 보관 개수",p.keepBackups,{p=p.copy(keepBackups=it?:30)},"개")
             TextButton(onClick={vm.preferences(p)}){Text("백업 설정 저장")}
             Action("지금 백업",{vm.act("백업을 완료했어요"){vm.app.backup.automatic(true)}},folder!=null)

@@ -24,9 +24,9 @@ import java.util.Locale
     val stock=remember(s){inventory(s)}
     Page("재고 관리","내가 사용하는 물품을 한눈에",brand=true,actions={SettingsIconButton {navigate("settings")}}) {
         AdaptivePair(first={Action("입고 등록",{navigate("receipt/new")},icon=Icons.Outlined.Add)},second={
-            OutlinedButton(onClick={navigate("stockHistory")},Modifier.fillMaxWidth().heightIn(min=54.dp)){Icon(Icons.Outlined.History,null,Modifier.size(20.dp));Spacer(Modifier.width(8.dp));Text("이력")}
+            SecondaryButton(onClick={navigate("stockHistory")},Modifier.fillMaxWidth()){Icon(Icons.Outlined.History,null,Modifier.size(20.dp));Spacer(Modifier.width(8.dp));Text("이력")}
         })
-        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("전체","투석액","소모품").forEach{FilterChip(filter==it,{filter=it},{Text(it)})}}
+        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("전체","투석액","소모품").forEach{SelectionChip(filter==it,{filter=it},{Text(it)})}}
         if(s.products.isEmpty())Paper{Section("내 물품을 등록해 보세요");Hint("투석액·카세트·라인을 나만의 색상으로 구분해요.");Action("첫 품목 등록",{navigate("products")})}
         s.products.filter{it.active && (filter=="전체" || it.kind==filter)}.forEach{p->
             var menu by remember(p.id){mutableStateOf(false)}
@@ -110,7 +110,7 @@ import java.util.Locale
     },p.name.isNotBlank(),busy=vm.busy.collectAsState().value) {
         Paper {
             OutlinedTextField(p.name,{p=p.copy(name=it)},label={Text("제품명 · 농도 · 규격")},placeholder={Text("예: 투석액 1.5% 5L")},modifier=Modifier.fillMaxWidth())
-            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("투석액","소모품").forEach{FilterChip(p.kind==it,{p=p.copy(kind=it)},{Text(it)})}}
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("투석액","소모품").forEach{SelectionChip(p.kind==it,{p=p.copy(kind=it)},{Text(it)})}}
         }
         Paper {
             Section("품목 색상")

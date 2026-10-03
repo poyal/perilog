@@ -117,9 +117,9 @@ internal val dark=darkColorScheme(
     val leave={if(!busy){if(dirty || errors.isNotEmpty())discard=true else back()}}
     BackHandler {leave()}
     Page(title,subtitle,back=leave,footer={
-        Row(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically) {
-            OutlinedButton(onClick=leave,enabled=!busy,modifier=Modifier.heightIn(min=52.dp)){Text("취소")}
-            Box(Modifier.weight(1f)){Action(saveLabel,save,enabled && !busy && errors.isEmpty())}
+        Row(Modifier.height(IntrinsicSize.Min),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically) {
+            SecondaryButton(onClick=leave,enabled=!busy,modifier=Modifier.fillMaxHeight()){Text("취소")}
+            Action(saveLabel,save,enabled && !busy && errors.isEmpty(),modifier=Modifier.weight(1f).fillMaxHeight())
         }
     },content=content)
     if(discard)Confirm("변경 내용을 버릴까요?","저장하지 않은 변경만 취소해요. 기존 기록과 재고는 그대로 유지됩니다.",{discard=false}){discard=false;back()}
@@ -136,6 +136,25 @@ internal val dark=darkColorScheme(
 }
 @Composable fun Section(text:String) {Text(text,style=MaterialTheme.typography.titleMedium)}
 @Composable fun Hint(text:String) {Text(text,style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+/** Primary and outlined actions share geometry; only their emphasis colors differ. */
+private val actionButtonMinHeight=54.dp
+private val actionButtonPadding=PaddingValues(horizontal=18.dp,vertical=15.dp)
+@Composable fun SecondaryButton(onClick:()->Unit,modifier:Modifier=Modifier,enabled:Boolean=true,
+    contentPadding:PaddingValues=actionButtonPadding,disabledContentColor:Color=Color.Unspecified,
+    content:@Composable RowScope.()->Unit) {
+    OutlinedButton(onClick=onClick,modifier=modifier.heightIn(min=actionButtonMinHeight),enabled=enabled,
+        shape=MaterialTheme.shapes.medium,contentPadding=contentPadding,
+        colors=ButtonDefaults.outlinedButtonColors(containerColor=MaterialTheme.colorScheme.surfaceContainerLowest,
+            disabledContainerColor=MaterialTheme.colorScheme.surfaceContainerLowest,disabledContentColor=disabledContentColor),content=content)
+}
+@Composable fun SelectionChip(selected:Boolean,onClick:()->Unit,label:@Composable ()->Unit,modifier:Modifier=Modifier,
+    enabled:Boolean=true,leadingIcon:(@Composable ()->Unit)?=null,
+    border:BorderStroke?=FilterChipDefaults.filterChipBorder(enabled,selected)) {
+    FilterChip(selected=selected,onClick=onClick,label=label,modifier=modifier,enabled=enabled,leadingIcon=leadingIcon,border=border,
+        shape=MaterialTheme.shapes.small,
+        colors=FilterChipDefaults.filterChipColors(containerColor=MaterialTheme.colorScheme.surfaceContainerLowest,
+            disabledContainerColor=MaterialTheme.colorScheme.surfaceContainerLowest))
+}
 @Composable fun MemoBlock(text:String) {
     if(text.isBlank())return
     var expanded by rememberSaveable(text){mutableStateOf(false)}
@@ -160,7 +179,7 @@ internal val dark=darkColorScheme(
 @Composable fun SelectionBox(label:String,value:String,options:List<String>,onSelect:(String)->Unit,modifier:Modifier=Modifier) {
     var expanded by remember{mutableStateOf(false)}
     Box(modifier) {
-        Surface(onClick={expanded=true},shape=RoundedCornerShape(12.dp),color=MaterialTheme.colorScheme.surface,
+        Surface(onClick={expanded=true},shape=RoundedCornerShape(12.dp),color=MaterialTheme.colorScheme.surfaceContainerLowest,
             border=BorderStroke(1.dp,MaterialTheme.colorScheme.outline),
             modifier=Modifier.fillMaxWidth().semantics{contentDescription=label;stateDescription=value}) {
             Column(Modifier.padding(horizontal=10.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(2.dp)) {
@@ -176,14 +195,11 @@ internal val dark=darkColorScheme(
         }
     }
 }
-@Composable fun Action(text:String,onClick:()->Unit,enabled:Boolean=true,icon:ImageVector?=null) {
+@Composable fun Action(text:String,onClick:()->Unit,enabled:Boolean=true,icon:ImageVector?=null,modifier:Modifier=Modifier) {
     val colors=MaterialTheme.colorScheme
-    Button(onClick,Modifier.fillMaxWidth().heightIn(min=54.dp),enabled=enabled,shape=RoundedCornerShape(18.dp),
-        contentPadding=PaddingValues(0.dp),colors=ButtonDefaults.buttonColors(containerColor=colors.primary,contentColor=colors.onPrimary,disabledContainerColor=colors.surfaceVariant)) {
-        Row(Modifier.fillMaxWidth()
-            .padding(horizontal=18.dp,vertical=15.dp),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically) {
-            if(icon!=null){Icon(icon,null,Modifier.size(22.dp));Spacer(Modifier.width(10.dp))};Text(text)
-        }
+    Button(onClick,modifier.fillMaxWidth().heightIn(min=actionButtonMinHeight),enabled=enabled,shape=MaterialTheme.shapes.medium,
+        contentPadding=actionButtonPadding,colors=ButtonDefaults.buttonColors(containerColor=colors.primary,contentColor=colors.onPrimary,disabledContainerColor=colors.surfaceVariant)) {
+        if(icon!=null){Icon(icon,null,Modifier.size(22.dp));Spacer(Modifier.width(10.dp))};Text(text)
     }
 }
 @Composable fun Bow(size:Int=44) {Image(painterResource(R.drawable.journal_bow),stringResource(R.string.app_name),Modifier.size(size.dp).clip(RoundedCornerShape(12.dp)))}
@@ -256,8 +272,8 @@ internal val dark=darkColorScheme(
         Surface(shape=RoundedCornerShape(18.dp),color=MaterialTheme.colorScheme.surface) {
             FlowRow(Modifier.fillMaxWidth().padding(4.dp),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
                 if(showQuickDates) {
-                    FilterChip(date==today(),{onChange(today())},{Text("오늘")},border=null)
-                    FilterChip(date==LocalDate.now().minusDays(1).toString(),{onChange(LocalDate.now().minusDays(1).toString())},{Text("어제")},border=null)
+                    SelectionChip(date==today(),{onChange(today())},{Text("오늘")},border=null)
+                    SelectionChip(date==LocalDate.now().minusDays(1).toString(),{onChange(LocalDate.now().minusDays(1).toString())},{Text("어제")},border=null)
                 }
                 TextButton(onClick={month=date.ifBlank{today()}.take(7);open=!open}){Icon(Icons.Outlined.CalendarMonth,null,Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(if(open)"날짜 선택 접기"else"날짜 선택")}
             }

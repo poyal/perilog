@@ -30,6 +30,7 @@ import java.time.LocalDate
     var to by rememberSaveable{mutableStateOf(today())}
     var choosingProduct by remember{mutableStateOf(false)}
     var cancellingId by rememberSaveable{mutableStateOf<String?>(null)}
+    var choosingPeriod by rememberSaveable{mutableStateOf(false)}
     val history=remember(s){stockHistory(s)}
     val selected=s.products.find{it.id==productId}
     val dates=period!="전체 기간"
@@ -43,7 +44,7 @@ import java.time.LocalDate
             }
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.weight(1f)) {
-                    Surface(onClick={choosingProduct=true},shape=RoundedCornerShape(12.dp),color=MaterialTheme.colorScheme.surface,
+                    Surface(onClick={choosingProduct=true},shape=RoundedCornerShape(12.dp),color=MaterialTheme.colorScheme.surfaceContainerLowest,
                         border=BorderStroke(1.dp,MaterialTheme.colorScheme.outline),
                         modifier=Modifier.fillMaxWidth().semantics{contentDescription="이력 품목";stateDescription=selected?.name ?: "전체 품목"}) {
                         Column(Modifier.padding(horizontal=10.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(2.dp)) {
@@ -63,16 +64,15 @@ import java.time.LocalDate
                     }
                 }
                 SelectionBox("이력 기간",period,listOf("전체 기간","7D","30D","기간 지정"),{value->
-                    period=value
-                    if(value=="7D" || value=="30D") {
-                        from=LocalDate.now().minusDays(if(value=="7D")6 else 29).toString();to=today()
+                    if(value=="기간 지정")choosingPeriod=true else {
+                        period=value
+                        if(value=="7D" || value=="30D") {
+                            from=LocalDate.now().minusDays(if(value=="7D")6 else 29).toString();to=today()
+                        }
                     }
                 },Modifier.weight(1f))
             }
-            if(period=="기간 지정") {
-                DateControl(from,{from=it},"시작");DateControl(to,{to=it},"종료")
-            }
-            if(dates)Hint(if(from>to)"종료일을 시작일 이후로 선택해 주세요."else"$from ~ $to")
+            if(dates)DateRangeControl(LocalDate.parse(from),LocalDate.parse(to),{choosingPeriod=true},enabled=period=="기간 지정")
             Hint("취소한 내역도 남아요. 수량 맞추기는 직접 확인한 새 기준 수량입니다.")
         }
         Action("+ 일괄 입고 등록",{navigate("receipt/new")},s.products.isNotEmpty())
@@ -112,6 +112,9 @@ import java.time.LocalDate
                 }
             }
         }}
+    }
+    if(choosingPeriod)DateRangeDialog(LocalDate.parse(from),LocalDate.parse(to),{choosingPeriod=false}){start,end->
+        from=start.toString();to=end.toString();period="기간 지정";choosingPeriod=false
     }
     history.find{it.id==cancellingId}?.let{e->
         val title=when(e.type){StockHistoryType.RECEIPT->"입고를 취소할까요?";StockHistoryType.USAGE->"사용을 취소할까요?";else->"조정을 취소할까요?"}

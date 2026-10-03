@@ -1,6 +1,7 @@
 package com.poyal.perilog.ui
 
 import android.app.Application
+import android.os.Bundle
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import kotlinx.serialization.encodeToString
@@ -27,11 +28,13 @@ class JournalViewModel(application: Application,private val savedState:SavedStat
     val calendarDay=MutableStateFlow(today())
     val localNow=MutableStateFlow(java.time.LocalDateTime.now())
     val inputErrors=mutableStateMapOf<String,String>()
-    val recordFilters=RecordFilters()
-    val statsFilters=StatsFilters()
+    val recordFilters=RecordFilters(savedState["recordFilters"])
+    val statsFilters=StatsFilters(savedState["statsFilters"])
     private val serial=Mutex()
     private var draftJob: Job?=null
     init {
+        savedState.setSavedStateProvider("recordFilters"){recordFilters.save()}
+        savedState.setSavedStateProvider("statsFilters"){statsFilters.save()}
         viewModelScope.launch { repository.snapshots.first(); ready.value=true }
         viewModelScope.launch { while(isActive) { refreshClock();delay(30000) } }
     }
@@ -73,20 +76,31 @@ class JournalViewModel(application: Application,private val savedState:SavedStat
 }
 
 
-class RecordFilters {
-    val mode=mutableStateOf("리스트")
-    val range=mutableStateOf("전체")
-    val month=mutableStateOf(java.time.YearMonth.now().toString())
-    val selected=mutableStateOf(today())
-    val type=mutableStateOf("전체")
-    val status=mutableStateOf("전체 상태")
-    val from=mutableStateOf(java.time.LocalDate.now().minusDays(29).toString())
-    val to=mutableStateOf(today())
-    val period=mutableStateOf(false)
+class RecordFilters(saved:Bundle?=null) {
+    val mode=mutableStateOf(saved?.getString("mode") ?: "리스트")
+    val range=mutableStateOf(saved?.getString("range") ?: "전체")
+    val month=mutableStateOf(saved?.getString("month") ?: java.time.YearMonth.now().toString())
+    val selected=mutableStateOf(saved?.getString("selected") ?: today())
+    val type=mutableStateOf(saved?.getString("type") ?: "전체")
+    val status=mutableStateOf(saved?.getString("status") ?: "전체 상태")
+    val from=mutableStateOf(saved?.getString("from") ?: java.time.LocalDate.now().minusDays(29).toString())
+    val to=mutableStateOf(saved?.getString("to") ?: today())
+    val period=mutableStateOf(saved?.getBoolean("period") ?: false)
+    val tableOpened=mutableStateOf(saved?.getBoolean("tableOpened") ?: false)
+    fun save()=Bundle().apply {
+        listOf("mode" to mode,"range" to range,"month" to month,"selected" to selected,"type" to type,
+            "status" to status,"from" to from,"to" to to).forEach{(key,state)->putString(key,state.value)}
+        putBoolean("period",period.value)
+        putBoolean("tableOpened",tableOpened.value)
+    }
 }
-class StatsFilters {
-    val range=mutableStateOf("7D")
-    val from=mutableStateOf(java.time.LocalDate.now().minusDays(6).toString())
-    val to=mutableStateOf(today())
-    val table=mutableStateOf(false)
+enum class StatsChartMode(val label:String) { LINE("라인차트"), METRIC("항목별 도표") }
+class StatsFilters(saved:Bundle?=null) {
+    val range=mutableStateOf(saved?.getString("range") ?: "7D")
+    val from=mutableStateOf(saved?.getString("from") ?: java.time.LocalDate.now().minusDays(6).toString())
+    val to=mutableStateOf(saved?.getString("to") ?: today())
+    val chartMode=mutableStateOf(StatsChartMode.entries.find{it.name==saved?.getString("chartMode")} ?: StatsChartMode.LINE)
+    fun save()=Bundle().apply {
+        putString("range",range.value);putString("from",from.value);putString("to",to.value);putString("chartMode",chartMode.value.name)
+    }
 }

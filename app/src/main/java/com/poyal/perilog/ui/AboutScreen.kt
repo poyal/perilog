@@ -70,7 +70,7 @@ import java.time.format.DateTimeFormatter
             state.release?.let { Hint("최신 확인 버전 ${it.version}") }
             if (state.checkedAt > 0) Hint("마지막 성공 확인: " + Instant.ofEpochMilli(state.checkedAt).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yyyy. M. d HH:mm")))
             if (state.check == CheckStatus.ERROR && state.release != null) Hint("이전 확인 결과예요. 새 정보를 받지 못했어요.")
-            OutlinedButton(onClick = updates::checkNow, enabled = state.check != CheckStatus.CHECKING) {
+            SecondaryButton(onClick = updates::checkNow, enabled = state.check != CheckStatus.CHECKING) {
                 Icon(Icons.Outlined.Refresh, null); Spacer(Modifier.width(8.dp)); Text(if (state.check == CheckStatus.CHECKING) "확인 중…" else "업데이트 확인")
             }
             val newer = state.release?.let { compareVersions(it.version, updates.installedVersion) > 0 } == true
@@ -87,7 +87,7 @@ import java.time.format.DateTimeFormatter
             if (state.transfer == TransferStatus.VERIFYING) LinearProgressIndicator(Modifier.fillMaxWidth())
             if (state.transferMessage.isNotBlank()) Text(state.transferMessage, color = if (state.transfer == TransferStatus.FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
             state.fileName?.let { Hint("저장 파일: $it") }
-            OutlinedButton(onClick = {
+            SecondaryButton(onClick = {
                 try { context.startActivity(Intent(DownloadManager.ACTION_VIEW_DOWNLOADS)) }
                 catch (_: Exception) { updates.installationMessage("파일 앱의 Download 또는 다운로드 폴더에서 APK를 찾아 주세요.") }
             }) { Icon(Icons.Outlined.FolderOpen, null); Spacer(Modifier.width(8.dp)); Text("다운로드 폴더 열기") }

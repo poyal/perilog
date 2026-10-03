@@ -158,7 +158,6 @@ class AppFlowTest {
         node("연결된 물품 사용도 함께 취소해 재고에 반영해요. ‘되돌리기’로 기록과 사용 내역을 함께 복구할 수 있어요.").assertExists()
         click("확인");await{snapshot().treatments.isEmpty()}
         stock(1);assertTrue(snapshot().usages.single().cancelled)
-        node("기록 삭제 후 유지한 사용 내역").assertDoesNotExist()
         click("되돌리기");await{snapshot().treatments.size==1}
         stock(-1);assertEquals(before.treatments,snapshot().treatments);assertEquals(before.usages,snapshot().usages)
         show(compose.onNodeWithTag("record-menu-delete-undo")).performClick();click("삭제");click("확인")
@@ -337,9 +336,10 @@ class AppFlowTest {
     }
     @Test fun statisticsSelectionSurvivesOpeningARecord() {
         runBlocking { app.repository.save(Treatment(weightGrams=62300,systolic=120,diastolic=80,initialDrain=2300,machineUf=600),true) }
-        tab("통계");select("통계 기간","30D");select("표시 방식","표")
-        show(compose.onAllNodes(hasText(today()) and hasClickAction()).onFirst()).performClick();back()
-        selectedValue("통계 기간","30D");selectedValue("표시 방식","표")
+        tab("통계");select("통계 기간","30D");select("표시 방식","항목별 도표")
+        show(compose.onNodeWithTag("chart-dates-UF")).performClick();click(today().replace('-','.'))
+        click("기록 열기");back()
+        selectedValue("통계 기간","30D");selectedValue("표시 방식","항목별 도표")
     }
     @Test fun newRecordsStartEmptyAndDateChangesKeepDraftInputs() {
         runBlocking {
@@ -378,7 +378,7 @@ class AppFlowTest {
         node("사용한 품목을 선택해 주세요.").assertExists()
         field("배액무게").assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
         back();tab("기록");click("표")
-        show(compose.onNodeWithTag("record-row-previous")).performClick()
+        show(compose.onNodeWithTag("record-cell-previous-0")).performClick();click("기록 열기")
         click("수정");field("몸무게").assertTextContains("61")
         show(compose.onNodeWithContentDescription("제수량 도움말")).performClick()
         field("이 기록의 이전 주입 기준").assertTextContains("1900");click("닫기")
@@ -400,19 +400,20 @@ class AppFlowTest {
         }
         tab("통계")
         assertTrue(node("투석 기록").getUnclippedBoundsInRoot().top<node("활력 상태").getUnclippedBoundsInRoot().top)
-        show(node("조회 기간")).assertIsDisplayed();screenshot("updated-statistics.png")
+        show(compose.onNodeWithContentDescription("조회 기간 변경")).assertIsDisplayed();screenshot("updated-statistics.png")
         show(node("총 제수량")).assertIsDisplayed()
         node("초기배액량").assertDoesNotExist();node("기계 제수량").assertDoesNotExist()
         show(node("평균 233.3 mL")).assertIsDisplayed()
-        select("표시 방식","표")
+        select("표시 방식","항목별 도표")
+        show(compose.onNodeWithTag("chart-dates-UF")).performClick();click(today().replace('-','.'))
         assertTrue(node("투석 기록").getUnclippedBoundsInRoot().top<node("활력 상태").getUnclippedBoundsInRoot().top)
         show(node("900 mL")).assertIsDisplayed();show(node("-200 mL")).assertIsDisplayed()
         show(node("0 mL")).assertIsDisplayed()
         compose.onAllNodesWithText("— mL").assertCountEquals(3)
         node("3000 mL").assertDoesNotExist()
-        show(node("900 mL")).performClick()
+        show(compose.onNode(hasText("기록 열기") and hasAnyAncestor(hasTestTag("chart-value-UF-positive")))).performClick()
         show(node("900 mL")).assertIsDisplayed();back()
-        selectedValue("표시 방식","표")
+        selectedValue("표시 방식","항목별 도표")
     }
     @Test fun treatmentOptionsHideLegacyTimesAndKeepThemWhenMemoChanges() {
         val original=Treatment(id="legacy-times",date=yesterday,weightGrams=54000,systolic=110,diastolic=70,
@@ -445,20 +446,135 @@ class AppFlowTest {
             app.repository.save(Treatment(id="older",date=LocalDate.now().minusDays(15).toString(),weightGrams=61000),false)
             app.repository.save(Treatment(id="manual",date=yesterday,kind="MANUAL",manualDrain=2195,drainUnit="g"),true)
         }
-        tab("기록");click("표");selectedValue("조회 기간","7D")
+        tab("기록");click("표");click("필터");selectedValue("조회 기간","7D");click("닫기")
         compose.onNodeWithTag("record-row-recent").assertExists()
         compose.onNodeWithTag("record-row-manual").assertExists()
         compose.onNodeWithTag("record-row-older").assertDoesNotExist()
         show(node("2195 g")).assertIsDisplayed()
-        select("조회 기간","30D");compose.onNodeWithTag("record-row-older").assertExists()
-        show(compose.onNodeWithTag("record-row-recent")).performClick()
+        click("필터");select("조회 기간","30D");click("닫기");compose.onNodeWithTag("record-row-older").assertExists()
+        show(compose.onNodeWithTag("record-cell-recent-0")).performClick();click("기록 열기")
         node("날짜 ${yesterday.replace('-','.')}").assertExists();back()
-        node("표").assertIsSelected();selectedValue("조회 기간","30D")
+        node("기록 표").assertIsDisplayed();click("필터");selectedValue("조회 기간","30D")
         select("조회 기간","기간 지정")
-        node("시작 ${LocalDate.now().minusDays(29).toString().replace('-','.')}").assertExists()
-        click("리스트");node("리스트").assertIsSelected()
+        compose.onNodeWithTag("date-range-dialog").assertExists()
+        compose.onNodeWithContentDescription("기간 선택 취소").performClick();selectedValue("조회 기간","30D");click("닫기")
+        back();node("리스트").assertIsSelected()
         click("캘린더");node("캘린더").assertIsSelected()
     }
+    @Test fun spreadsheetZoomPinchFrozenHeadersAndThousandRows() {
+        val records=(0 until 1000).map{n->Treatment(id="many-$n",date=LocalDate.now().minusDays(n.toLong()).toString(),
+            weightGrams=62250,systolic=120,diastolic=80,initialDrain=2200,machineUf=580,saved=true,usageConfirmed=true)}
+        runBlocking{app.repository.restore(snapshot().copy(treatments=records,usages=records.map{Usage(it.id,it.date,it.items,it.kind,it.createdAt)}))}
+        tab("기록");click("표");click("필터");select("조회 기간","전체");click("닫기")
+        compose.onNodeWithTag("record-cell-many-0-8").assertIsDisplayed()
+        val originalZoom=nodeZoom()
+        val viewport=compose.onNodeWithTag("record-table-viewport")
+        viewport.performTouchInput {
+            val cy=center.y
+            down(0,androidx.compose.ui.geometry.Offset(width*.4f,cy))
+            down(1,androidx.compose.ui.geometry.Offset(width*.6f,cy))
+            for(step in 1..8) {
+                moveTo(0,androidx.compose.ui.geometry.Offset(width*(.4f-step*.025f),cy),delayMillis=16)
+                moveTo(1,androidx.compose.ui.geometry.Offset(width*(.6f+step*.025f),cy),delayMillis=16)
+            }
+            up(0);up(1)
+        }
+        assertTrue(nodeZoom()>originalZoom)
+        click("100%");assertEquals(100,nodeZoom())
+        // Zoom anchors the row under the fingers; return to the first row for edge checks.
+        compose.onNodeWithTag("record-table-rows").performScrollToIndex(0)
+        val dateLeft=compose.onNodeWithTag("record-cell-many-0-0").getUnclippedBoundsInRoot().left
+        compose.onNodeWithTag("record-table-horizontal").performTouchInput{swipeLeft()}
+        assertEquals(dateLeft,compose.onNodeWithTag("record-cell-many-0-0").getUnclippedBoundsInRoot().left)
+        val headerTop=compose.onNodeWithTag("record-table-header").getUnclippedBoundsInRoot().top
+        compose.onNodeWithTag("record-table-rows").performScrollToIndex(999)
+        compose.onNodeWithTag("record-cell-many-999-0").assertIsDisplayed()
+        assertEquals(headerTop,compose.onNodeWithTag("record-table-header").getUnclippedBoundsInRoot().top)
+        compose.onNodeWithTag("record-cell-many-999-0").performClick()
+        compose.activityRule.scenario.recreate()
+        await{compose.onAllNodesWithTag("record-cell-detail").fetchSemanticsNodes().isNotEmpty()}
+        assertEquals(100,nodeZoom());compose.onNodeWithTag("record-cell-many-999-0").assertIsDisplayed()
+        screenshot("record-table-zoomed.png")
+        val originalOrientation=compose.activity.requestedOrientation
+        try {
+            compose.activityRule.scenario.onActivity{it.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE}
+            await("Landscape table"){compose.activity.resources.configuration.orientation==Configuration.ORIENTATION_LANDSCAPE}
+            assertEquals(100,nodeZoom());compose.onNodeWithTag("record-cell-detail").assertIsDisplayed()
+            node("기록 열기").assertIsDisplayed();node("전체 열").assertIsDisplayed()
+            screenshot("record-table-landscape.png")
+        } finally {
+            compose.activityRule.scenario.onActivity{it.requestedOrientation=originalOrientation}
+            await("Portrait table"){compose.activity.resources.configuration.orientation==Configuration.ORIENTATION_PORTRAIT}
+        }
+        click("전체 열");compose.onNodeWithTag("record-cell-many-999-8").assertIsDisplayed()
+        assertEquals(records.toSet(),snapshot().treatments.toSet())
+    }
+    private fun nodeZoom()=compose.onNodeWithTag("table-zoom").fetchSemanticsNode().config[SemanticsProperties.StateDescription].removeSuffix("%").toInt()
+
+    @Test fun rangePickerCancelApplyAndRestoreAcrossAllThreeScreens() {
+        tab("통계")
+        show(compose.onNodeWithContentDescription("조회 기간 변경")).assertIsNotEnabled().performClick()
+        compose.onNodeWithTag("date-range-dialog").assertDoesNotExist()
+        select("통계 기간","30D")
+        compose.onNodeWithContentDescription("조회 기간 변경").assertIsNotEnabled()
+        select("통계 기간","기간 지정")
+        compose.onNodeWithTag("date-range-dialog").assertIsDisplayed()
+        compose.activityRule.scenario.recreate()
+        compose.onNodeWithTag("date-range-dialog").assertIsDisplayed()
+        compose.onNodeWithContentDescription("기간 선택 취소").performClick()
+        selectedValue("통계 기간","30D")
+        select("통계 기간","기간 지정");click("적용");selectedValue("통계 기간","기간 지정")
+        show(compose.onNodeWithContentDescription("조회 기간 변경")).assertIsEnabled().performClick()
+        compose.onNodeWithTag("date-range-dialog").assertIsDisplayed()
+        compose.onNodeWithContentDescription("기간 선택 취소").performClick()
+        tab("기록");select("조회 기간","7D")
+        show(compose.onNodeWithContentDescription("조회 기간 변경")).assertIsNotEnabled()
+        select("조회 기간","기간 지정");click("적용");selectedValue("조회 기간","기간 지정")
+        show(compose.onNodeWithContentDescription("조회 기간 변경")).assertIsDisplayed().assertIsEnabled()
+        click("표");click("필터");select("조회 기간","30D")
+        compose.onNodeWithContentDescription("조회 기간 변경").assertIsNotEnabled()
+        select("조회 기간","기간 지정");click("적용")
+        compose.onNodeWithContentDescription("조회 기간 변경").assertIsEnabled()
+        click("닫기");back()
+        tab("재고");click("이력");select("이력 기간","기간 지정")
+        compose.onNodeWithContentDescription("기간 선택 취소").performClick();selectedValue("이력 기간","전체 기간")
+        select("이력 기간","7D")
+        show(compose.onNodeWithContentDescription("조회 기간 변경")).assertIsNotEnabled()
+        select("이력 기간","기간 지정");click("적용");selectedValue("이력 기간","기간 지정")
+        show(compose.onNodeWithContentDescription("조회 기간 변경")).assertIsDisplayed().assertIsEnabled()
+        screenshot("range-picker-applied.png")
+    }
+
+    @Test fun rangePickerDirectInputRejectsReversedDatesAndWorksInDarkLandscape() {
+        runBlocking{app.repository.preferences(snapshot().preferences.copy(darkMode="DARK"))}
+        tab("통계");select("통계 기간","기간 지정")
+        compose.onNode(hasContentDescription("입력",substring=true) and hasClickAction()).performClick()
+        val fields=compose.onAllNodes(hasSetTextAction())
+        fields.assertCountEquals(2)
+        show(fields[0]).performTextReplacement("20261231")
+        show(fields[1]).performTextReplacement("20261230")
+        await("Reversed date input validation") {
+            compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.Error)).fetchSemanticsNodes().isNotEmpty()
+        }
+        node("적용").assertIsNotEnabled()
+        show(fields[1]).performTextReplacement("20270102")
+        await("Valid date input validation"){compose.onAllNodes(hasText("적용") and isEnabled()).fetchSemanticsNodes().isNotEmpty()}
+        node("적용").assertIsEnabled()
+        val originalOrientation=compose.activity.requestedOrientation
+        try {
+            compose.activityRule.scenario.onActivity{it.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE}
+            await("Landscape range input"){compose.activity.resources.configuration.orientation==Configuration.ORIENTATION_LANDSCAPE}
+            show(compose.onAllNodes(hasSetTextAction())[1]).assertIsDisplayed()
+            node("적용").assertIsDisplayed().assertIsEnabled()
+            screenshot("range-picker-dark-landscape.png")
+            click("적용")
+            show(compose.onNodeWithContentDescription("조회 기간 변경")).assert(
+                SemanticsMatcher.expectValue(SemanticsProperties.StateDescription,"2026.12.31 ~ 2027.01.02 · 3일"))
+        } finally {
+            compose.activityRule.scenario.onActivity{it.requestedOrientation=originalOrientation}
+        }
+    }
+
     @Test fun backupRoundTripAndBrokenFilePreserveData()=runBlocking {
         val t=Treatment(id="backup-treatment",kind="MANUAL",items=listOf(Item(p.id,p.name,2)),manualDrain=2195,drainUnit="kg",basisMl=null)
         app.repository.save(t,true)

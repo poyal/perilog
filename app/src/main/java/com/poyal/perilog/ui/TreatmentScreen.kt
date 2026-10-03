@@ -103,7 +103,7 @@ import com.poyal.perilog.domain.*
             }
         }else Paper {
             Section("배액 기록 · 선택");Hint("물품만 저장해도 추가투석 기록이 완료돼요.")
-            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("g","kg","mL").forEach{unit->FilterChip(current.drainUnit==unit,{
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("g","kg","mL").forEach{unit->SelectionChip(current.drainUnit==unit,{
                 update(current.copy(drainUnit=unit,manualDrain=if((current.drainUnit=="mL")!=(unit=="mL"))null else current.manualDrain,previousFill=if(unit=="mL")current.previousFill else null))
             },{Text(unit)})}}
             NumberInput(if(current.drainUnit=="mL")"배액량"else"배액무게",current.manualDrain,{update(current.copy(manualDrain=it))},current.drainUnit,if(current.drainUnit=="kg")1000 else 1)

@@ -175,7 +175,7 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
             FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 choices.forEach { d ->
                     val selected=a.departments.any{it.id==d.id}
-                    FilterChip(selected,{a=if(selected)a.copy(departments=a.departments.filterNot{it.id==d.id},departmentTimes=a.departmentTimes-d.id)
+                    SelectionChip(selected,{a=if(selected)a.copy(departments=a.departments.filterNot{it.id==d.id},departmentTimes=a.departmentTimes-d.id)
                         else a.copy(departments=a.departments+d,departmentTimes=a.departmentTimes+(d.id to a.time))},
                         label={Text(d.name)},leadingIcon={ColorDot(d.color,16,d.name)})
                 }
@@ -196,7 +196,7 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
             FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 choices.forEach { item ->
                     val selected=selectedItems.any{it.id==item.id}
-                    FilterChip(selected,{a=a.copy(care=null,careItems=if(selected)selectedItems.filterNot{it.id==item.id}else selectedItems+item)},
+                    SelectionChip(selected,{a=a.copy(care=null,careItems=if(selected)selectedItems.filterNot{it.id==item.id}else selectedItems+item)},
                         label={Text(item.name)},leadingIcon={Icon(careIcon(item.iconKey).image,null,Modifier.size(22.dp))},
                         modifier=Modifier.semantics{contentDescription="${item.name} 치료 항목 선택"})
                 }
@@ -296,7 +296,7 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
             }
             if(icons)FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 careIcons.forEach { option ->
-                    FilterChip(c.iconKey==option.key,{c=c.copy(iconKey=option.key);icons=false},
+                    SelectionChip(c.iconKey==option.key,{c=c.copy(iconKey=option.key);icons=false},
                         label={Text(option.label)},leadingIcon={Icon(option.image,null,Modifier.size(22.dp))},
                         modifier=Modifier.semantics{contentDescription="${option.label} 아이콘"})
                 }

@@ -20,6 +20,30 @@ import java.time.LocalDateTime
 /** Manual emulator setup, compiled only with -PcaptureScreenshots. Keeps existing edits. */
 @RunWith(AndroidJUnit4::class)
 class PreviewSamples {
+    /** Optional contact examples. Stable IDs preserve existing contacts and sample edits. */
+    @Test fun loadContacts() = runBlocking {
+        require(BuildConfig.DEBUG && Build.HARDWARE in listOf("ranchu","goldfish")) {
+            "연락처 샘플은 개발용 에뮬레이터에서만 준비합니다."
+        }
+        val app=ApplicationProvider.getApplicationContext<PerilogApplication>()
+        val before=app.repository.snapshot()
+        val samples=listOf(
+            Contact(id="preview-contact-room",name="투석실 (샘플)",phone="032-000-0000",emoji="🏥",createdAt=100),
+            Contact(id="preview-contact-center",name="고객센터 (샘플)",phone="1577-0000",emoji="☎️",allowSms=false,createdAt=101),
+            Contact(id="preview-contact-nurse",name="간호사 (샘플)",phone="010-0000-0000",emoji="🧑‍⚕️",createdAt=102))
+        val added=samples.filter{sample->before.contacts.none{it.id==sample.id}}
+        if(added.isNotEmpty())app.backup.protect()
+        added.forEach{app.repository.createContact(it)}
+        val after=app.repository.snapshot()
+        check(before.contacts.all{it in after.contacts}) { "기존 연락처를 유지해야 합니다." }
+        check(after.copy(contacts=before.contacts,exportedAt=before.exportedAt)==before) { "연락처 이외의 자료는 바꾸지 않습니다." }
+        InstrumentationRegistry.getInstrumentation().sendStatus(0,Bundle().apply {
+            putString("contact_samples","투석실·고객센터·간호사 샘플")
+            putString("added_contacts",added.size.toString())
+            putString("total_contacts",after.contacts.size.toString())
+        })
+    }
+
     /** Opt-in memo examples for manual review. Repeated runs keep edits and all drafts. */
     @Test fun loadMemos() = runBlocking {
         require(BuildConfig.DEBUG && Build.HARDWARE in listOf("ranchu","goldfish")) {

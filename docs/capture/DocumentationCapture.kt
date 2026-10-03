@@ -81,6 +81,27 @@ class DocumentationCapture {
         val image=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
         File(directory,"$name.png").outputStream().use{image.compress(Bitmap.CompressFormat.PNG,100,it)}
     }
+    @Test fun captureChartsAndTable() {
+        seed(completeToday=true)
+        ui.waitUntil(10000){ui.onAllNodesWithText("오늘 기록 확인").fetchSemanticsNodes().isNotEmpty()}
+        tab("통계");shot("10-statistics")
+        show(ui.onNodeWithContentDescription("표시 방식")).performClick();click("항목별 도표");shot("11-statistics-metric")
+        show(ui.onNodeWithTag("chart-dates-WEIGHT"));shot("45-statistics-vitals")
+        show(ui.onNodeWithContentDescription("통계 기간")).performClick();click("기간 지정");shot("43-date-range-picker")
+        ui.onNodeWithContentDescription("기간 선택 취소").performClick()
+        tab("기록");click("표");shot("23-record-table")
+        click("100%")
+        ui.onNodeWithTag("record-cell-today-4").assertIsDisplayed().performClick()
+        ui.onNodeWithTag("record-cell-detail").assertIsDisplayed();shot("44-record-table-zoomed")
+        back()
+    }
+    @Test fun captureContactEditor() {
+        seed()
+        ui.waitUntil(10000){ui.onAllNodesWithText("기록하기").fetchSemanticsNodes().isNotEmpty()}
+        ui.onNodeWithContentDescription("설정").performClick()
+        click("연락처 관리");show(ui.onNodeWithContentDescription("투석실 수정")).performClick()
+        shot("34-contact-editor")
+    }
     @Test fun captureManual() {
         seed()
         ui.waitUntil(10000){ui.onAllNodesWithText("기록하기").fetchSemanticsNodes().isNotEmpty()}
@@ -117,7 +138,7 @@ class DocumentationCapture {
         if(today.dayOfMonth<8) {click("이전");click("28")}
         shot("09-calendar")
         tab("통계");shot("10-statistics")
-        show(ui.onNodeWithContentDescription("표시 방식")).performClick();click("표");shot("11-statistics-table")
+        show(ui.onNodeWithContentDescription("표시 방식")).performClick();click("항목별 도표");shot("11-statistics-metric")
         tab("재고");shot("12-inventory")
         click("이력");show(ui.onNodeWithContentDescription("이력 종류")).performClick()
         ui.onNode(hasText("입고") and hasClickAction() and hasAnyAncestor(isPopup())).performClick();shot("13-receipt-history")
@@ -135,7 +156,7 @@ class DocumentationCapture {
         ui.onNodeWithText("지금 백업").performScrollTo()
         shot("19-backup")
         back()
-        tab("기록");click("표");shot("23-record-table")
+        tab("기록");click("표");shot("23-record-table");back()
         tab("홈")
         val before=runBlocking{app.repository.snapshot()}
         runBlocking{app.repository.restore(before.copy(treatments=before.treatments.filterNot{it.id=="day-1"},usages=before.usages.filterNot{it.id=="day-1"}))}

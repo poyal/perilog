@@ -200,17 +200,17 @@ class AppointmentFlowTest {
         ui.onNode(hasSetTextAction() and hasText("전화번호")).assertTextContains("1577-1111")
         click("저장");await{snapshot().contacts.size==1}
         assertEquals("1577-1111",snapshot().contacts.single().phone)
-        show(ui.onNodeWithContentDescription("번호 입력 검사 수정")).performClick()
+        contactMenu("번호 입력 검사","수정")
         back() // Merely opening an already formatted number must not mark the editor dirty.
-        ui.onNodeWithContentDescription("번호 입력 검사 수정").assertExists()
-        show(ui.onNodeWithContentDescription("번호 입력 검사 수정")).performClick()
+        ui.onNodeWithContentDescription("번호 입력 검사 더보기").assertExists()
+        contactMenu("번호 입력 검사","수정")
         listOf("112","119","114").forEach { value ->
             input("전화번호",value)
             ui.onNode(hasSetTextAction() and hasText("전화번호")).assertTextContains(value)
             node("저장").assertIsEnabled()
         }
         click("저장");await{snapshot().contacts.single().phone=="114"}
-        show(ui.onNodeWithContentDescription("번호 입력 검사 수정")).performClick()
+        contactMenu("번호 입력 검사","수정")
         ui.onNode(hasSetTextAction() and hasText("전화번호")).assertTextContains("114")
     }
     @OptIn(ExperimentalTestApi::class)

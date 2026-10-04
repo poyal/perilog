@@ -53,7 +53,10 @@ data class ReplenishmentInput(
     val pattern: UsagePattern = UsagePattern(), val changes: List<PatternChange> = emptyList(),
     val bufferDays: Int = 0,
     val stockOverrides: Map<String, Int> = emptyMap(),
-    val requestOverrides: Map<String, Int> = emptyMap()
+    val requestOverrides: Map<String, Int> = emptyMap(),
+    // Missing in older backups: retain the original buffer-before-stock formula.
+    val calculationVersion: Int = 1,
+    val extraQuantities: Map<String, Int> = emptyMap()
 )
 
 /** Captured before any delivery: later receipts never enter this calculation twice. */

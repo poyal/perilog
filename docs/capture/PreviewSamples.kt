@@ -151,6 +151,10 @@ class PreviewSamples {
         val before=app.repository.snapshot()
         app.backup.protect()
         val date=LocalDate.now()
+        val historyDays=InstrumentationRegistry.getArguments().getString("historyDays")?.let {
+            requireNotNull(it.toIntOrNull()) {"historyDays는 정수여야 합니다."}
+        } ?: 14
+        require(historyDays in 14..180) {"샘플 기간은 14~180일입니다."}
         val products=listOf(
             Product(id="preview-d15",name="투석액 1.5%",color=0xFF2167B8),
             Product(id="preview-d25",name="투석액 2.5%",color=0xFF47956E),
@@ -160,12 +164,20 @@ class PreviewSamples {
             Product(id="preview-line",name="손투석 라인",kind="소모품",color=0xFF8772B5))
         val composition=listOf(0,1,4).map{Item(products[it].id,products[it].name,1)}
         val manualItems=listOf(Item(products[0].id,products[0].name,1),Item(products[5].id,products[5].name,1))
-        val history=(1..14).map{n->
+        val history=(1..historyDays).map{n->
             val day=date.minusDays(n.toLong()).toString()
+            val variation=(n-1)%14+1
+            val items=if(historyDays>14)when(n%7) {
+                0 -> listOf(0,2,4).map{Item(products[it].id,products[it].name,1)}
+                3 -> listOf(0,3,4).map{Item(products[it].id,products[it].name,1)}
+                else -> composition
+            }else composition
             Treatment(id="preview-machine-$day",date=day,weightGrams=62000+(n%5)*100,
-                systolic=118+n%8,diastolic=76+n%5,initialDrain=2180+n*10,machineUf=460+n*12,
-                dwellMinutes=110,items=composition,usageConfirmed=true,saved=true,memo="샘플 기록",createdAt=100L+n,
-                usageTemplateId="preview-night",usageTemplateName="밤 투석 · 1.5 + 2.5",usageTemplateColor=0xFF2167B8)
+                systolic=118+n%8,diastolic=76+n%5,initialDrain=2180+variation*10,machineUf=460+variation*12,
+                dwellMinutes=110,items=items,usageConfirmed=true,saved=true,memo="샘플 기록",createdAt=100L+n,
+                usageTemplateId="preview-night".takeIf{items==composition},
+                usageTemplateName="밤 투석 · 1.5 + 2.5".takeIf{items==composition},
+                usageTemplateColor=0xFF2167B8.takeIf{items==composition})
         }
         val current=Treatment(id="preview-machine-$date",date=date.toString(),weightGrams=62300,
             systolic=120,diastolic=80,items=composition,usageConfirmed=true,saved=true,createdAt=1000L,
@@ -190,20 +202,50 @@ class PreviewSamples {
         val templates=listOf(
             UsageTemplate(id="preview-night",name="밤 투석 · 1.5 + 2.5",items=composition),
             UsageTemplate(id="preview-manual",name="추가투석 · 1.5 + 라인",items=manualItems,color=0xFF8772B5))
-        app.repository.restore(before.copy(
+        var next=before.copy(
             products=(before.products+products).distinctBy{it.id},
             templates=(before.templates+templates).distinctBy{it.id},
             treatments=before.treatments+added,
             drafts=before.drafts+addedDrafts,
             usages=before.usages+added.map{Usage(it.id,it.date,it.items,it.kind,it.createdAt)},
-            receipts=(before.receipts+receipt).distinctBy{it.id}))
+            receipts=(before.receipts+receipt).distinctBy{it.id})
+        // Extending history should not consume the user's current preview stock a second time.
+        // Add an explicit sample receipt for the net new consumption after any stock counts.
+        val previousStock=inventory(before).products
+        if(historyDays>14) {
+            val nextStock=inventory(next).products
+            val receiptId="preview-history-delivery-$date-$historyDays"
+            val lines=previousStock.filterValues{it.registered}.mapNotNull{(id,stock)->
+                val difference=stock.balance-nextStock.getValue(id).balance
+                if(difference>0)ReceiptLine(id="$receiptId-$id",productId=id,quantity=difference)else null
+            }
+            if(lines.isNotEmpty()) {
+                check(next.receipts.none{it.id==receiptId}) {"같은 기간의 보충 입고가 이미 있어요."}
+                val latest=(before.counts.map{it.createdAt}+before.receipts.map{it.createdAt}+
+                    before.adjustments.map{it.createdAt}+before.usages.map{it.createdAt}).maxOrNull() ?: 0L
+                next=next.copy(receipts=next.receipts+Receipt(id=receiptId,date=date.toString(),lines=lines,
+                    createdAt=maxOf(System.currentTimeMillis(),latest+1),memo="${historyDays}일 샘플 확장 · 추가 사용 기록에 대응하는 입고"))
+            }
+            val finalStock=inventory(next).products
+            check(previousStock.filterValues{it.registered}.all{(id,stock)->finalStock[id]?.balance==stock.balance}) {
+                "샘플 기간을 늘려도 기존에 등록된 현재 재고는 유지해야 합니다."
+            }
+        }
+        app.repository.restore(next)
         val after=app.repository.snapshot()
         check(products.all{sample->after.products.any{it.id==sample.id}})
         check(templates.all{sample->after.templates.any{it.id==sample.id}})
+        check(before.products.all{it in after.products} && before.templates.all{it in after.templates} &&
+            before.treatments.all{it in after.treatments} && before.drafts.all{it in after.drafts} &&
+            before.usages.all{it in after.usages} && before.receipts.all{it in after.receipts})
+        check(after.copy(products=before.products,templates=before.templates,treatments=before.treatments,
+            drafts=before.drafts,usages=before.usages,receipts=before.receipts,exportedAt=before.exportedAt)==before)
         InstrumentationRegistry.getInstrumentation().sendStatus(0,Bundle().apply{
             putString("sample_setup","품목 ${after.products.size}개 · 구성 ${after.templates.size}개 · 기록 ${after.treatments.size}건")
             putString("added_records",added.size.toString())
             putString("added_drafts",addedDrafts.size.toString())
+            putString("sample_period","${date.minusDays(historyDays.toLong())} ~ $date")
+            putString("preserved","기존 입력·수정값·초안 유지"+if(historyDays>14)" · 현재 재고 유지"else "")
         })
     }
 }

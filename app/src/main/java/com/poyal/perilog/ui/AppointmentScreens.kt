@@ -2,6 +2,7 @@
 package com.poyal.perilog.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
@@ -10,9 +11,11 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -88,12 +91,23 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
 
 @Composable fun HomeAppointment(s:Snapshot,now:LocalDateTime,navigate:(String)->Unit) {
     val next=nextAppointment(s.appointments,now)
-    Paper {
+    val day=now.toLocalDate().toString()
+    val shortageCount=remember(s,next?.date,day) {
+        next?.let { appointment ->
+            runCatching {forecastStock(s,appointment.date,day)}.getOrNull()
+                ?.lines?.count {(it.balance?.numerator ?: 0)<0}
+        } ?: 0
+    }
+    Paper(Modifier.testTag("home-appointment").then(if(next==null)Modifier else Modifier.clickable(
+        onClickLabel="병원 일정 상세 보기",role=Role.Button,onClick={navigate("appointmentDetail/${next.id}")}))) {
         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             Icon(Icons.Outlined.Event,null,tint=MaterialTheme.colorScheme.primary)
             Text("병원 일정",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge)
-            if(next!=null)IconButton(onClick={navigate("appointment/new")}) {
-                Icon(Icons.Outlined.Add,"병원 일정 추가",tint=MaterialTheme.colorScheme.primary)
+            if(next!=null) {
+                Icon(Icons.Outlined.ChevronRight,null,tint=MaterialTheme.colorScheme.onSurfaceVariant)
+                IconButton(onClick={navigate("appointment/new")}) {
+                    Icon(Icons.Outlined.Add,"병원 일정 추가",tint=MaterialTheme.colorScheme.primary)
+                }
             }
         }
         if(next==null) {
@@ -106,8 +120,16 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
                     Column(Modifier.align(Alignment.CenterVertically),verticalArrangement=Arrangement.spacedBy(2.dp)) {
                         Text(LocalDate.parse(next.date).format(DateTimeFormatter.ofPattern("yyyy. MM. dd (E)",Locale.KOREAN)),
                             style=MaterialTheme.typography.bodyMedium)
-                        Text(if(next.departments.isEmpty())next.time else "다음 진료 ${next.nextAt(now)?.toLocalTime()}",
-                            style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                            Text(if(next.departments.isEmpty())next.time else "다음 진료 ${next.nextAt(now)?.toLocalTime()}",
+                                modifier=Modifier.weight(1f,fill=false).testTag("home-next-appointment-time"),
+                                style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            if(shortageCount>0) IconButton(onClick={navigate("appointmentStock/${next.id}")},
+                                modifier=Modifier.testTag("home-stock-shortage")) {
+                                Icon(Icons.Outlined.WarningAmber,"방문 전 재고 부족 예상 ${shortageCount}품목 · 예상 잔량 보기",
+                                    Modifier.size(20.dp),tint=MaterialTheme.colorScheme.error)
+                            }
+                        }
                     }
                 }
                 if(next.departments.isNotEmpty() || next.selectedCareItems().isNotEmpty()) {
@@ -118,6 +140,22 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
                 }
                 MemoBlock(next.memo)
             }
+        }
+    }
+}
+
+@Composable fun AppointmentDetailScreen(s:Snapshot,id:String,now:LocalDateTime,navigate:(String)->Unit,back:()->Unit) {
+    val appointment=s.appointments.find {it.id==id}
+    Page("병원 일정 상세",back=back) {
+        if(appointment==null) Paper {Hint("삭제된 병원 일정이에요.")}
+        else {
+            Paper {
+                Text(appointment.dayLabel(now),fontWeight=FontWeight.Bold,color=MaterialTheme.colorScheme.primary)
+                AppointmentDetails(appointment)
+                if(!appointment.endsAt().isBefore(now)) AppointmentStockSummary(s,appointment,now,navigate)
+            }
+            Action("일정 수정",{navigate("appointment/${appointment.id}")},icon=Icons.Outlined.Edit)
+            SecondaryButton(onClick={navigate("appointment/next/${appointment.id}")}) {Text("같은 구성으로 다음 예약")}
         }
     }
 }
@@ -134,6 +172,7 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
             entries.forEach { a -> Paper {
                 Text(a.dayLabel(now),fontWeight=FontWeight.Bold,color=MaterialTheme.colorScheme.primary)
                 AppointmentDetails(a)
+                if(!past) AppointmentStockSummary(s,a,now,navigate)
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick={navigate("appointment/${a.id}")},modifier=Modifier.semantics{contentDescription="${a.id} 일정 수정"}){Text("수정")}
                     TextButton(onClick={navigate("appointment/next/${a.id}")}){Text("같은 구성으로 다음 예약")}

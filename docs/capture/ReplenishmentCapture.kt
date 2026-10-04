@@ -44,7 +44,7 @@ class ReplenishmentCapture {
             UsageTemplate(id="c",name="다른 구성 C",items=listOf(Item(p.id,p.name,1),Item(q.id,q.name,1)),color=0xFFEF8752))
         val source=Snapshot(products=listOf(p,q),templates=templates,usages=history,preferences=Preferences(celebrate=false),
             counts=listOf(StockCount(productId=p.id,date=today(),quantity=21),StockCount(productId=q.id,date=today(),quantity=8)))
-        val input=ReplenishmentInput(visitDate=now.plusDays(6).toString(),nextVisitDate=now.plusDays(34).toString())
+        val input=ReplenishmentInput(visitDate=now.plusDays(6).toString(),nextVisitDate=now.plusDays(34).toString(),calculationVersion=2)
         val plan=ReplenishmentPlan(id="example-request",input=input,calculation=calculateReplenishment(source,input,today()),memo="두 번에 나누어 받을 예정이에요")
         runBlocking {app.repository.restore(source.copy(replenishmentPlans=listOf(plan)))}
         ui.waitUntil(10000) {ui.onAllNodesWithText("오늘 기록 시작").fetchSemanticsNodes().isNotEmpty()}

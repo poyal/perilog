@@ -71,6 +71,28 @@ class ReplenishmentFlowTest {
         runBlocking {app.repository.replenishmentPlan(plan)}
         return plan
     }
+    @Test fun extraDaysAndItemsPersistAndManualFinalRemainsIndependent() {
+        requests();click("새 입고 요청 계산");selectNextDate(LocalDate.now().plusDays(7))
+        click("평소 사용 바꾸기");click("기본 구성 선택");click("기본 구성 A");click("이 사용으로 계산")
+        click("3일")
+        input("${p.name} 개별 추가분","1.5");hideKeyboard()
+        ui.onNodeWithText("요청안 저장").assertIsNotEnabled()
+        input("${p.name} 개별 추가분","5");hideKeyboard()
+        ui.activityRule.scenario.recreate()
+        show(ui.onNode(hasSetTextAction() and hasContentDescription("${p.name} 개별 추가분"))).assertTextContains("5")
+        input("${p.name} 실제 요청할 수량","9");hideKeyboard()
+        click("7일")
+        show(ui.onNode(hasSetTextAction() and hasContentDescription("${p.name} 실제 요청할 수량"))).assertTextContains("9")
+        click("요청안 저장")
+        ui.waitUntil(10000) {snapshot().replenishmentPlans.size==1}
+        val plan=snapshot().replenishmentPlans.single()
+        assertEquals(2,plan.input.calculationVersion);assertEquals(5,plan.input.extraQuantities[p.id])
+        assertEquals(19,plan.calculation.lines.first {it.productId==p.id}.suggested)
+        assertEquals(9,plan.calculation.lines.first {it.productId==p.id}.requested)
+        assertEquals(20,inventory(snapshot()).products.getValue(p.id).balance)
+        click("${today()} 입고 요청");click("요청 수정");click("자동 계산값 적용");click("요청안 저장")
+        ui.waitUntil(10000) {snapshot().replenishmentPlans.single().calculation.lines.first {it.productId==p.id}.requested==19}
+    }
     @Test fun newWeeklyRequestWithoutHistoryHasAutomaticRemainderAndPersists() {
         requests();click("새 입고 요청 계산");selectNextDate(LocalDate.now().plusDays(7))
         click("평소 사용 바꾸기");click("기본 구성 선택");click("기본 구성 A")
@@ -93,7 +115,7 @@ class ReplenishmentFlowTest {
         repeat(2) { index ->
             show(ui.onAllNodesWithText("날짜 선택")[index]).performClick()
             val weekdays=listOf("일","월","화","수","목","금","토").map {
-                show(ui.onNodeWithText(it)).getUnclippedBoundsInRoot()
+                show(ui.onNode(hasText(it) and hasAnyAncestor(hasContentDescription("달력 요일")))).getUnclippedBoundsInRoot()
             }
             weekdays.zipWithNext().forEach { (left,right)->assertTrue(left.right<=right.left) }
             val month=LocalDate.now().withDayOfMonth(1)

@@ -37,7 +37,7 @@ fun validatePattern(pattern: UsagePattern, productIds: Set<String>) {
     if (pattern.mode == "DIRECT") require(pattern.directItems.isNotEmpty()) { "하루 또는 일주일 사용량을 입력해 주세요." }
 }
 
-private fun patternRates(pattern: UsagePattern, evidence: UsageEvidence): Map<String, SupplyAmount> {
+internal fun patternRates(pattern: UsagePattern, evidence: UsageEvidence): Map<String, SupplyAmount> {
     val rates = mutableMapOf<String, SupplyAmount>()
     fun add(items: List<Item>, times: Int, days: Int) = items.forEach {
         rates[it.productId] = (rates[it.productId] ?: zeroSupply) + SupplyAmount(it.quantity.toLong()*times, days.toLong())
@@ -67,6 +67,8 @@ fun calculateReplenishment(s: Snapshot, input: ReplenishmentInput, asOf: String,
     require(days in 1..3650 && ChronoUnit.DAYS.between(basisDate, next) <= 3650) { "방문 사이 기간은 1~3,650일로 선택해 주세요." }
     require(input.historyTo < basisDate.toString()) { "참고 기간은 계산 기준일 전날까지 선택해 주세요." }
     require(input.bufferDays in 0..365) { "여유분은 0~365일로 입력해 주세요." }
+    require(input.calculationVersion in 1..2) { "지원하지 않는 요청 계산 방식입니다." }
+    require(input.calculationVersion == 2 || input.extraQuantities.isEmpty())
     val ids = s.products.map { it.id }.toSet()
     validatePattern(input.pattern, ids)
     require(input.changes.map { it.from }.distinct().size == input.changes.size) { "사용 변경일이 겹치지 않게 선택해 주세요." }
@@ -76,44 +78,27 @@ fun calculateReplenishment(s: Snapshot, input: ReplenishmentInput, asOf: String,
         require(LocalDate.parse(it.from) in basisDate..next.minusDays(1)) { "사용 변경일은 계산 기준일부터 다음 방문 전날 사이로 선택해 주세요." }
         validatePattern(it.pattern, ids)
     }
-    (input.stockOverrides.entries + input.requestOverrides.entries).forEach { (id, q) -> require(id in ids && q in 0..1000000) { "직접 입력한 수량은 0~1,000,000EA로 입력해 주세요." } }
+    (input.stockOverrides.entries + input.requestOverrides.entries + input.extraQuantities.entries).forEach { (id, q) -> require(id in ids && q in 0..1000000) { "직접 입력한 수량은 0~1,000,000EA로 입력해 주세요." } }
     val evidence = if(frozenBasis?.historyDays!=null && frozenBasis.historyFrom==input.historyFrom && frozenBasis.historyTo==input.historyTo)
         UsageEvidence(frozenBasis.historyDays,(ChronoUnit.DAYS.between(LocalDate.parse(input.historyFrom),LocalDate.parse(input.historyTo))+1).toInt(),frozenBasis.historyRates)
         else usageEvidence(s, input.historyFrom, input.historyTo)
-    val stock = inventory(s, basisDate.toString())
-    val basis = (frozenBasis ?: ReplenishmentBasis(basisDate.toString(), stock.products.mapValues { if (it.value.registered) it.value.balance else null },
-        s.usages.filter { !it.cancelled && it.date == basisDate.toString() }.flatMap { it.items }.groupBy { it.productId }.mapValues { (_, items) -> items.sumOf { it.quantity } }))
+    val basis = (frozenBasis ?: supplyBasis(s, basisDate.toString()))
         .copy(historyFrom=input.historyFrom,historyTo=input.historyTo,historyDays=evidence.days,historyRates=evidence.rates)
-    // Evaluate only patterns that actually apply; an unused historical starting pattern needs no records.
-    val changes = input.changes.sortedBy { it.from }
-    val rateCache = mutableMapOf<UsagePattern, Map<String, SupplyAmount>>()
-    fun rates(date: LocalDate): Map<String, SupplyAmount> {
-        val p = changes.lastOrNull { it.from <= date.toString() }?.pattern ?: input.pattern
-        return rateCache.getOrPut(p) { patternRates(p, evidence) }
-    }
-    fun sum(from: LocalDate, until: LocalDate): Map<String, SupplyAmount> {
-        val result = mutableMapOf<String, SupplyAmount>()
-        var date = from
-        while (date < until) {
-            rates(date).forEach { (id, amount) ->
-                val remaining = if (date == basisDate) (amount - SupplyAmount((basis.usedToday[id] ?: 0).toLong())).nonNegative() else amount
-                result[id] = (result[id] ?: zeroSupply) + remaining
-            }
-            date = date.plusDays(1)
-        }
-        return result
-    }
-    val before = sum(basisDate, visit)
-    val demand = sum(visit, next)
-    val lastRates = rates(next.minusDays(1))
-    val relevant = s.products.filter { it.active || it.id in demand || it.id in input.requestOverrides || it.id in input.stockOverrides }
+    val projection = UsageProjection(basis, input.pattern, evidence, input.changes)
+    val before = projection.sum(basisDate, visit)
+    val demand = projection.sum(visit, next)
+    val lastRates = projection.rates(next.minusDays(1))
+    val relevant = s.products.filter { it.active || it.id in demand || it.id in input.requestOverrides || it.id in input.stockOverrides || it.id in input.extraQuantities }
     val lines = relevant.map { p ->
         val current = basis.stocks[p.id]
         val rawVisit = current?.let { SupplyAmount(it.toLong()) - (before[p.id] ?: zeroSupply) }
         val projected = input.stockOverrides[p.id]?.let { SupplyAmount(it.toLong()) } ?: rawVisit?.nonNegative()
         val needed = demand[p.id] ?: zeroSupply
         val buffer = (lastRates[p.id] ?: zeroSupply)*input.bufferDays
-        val suggested = (needed + buffer - (projected ?: zeroSupply)).nonNegative().ceil()
+        val basic = (needed - (projected ?: zeroSupply)).nonNegative()
+        val suggested = if (input.calculationVersion == 1)
+            (needed + buffer - (projected ?: zeroSupply)).nonNegative().ceil()
+        else (basic + buffer + SupplyAmount((input.extraQuantities[p.id] ?: 0).toLong())).ceil()
         require(suggested <= 1000000) { "${p.name} 요청량이 너무 큽니다. 기간과 사용량을 확인해 주세요." }
         ReplenishmentLine(p.id, p.name, current, projected,
             rawVisit?.let { (zeroSupply-it).nonNegative() } ?: zeroSupply, needed, buffer, suggested, input.requestOverrides[p.id] ?: suggested)
@@ -154,16 +139,24 @@ fun validateReplenishment(s: Snapshot) {
         require(p.input.historyTo < c.basis.asOf)
         require(ChronoUnit.DAYS.between(LocalDate.parse(p.input.historyFrom), LocalDate.parse(p.input.historyTo))+1 == c.historyTotalDays.toLong())
         require(p.input.bufferDays in 0..365)
+        require(p.input.calculationVersion in 1..2)
+        require(p.input.calculationVersion == 2 || p.input.extraQuantities.isEmpty())
         validatePattern(p.input.pattern, products)
         require(p.input.changes.map { it.id }.distinct().size == p.input.changes.size && p.input.changes.map { it.from }.distinct().size == p.input.changes.size)
         p.input.changes.forEach { require(it.id.isNotBlank() && LocalDate.parse(it.from) in basisDate..LocalDate.parse(p.input.nextVisitDate).minusDays(1)); validatePattern(it.pattern, products) }
-        (p.input.stockOverrides.entries + p.input.requestOverrides.entries).forEach { (id, q) -> require(id in products && q in 0..1000000) }
+        (p.input.stockOverrides.entries + p.input.requestOverrides.entries + p.input.extraQuantities.entries).forEach { (id, q) -> require(id in products && q in 0..1000000) }
         require(c.lines.map { it.productId }.distinct().size == c.lines.size)
         c.lines.forEach {
             require(it.productId in products && it.name.isNotBlank() && it.requested in 0..1000000 && it.suggested in 0..1000000)
             listOfNotNull(it.visitStock, it.beforeShortage, it.demand, it.buffer).forEach { amount -> require(amount.numerator >= 0 && amount.denominator > 0) }
             require(it.requested == (p.input.requestOverrides[it.productId] ?: it.suggested))
+            if(p.input.calculationVersion==2) {
+                val expected=((it.demand-(it.visitStock ?: zeroSupply)).nonNegative()+it.buffer+
+                    SupplyAmount((p.input.extraQuantities[it.productId] ?: 0).toLong())).ceil()
+                require(it.suggested==expected) { "여유분과 계산한 요청량이 일치하지 않습니다." }
+            }
         }
+        require(p.input.extraQuantities.keys.all { id -> c.lines.any {it.productId==id} })
         c.basis.stocks.forEach { (id, _) -> require(id in products) }
         c.basis.usedToday.forEach { (id, q) -> require(id in products && q >= 0) }
         c.basis.historyDays?.let { days ->

@@ -469,6 +469,7 @@ class AppFlowTest {
         compose.onNodeWithTag("record-cell-many-0-8").assertIsDisplayed()
         val originalZoom=nodeZoom()
         val viewport=compose.onNodeWithTag("record-table-viewport")
+        assertTrue(compose.onNodeWithTag("record-table-controls").getUnclippedBoundsInRoot().bottom<=viewport.getUnclippedBoundsInRoot().top)
         viewport.performTouchInput {
             val cy=center.y
             down(0,androidx.compose.ui.geometry.Offset(width*.4f,cy))
@@ -480,7 +481,7 @@ class AppFlowTest {
             up(0);up(1)
         }
         assertTrue(nodeZoom()>originalZoom)
-        click("100%");assertEquals(100,nodeZoom())
+        click("100%로");assertEquals(100,nodeZoom())
         // Zoom anchors the row under the fingers; return to the first row for edge checks.
         compose.onNodeWithTag("record-table-rows").performScrollToIndex(0)
         val dateLeft=compose.onNodeWithTag("record-cell-many-0-0").getUnclippedBoundsInRoot().left

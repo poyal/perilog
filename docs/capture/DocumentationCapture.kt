@@ -99,7 +99,7 @@ class DocumentationCapture {
         show(ui.onNodeWithContentDescription("통계 기간")).performClick();click("기간 지정");shot("43-date-range-picker")
         ui.onNodeWithContentDescription("기간 선택 취소").performClick()
         tab("기록");click("표");shot("23-record-table")
-        click("100%")
+        click("100%로")
         ui.onNodeWithTag("record-cell-today-4").assertIsDisplayed().performClick()
         ui.onNodeWithTag("record-cell-detail").assertIsDisplayed();shot("44-record-table-zoomed")
         back()

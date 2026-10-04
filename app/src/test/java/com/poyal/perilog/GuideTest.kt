@@ -10,7 +10,7 @@ class GuideTest {
         val ids=guideTopics.map {it.id}
         assertEquals(ids.size,ids.distinct().size)
         listOf("home","edit","records","recordTable","stats","stock","settings","about","products","product/id","templates","template/id",
-            "appointments","appointment/id","departments","department/id","careTemplates","care/id","contacts","contact/id","contacts/order","widgets",
+            "appointments","appointment/id","appointmentDetail/id","appointmentStock/id","departments","department/id","careTemplates","care/id","contacts","contact/id","contacts/order","widgets",
             "requests","request/id","requestDetail/id","requestReceive/id","stockHistory/id","count/id","adjustment/id").forEach {route->
             assertTrue("Missing help for $route",guideForRoute(route) in ids)
         }

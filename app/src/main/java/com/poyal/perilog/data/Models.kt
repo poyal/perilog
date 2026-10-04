@@ -100,7 +100,8 @@ data class Preferences(val basis: List<Basis> = listOf(Basis("1970-01-01", 2000)
     val reminder: Boolean = false, val reminderHour: Int = 21, val reminderMinute: Int = 0,
     val palette: List<Long> = listOf(0xFF2167B8,0xFF47956E,0xFFEF8752,0xFF30343B,0xFFBA668B,0xFF8772B5,0xFFDAAB36,0xFF5B9FA6),
     val celebratedDates: Set<String> = emptySet(), val lastDrainUnit: String = "g",
-    val contactOrder: List<String> = emptyList())
+    val contactOrder: List<String> = emptyList(),
+    val stockForecastPattern: UsagePattern = UsagePattern())
 
 @Serializable
 data class Snapshot(val formatVersion: Int = 1, val appVersion: String = "1.0.1",

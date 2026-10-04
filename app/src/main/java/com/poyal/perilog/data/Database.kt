@@ -234,8 +234,13 @@ class Repository(val db: JournalDb) {
     }
     suspend fun preferences(p: Preferences) = db.withTransaction {
         val s=read()
-        // A settings form opened before reordering contacts must not overwrite their new order.
-        val updated=p.copy(contactOrder=s.preferences.contactOrder)
+        // A stale general settings form must preserve values managed on their own screens.
+        val updated=p.copy(contactOrder=s.preferences.contactOrder, stockForecastPattern=s.preferences.stockForecastPattern)
+        validate(s.copy(preferences=updated)); d.put(SettingsRow(payload=codec.encodeToString(updated)))
+    }
+    suspend fun stockForecastPattern(pattern: UsagePattern) = db.withTransaction {
+        val s=read()
+        val updated=s.preferences.copy(stockForecastPattern=pattern)
         validate(s.copy(preferences=updated)); d.put(SettingsRow(payload=codec.encodeToString(updated)))
     }
     suspend fun reorderContacts(ids: List<String>) = db.withTransaction {

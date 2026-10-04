@@ -24,6 +24,28 @@ class RepositoryTest {
     private val p=Product(id="p",name="테스트 물품")
     @Before fun setup() {db=Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(),JournalDb::class.java).allowMainThreadQueries().build();repo=Repository(db)}
     @After fun close() {db.close()}
+    @Test fun forecastAndExtraRequestSettingsRoundTripWithoutChangingLegacyRequests()=runBlocking {
+        repo.product(p)
+        val pattern=UsagePattern(mode="DIRECT",directPeriodDays=1,directItems=listOf(Item(p.id,p.name,2)))
+        val stale=repo.snapshot().preferences
+        repo.stockForecastPattern(pattern)
+        repo.preferences(stale.copy(darkMode="DARK"))
+        assertEquals(pattern,repo.snapshot().preferences.stockForecastPattern)
+        val old=ReplenishmentInput(nextVisitDate=java.time.LocalDate.now().plusDays(7).toString(),pattern=pattern,bufferDays=3)
+        val legacy=ReplenishmentPlan(id="old",input=old,calculation=calculateReplenishment(repo.snapshot(),old,today()))
+        repo.replenishmentPlan(legacy)
+        val added=old.copy(calculationVersion=2,extraQuantities=mapOf(p.id to 5))
+        repo.replenishmentPlan(ReplenishmentPlan(id="new",input=added,calculation=calculateReplenishment(repo.snapshot(),added,today())))
+        val backup=codec.decodeFromString<Snapshot>(codec.encodeToString(Snapshot.serializer(),repo.snapshot()))
+        repo.restore(Snapshot());repo.restore(backup)
+        assertEquals(legacy,repo.snapshot().replenishmentPlans.first {it.id=="old"})
+        assertEquals(25,repo.snapshot().replenishmentPlans.first {it.id=="new"}.calculation.lines.single().requested)
+        assertEquals(pattern,repo.snapshot().preferences.stockForecastPattern)
+        assertEquals(1,codec.decodeFromString<ReplenishmentInput>("{}").calculationVersion)
+        assertEquals("HISTORY",codec.decodeFromString<Preferences>("{}").stockForecastPattern.mode)
+        assertThrows(IllegalArgumentException::class.java) {runBlocking {repo.stockForecastPattern(pattern.copy(directItems=listOf(Item("missing","알 수 없음",1))))}}
+        Unit
+    }
     @Test fun contactOrderSurvivesBackupSettingsEditsAndNewContactsWithoutChangingContactData()=runBlocking {
         val a=Contact(id="a",name="병원",phone="02-123-4567",createdAt=1)
         val b=Contact(id="b",name="간호사",phone="010-1234-5678",createdAt=2,allowCall=false)

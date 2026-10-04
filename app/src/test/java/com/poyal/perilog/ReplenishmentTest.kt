@@ -100,4 +100,25 @@ class ReplenishmentTest {
         val c=PlanComposition(name="A",items=listOf(Item(p.id,p.name,1)))
         assertThrows(Exception::class.java) {line(i=input().copy(pattern=UsagePattern("WEEKLY",c,listOf(WeeklyComposition(c,5),WeeklyComposition(c.copy(id="different"),3)))))}
     }
+    @Test fun extraDaysAndIndividualQuantityAreAddedEvenWhenStockCoversDemand() {
+        val pattern=UsagePattern(mode="DIRECT",directPeriodDays=1,directItems=listOf(Item(p.id,p.name,2)))
+        val i=input().copy(visitDate=date,nextVisitDate="2026-10-10",pattern=pattern,bufferDays=3,
+            calculationVersion=2,extraQuantities=mapOf(p.id to 5))
+        val r=line(i=i)
+        assertEquals(11,r.suggested);assertEquals(11,r.requested)
+        assertEquals(0,line(i=i.copy(calculationVersion=1,extraQuantities=emptyMap())).requested)
+        assertEquals(7,line(i=i.copy(requestOverrides=mapOf(p.id to 7))).requested)
+        assertEquals(11,line(i=i.copy(requestOverrides=mapOf(p.id to 7))).suggested)
+    }
+    @Test fun extraQuantitiesRoundOnlyTheCombinedTotalAndRejectInvalidVersionsOrOverflow() {
+        val pattern=UsagePattern(mode="DIRECT",directItems=listOf(Item(p.id,p.name,1)))
+        val i=input().copy(visitDate=date,nextVisitDate="2026-10-04",pattern=pattern,bufferDays=1,calculationVersion=2,
+            extraQuantities=mapOf(p.id to 5))
+        assertEquals(6,line(Snapshot(products=listOf(p)),i).requested)
+        assertThrows(IllegalArgumentException::class.java) {line(i=i.copy(extraQuantities=mapOf(p.id to -1)))}
+        assertThrows(IllegalArgumentException::class.java) {line(i=i.copy(extraQuantities=mapOf(p.id to 1000001)))}
+        assertThrows(IllegalArgumentException::class.java) {line(Snapshot(products=listOf(p)),i.copy(extraQuantities=mapOf(p.id to 1000000)))}
+        assertThrows(IllegalArgumentException::class.java) {line(i=i.copy(calculationVersion=3))}
+        assertThrows(IllegalArgumentException::class.java) {line(i=i.copy(calculationVersion=1))}
+    }
 }

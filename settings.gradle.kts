@@ -5,3 +5,5 @@ dependencyResolutionManagement {
 }
 rootProject.name = "Perilog"
 include(":app")
+// Standalone launcher host for minified APK/process-death regressions; never shipped.
+if (providers.gradleProperty("widgetHost").isPresent) include(":widget-test-host")

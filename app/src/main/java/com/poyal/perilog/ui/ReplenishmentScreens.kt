@@ -55,7 +55,8 @@ import java.time.LocalDate
     var draft by rememberJsonState("request:$id") {
         val copied=s.replenishmentPlans.find { it.id==copyFrom }
         val input=existing?.input ?: copied?.input?.copy(visitDate=today(),nextVisitDate="",historyFrom=LocalDate.now().minusDays(28).toString(),
-            historyTo=LocalDate.now().minusDays(1).toString(),changes=emptyList(),stockOverrides=emptyMap(),requestOverrides=emptyMap()) ?: ReplenishmentInput()
+            historyTo=LocalDate.now().minusDays(1).toString(),changes=emptyList(),stockOverrides=emptyMap(),requestOverrides=emptyMap(),
+            calculationVersion=2,extraQuantities=emptyMap()) ?: ReplenishmentInput(calculationVersion=2)
         RequestDraft(id,input,existing?.memo ?: copied?.memo ?: "",existing?.calculation?.basis,existing?.createdAt ?: System.currentTimeMillis())
     }
     val original=rememberSaveable(id) { codec.encodeToString(draft) }
@@ -112,13 +113,11 @@ import java.time.LocalDate
                 Hint(if(evidence!=null && evidence.days>0) "최근 ${evidence.totalDays}일 중 ${evidence.days}일의 기록으로 계산해요" else "기록이 없어도 평소 사용을 입력하면 계산할 수 있어요")
             } else Hint("직접 정한 평소 사용으로 계산해요")
             SecondaryButton(onClick={patternTarget="base"},modifier=Modifier.fillMaxWidth()) {Text("평소 사용 바꾸기")}
-            TextButton(onClick={details=!details}) {Text(if(details) "계산 조건 접기" else "참고 기간 · 사용 변경 · 여유분")}
+            TextButton(onClick={details=!details}) {Text(if(details) "계산 조건 접기" else "참고 기간 · 사용 변경")}
             if(details) {
                 Hint("참고 기간은 계산 기준일 전날까지예요. 기록 없는 날짜는 평균에서 제외해요.")
                 DateControl(draft.input.historyFrom,{draft=draft.copy(input=draft.input.copy(historyFrom=it))},"참고 시작일")
                 DateControl(draft.input.historyTo,{draft=draft.copy(input=draft.input.copy(historyTo=it))},"참고 종료일")
-                NumberInput("여유분 더하기",draft.input.bufferDays,{draft=draft.copy(input=draft.input.copy(bufferDays=it ?: 0))},"일")
-                FlowRow { listOf(0,3,7).forEach { n->TextButton(onClick={draft=draft.copy(input=draft.input.copy(bufferDays=n))}) {Text(if(n==0) "없음" else "${n}일")} } }
                 draft.input.changes.forEach { change->key(change.id) {
                     HorizontalDivider()
                     DateControl(change.from,{date->draft=draft.copy(input=draft.input.copy(changes=draft.input.changes.map { if(it.id==change.id)it.copy(from=date) else it }))},"사용 변경일")
@@ -130,6 +129,21 @@ import java.time.LocalDate
                 TextButton(onClick={val c=PatternChange(from=draft.input.visitDate,pattern=draft.input.pattern);draft=draft.copy(input=draft.input.copy(changes=draft.input.changes+c));patternTarget=c.id}) {Text("+ 방문일부터 사용이 달라져요")}
                 TextButton(onClick={val c=PatternChange(from=runCatching { LocalDate.parse(draft.input.visitDate).plusDays(7).toString() }.getOrDefault(today()),pattern=draft.input.pattern);draft=draft.copy(input=draft.input.copy(changes=draft.input.changes+c));patternTarget=c.id}) {Text("+ 중간에 사용이 바뀌어요")}
             }
+        }
+        Paper {
+            Section("여유분 더 받기")
+            if(draft.input.calculationVersion==1) {
+                Hint("저장한 요청은 여유분까지 재고에서 차감한 기존 계산을 유지해요.")
+                val converted=remember(s,draft) {runCatching {calculateReplenishment(s,draft.input.copy(calculationVersion=2),today(),draft.basis)}.getOrNull()}
+                converted?.lines?.filter { line -> result?.lines?.find {it.productId==line.productId}?.suggested!=line.suggested }?.forEach { line ->
+                    Hint("${line.name}: 계산 요청 ${result?.lines?.find {it.productId==line.productId}?.suggested} → ${line.suggested}EA")
+                }
+                TextButton(onClick={draft=draft.copy(input=draft.input.copy(calculationVersion=2))}) {Text("계산 결과에 여유분 더하기")}
+            } else Hint("재고가 충분해 기본 요청이 0개여도 선택한 여유분은 더 받아요.")
+            NumberInput("여유분 더하기",draft.input.bufferDays,{draft=draft.copy(input=draft.input.copy(bufferDays=it ?: 0))},"일")
+            FlowRow { listOf(0,3,7).forEach { n->SelectionChip(draft.input.bufferDays==n,{draft=draft.copy(input=draft.input.copy(bufferDays=n))},{Text(if(n==0) "없음" else "${n}일")}) } }
+            Hint("직접 입력은 0~365일이에요. 다음 방문 직전의 사용량을 기준으로 더해요.")
+            if(draft.input.requestOverrides.isNotEmpty()) Hint("최종 수량을 직접 지정한 ${draft.input.requestOverrides.size}개 품목은 지정한 수량을 유지해요.")
         }
         if(latest!=null && latest!=calculated) Paper {
             Section("최신 기록으로 다시 계산")
@@ -158,15 +172,32 @@ import java.time.LocalDate
                     NumberInput("${line.name} 방문일 잔량",draft.input.stockOverrides[line.productId],{q->draft=draft.copy(input=draft.input.copy(stockOverrides=if(q==null)draft.input.stockOverrides-line.productId else draft.input.stockOverrides+(line.productId to q)))},"EA")
                     Hint("이번 계산에만 적용해요. 실제 재고는 수량 맞추기에서 바꿔 주세요.")
                     TextButton(onClick={navigate("count/${line.productId}")}) {Text("실제 재고 수량 맞추기")}
+                    if(line.productId in draft.input.stockOverrides) TextButton(onClick={draft=draft.copy(input=draft.input.copy(stockOverrides=draft.input.stockOverrides-line.productId))}) {Text("잔량 보정 해제")}
                 }
                 QuantitySummary("${result.days}일 동안 사용할 양","약 ${line.demand.label()} EA")
-                if(line.buffer.numerator>0) QuantitySummary("여유분","약 ${line.buffer.label()} EA")
+                QuantitySummary("기본 필요량","약 ${(line.demand-(line.visitStock ?: SupplyAmount())).nonNegative().label()} EA")
+                QuantitySummary("여유 일수분","약 ${line.buffer.label()} EA")
+                if(draft.input.calculationVersion==2) {
+                    val extra=draft.input.extraQuantities[line.productId] ?: 0
+                    val manual=line.productId in draft.input.requestOverrides
+                    Section("이 품목만 더 받기")
+                    if(manual) Hint("최종 수량을 직접 지정했어요. 자동 계산값을 적용하면 추가분을 바꿀 수 있어요.")
+                    else {
+                        NumberInput("${line.name} 개별 추가분",extra,{q->draft=draft.copy(input=draft.input.copy(extraQuantities=draft.input.extraQuantities+(line.productId to (q ?: 0))))},"EA")
+                        FlowRow {
+                            listOf(1,5,10).forEach { n->TextButton(enabled=extra<=1000000-n,onClick={draft=draft.copy(input=draft.input.copy(extraQuantities=draft.input.extraQuantities+(line.productId to (extra+n))))}) {Text("+$n")} }
+                            TextButton(onClick={draft=draft.copy(input=draft.input.copy(extraQuantities=draft.input.extraQuantities-line.productId))}) {Text("추가분 초기화")}
+                        }
+                    }
+                    QuantitySummary("개별 추가분","$extra EA")
+                }
                 HorizontalDivider()
                 QuantitySummary("계산한 요청량","약 ${line.suggested} EA")
+                QuantitySummary("최종 요청량","${line.requested} EA")
                 NumberInput("${line.name} 실제 요청할 수량",draft.input.requestOverrides[line.productId] ?: line.requested,{q->draft=draft.copy(input=draft.input.copy(requestOverrides=draft.input.requestOverrides+(line.productId to (q ?: 0))))},"EA",large=true)
-                if(line.productId in draft.input.requestOverrides || line.productId in draft.input.stockOverrides) {
-                    Hint("직접 수정한 값이 있어요")
-                    TextButton(onClick={draft=draft.copy(input=draft.input.copy(requestOverrides=draft.input.requestOverrides-line.productId,stockOverrides=draft.input.stockOverrides-line.productId))}) {Text("계산값으로 되돌리기")}
+                if(line.productId in draft.input.requestOverrides) {
+                    Hint("직접 지정한 최종 수량을 유지해요")
+                    TextButton(onClick={draft=draft.copy(input=draft.input.copy(requestOverrides=draft.input.requestOverrides-line.productId))}) {Text("자동 계산값 적용")}
                 }
             }
         } }
@@ -174,13 +205,13 @@ import java.time.LocalDate
     }
 }
 
-@Composable private fun QuantitySummary(label: String, value: String) {
+@Composable internal fun QuantitySummary(label: String, value: String) {
     FlowRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalArrangement=Arrangement.spacedBy(4.dp)) {
         Text(label);Text(value,fontWeight=FontWeight.SemiBold)
     }
 }
 
-@Composable private fun UsagePatternEditor(s: Snapshot, initial: UsagePattern, hasHistory: Boolean, back: ()->Unit, apply: (UsagePattern)->Unit) {
+@Composable internal fun UsagePatternEditor(s: Snapshot, initial: UsagePattern, hasHistory: Boolean, back: ()->Unit, apply: (UsagePattern)->Unit) {
     var p by rememberJsonState("pattern") { if(initial.mode=="HISTORY" && !hasHistory) initial.copy(mode=if(s.templates.isEmpty())"DIRECT"else"WEEKLY") else initial }
     var choosing by rememberSaveable { mutableStateOf<String?>(null) }
     var editingComposition by rememberSaveable { mutableStateOf<String?>(null) }
@@ -287,7 +318,14 @@ import java.time.LocalDate
             Section(line.name)
             QuantitySummary("요청","${line.requested} EA");QuantitySummary("받은 양","${line.received} EA");QuantitySummary("남은 양","${line.remaining} EA")
             if(line.excess>0) Hint("요청보다 ${line.excess}EA 더 받았어요.")
-            p.calculation.lines.find { it.productId==line.productId }?.let { original->Hint("저장 당시 방문일 예상 재고 ${original.visitStock?.let { "약 ${it.label()}EA" } ?: "미확인"}") }
+            p.calculation.lines.find { it.productId==line.productId }?.let { original->
+                Hint("저장 당시 방문일 예상 재고 ${original.visitStock?.let { "약 ${it.label()}EA" } ?: "미확인"}")
+                QuantitySummary("기본 필요량","약 ${(original.demand-(original.visitStock ?: SupplyAmount())).nonNegative().label()} EA")
+                QuantitySummary("여유 일수분","약 ${original.buffer.label()} EA")
+                if(p.input.calculationVersion==2) QuantitySummary("개별 추가분","${p.input.extraQuantities[line.productId] ?: 0} EA")
+                else Hint("여유분까지 재고에서 차감한 기존 계산이에요.")
+                if(line.productId in p.input.requestOverrides) Hint("최종 요청량을 직접 지정했어요.")
+            }
         } }
         Paper {
             Section("이전에 받은 내역")

@@ -261,7 +261,7 @@ private val actionButtonPadding=PaddingValues(horizontal=18.dp,vertical=15.dp)
     else->normal
 }
 @Composable fun CalendarWeekdayHeader() {
-    Row {
+    Row(Modifier.semantics { contentDescription="달력 요일" }) {
         listOf("일","월","화","수","목","금","토").forEachIndexed{index,label->
             Box(Modifier.weight(1f),contentAlignment=Alignment.Center) {
                 Text(label,style=MaterialTheme.typography.bodyMedium,
@@ -332,7 +332,9 @@ private val actionButtonPadding=PaddingValues(horizontal=18.dp,vertical=15.dp)
                 val converted=try{entered.replace(',','.').toBigDecimalOrNull()?.multiply(BigDecimal(scale))?.intValueExact()}catch(_:ArithmeticException){null}
                 invalid=entered.isNotBlank() && converted==null
                 if(invalid)errors[errorId]=label else errors.remove(errorId)
-                emitted=converted;onChange(converted)
+                // Keep malformed text and its error visible. Emitting null here lets
+                // callers with a zero default immediately reset the field to 0.
+                if(!invalid) {emitted=converted;onChange(converted)}
             }
         },placeholder={Text("—")},suffix={Text(unit,style=MaterialTheme.typography.bodyMedium)},isError=invalid,
             supportingText=if(invalid){{Text("숫자와 소수 자릿수를 확인해 주세요")}}else null,

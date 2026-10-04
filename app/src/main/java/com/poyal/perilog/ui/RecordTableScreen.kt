@@ -68,7 +68,6 @@ internal fun filterRecords(s:Snapshot,f:RecordFilters)=s.visibleRecords().filter
         Row(Modifier.fillMaxWidth().padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically) {
             IconButton(back){Icon(Icons.AutoMirrored.Outlined.ArrowBack,"뒤로")}
             Text("기록 표",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge)
-            TextButton(onClick={filterOpen=true}){Icon(Icons.Outlined.FilterList,null);Text("필터")}
             HelpIconButton()
         }
         Text((if(filters.period.value)"${filters.from.value.replace('-','.')} ~ ${filters.to.value.replace('-','.')}"else"전체 기간")+" · ${entries.size}건",
@@ -102,7 +101,7 @@ internal fun filterRecords(s:Snapshot,f:RecordFilters)=s.visibleRecords().filter
             LaunchedEffect(pendingX,zoom) {
                 pendingX?.let{target->withFrameNanos{};horizontal.scrollTo(target.coerceIn(0,horizontal.maxValue));pendingX=null}
             }
-            fun changeZoom(target:Float,anchor:Offset=Offset(with(density){maxWidth.toPx()}/2,with(density){maxHeight.toPx()}/2),pan:Offset=Offset.Zero) {
+            fun changeZoom(target:Float,anchor:Offset=Offset(with(density){maxWidth.toPx()}/2,rowPx+bodyHeight/2f),pan:Offset=Offset.Zero) {
                 val next=target.coerceIn(min(.25f,fitScale),2f)
                 val ratio=next/zoom
                 val anchorY=(anchor.y-rowPx).coerceAtLeast(0f)
@@ -119,6 +118,15 @@ internal fun filterRecords(s:Snapshot,f:RecordFilters)=s.visibleRecords().filter
                 override val minimumTouchTargetSize=DpSize.Zero
             }}
             Column(Modifier.fillMaxSize()) {
+                FlowRow(Modifier.fillMaxWidth().testTag("record-table-controls").padding(horizontal=8.dp),horizontalArrangement=Arrangement.Center,itemVerticalAlignment=Alignment.CenterVertically) {
+                    TextButton(onClick={filterOpen=true}){Icon(Icons.Outlined.FilterList,null);Text("필터")}
+                    TextButton(onClick={changeZoom(zoom-.25f)},enabled=zoom>min(.25f,fitScale)+.001f,modifier=Modifier.sizeIn(minWidth=48.dp,minHeight=48.dp).semantics{contentDescription="표 축소"}){Text("−")}
+                    Text("${(zoom*100).roundToInt()}%",Modifier.testTag("table-zoom").semantics{stateDescription="${(zoom*100).roundToInt()}%"})
+                    TextButton(onClick={changeZoom(zoom+.25f)},enabled=zoom<2f,modifier=Modifier.sizeIn(minWidth=48.dp,minHeight=48.dp).semantics{contentDescription="표 확대"}){Text("+")}
+                    TextButton(onClick={changeZoom(fitScale,Offset.Zero);fit=true;pendingX=0}){Text("전체 열")}
+                    TextButton(onClick={changeZoom(1f)}){Text("100%로")}
+                }
+                HorizontalDivider()
                 if(entries.isEmpty())Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center){Text("선택한 조건에 해당하는 기록이 없어요.")}
                 else CompositionLocalProvider(LocalViewConfiguration provides exactCells) {
                     Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().testTag("record-table-viewport").pointerInput(Unit) {
@@ -191,14 +199,7 @@ internal fun filterRecords(s:Snapshot,f:RecordFilters)=s.visibleRecords().filter
                         TextButton(onClick={open(selected)}){Text("기록 열기")}
                     }
                 }
-                HorizontalDivider()
-                FlowRow(Modifier.fillMaxWidth().padding(horizontal=8.dp),horizontalArrangement=Arrangement.Center,itemVerticalAlignment=Alignment.CenterVertically) {
-                    TextButton(onClick={changeZoom(zoom-.25f)},enabled=zoom>min(.25f,fitScale)+.001f,modifier=Modifier.sizeIn(minWidth=48.dp,minHeight=48.dp).semantics{contentDescription="표 축소"}){Text("−")}
-                    Text("${(zoom*100).roundToInt()}%",Modifier.testTag("table-zoom").semantics{stateDescription="${(zoom*100).roundToInt()}%"})
-                    TextButton(onClick={changeZoom(zoom+.25f)},enabled=zoom<2f,modifier=Modifier.sizeIn(minWidth=48.dp,minHeight=48.dp).semantics{contentDescription="표 확대"}){Text("+")}
-                    TextButton(onClick={changeZoom(fitScale,Offset.Zero);fit=true;pendingX=0}){Text("전체 열")}
-                    TextButton(onClick={changeZoom(1f)}){Text("100%")}
-                }
+
             }
         }
     }

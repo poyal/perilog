@@ -142,6 +142,7 @@ fun validate(s: Snapshot) {
     s.counts.forEach { date(it.date); require(it.productId in products && it.quantity in 0..1000000) }
     s.adjustments.forEach{date(it.date);require(it.productId in products && it.delta in -100000..100000 && it.delta!=0 && it.memo.isNotBlank()){"조정 수량과 사유를 확인해 주세요."}}
     val p=s.preferences
+    validatePattern(p.stockForecastPattern, products)
     require(p.expiryDays in 0..3650 && p.backupDays in listOf(1,7) && p.keepBackups in 1..365)
     require(p.reminderHour in 0..23 && p.reminderMinute in 0..59 && p.darkMode in listOf("SYSTEM","LIGHT","DARK"))
     require(p.basis.isNotEmpty()); p.basis.forEach{date(it.from); require(it.ml in 0..100000)}

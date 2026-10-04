@@ -113,7 +113,7 @@ import com.poyal.perilog.domain.dailyProgress
         }
     }
     LaunchedEffect(ready,route){if(ready && route=="edit" && vm.editor.value==null){if(editingId!=null && (s.treatments.any{it.id==editingId} || s.drafts.any{it.id==editingId}))vm.edit(editingId)else back()}}
-    val readOnly=route.startsWith("stock/") || route.startsWith("stockHistory/") || route.startsWith("guide/") || route.startsWith("requestDetail/")
+    val readOnly=route.startsWith("stock/") || route.startsWith("stockHistory/") || route.startsWith("guide/") || route.startsWith("requestDetail/") || route.startsWith("appointmentStock/") || route.startsWith("appointmentDetail/")
     BackHandler(stack.size>1 && (!editing || readOnly)){back()}
     CompositionLocalProvider(LocalInputErrors provides vm.inputErrors,LocalHelpAction provides {navigate("guide/${if(route=="edit" && vm.editor.value?.kind=="MANUAL")"manual"else guideForRoute(route)}")}){PerilogTheme(s.preferences.darkMode){
         val colors=MaterialTheme.colorScheme
@@ -140,6 +140,8 @@ import com.poyal.perilog.domain.dailyProgress
                     route.startsWith("guide/")->GuideScreen(route.substringAfter('/'),::navigate,::back)
                     route.startsWith("requestDetail/")->ReplenishmentDetailScreen(s,route.substringAfter('/'),::navigate,::back)
                     route.startsWith("requestReceive/")->RequestReceiptScreen(s,vm,route.substringAfter('/'),::back)
+                    route.startsWith("appointmentStock/")->StockForecastScreen(s,vm,route.substringAfterLast('/'),now,::navigate,::back)
+                    route.startsWith("appointmentDetail/")->AppointmentDetailScreen(s,route.substringAfter('/'),now,::navigate,::back)
                     route.startsWith("request/")->ReplenishmentEditor(s,vm,route.substringAfterLast('/'),if(route.startsWith("request/copy/"))route.split('/')[2]else null,::navigate,::back)
                     route=="products"->ProductsScreen(s,::navigate,::back)
                     route=="templates"->TemplatesScreen(s,vm,::navigate,::back)

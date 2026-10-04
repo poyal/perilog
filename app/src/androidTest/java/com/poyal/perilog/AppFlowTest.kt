@@ -565,7 +565,16 @@ class AppFlowTest {
         try {
             compose.activityRule.scenario.onActivity{it.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE}
             await("Landscape range input"){compose.activity.resources.configuration.orientation==Configuration.ORIENTATION_LANDSCAPE}
-            show(compose.onAllNodes(hasSetTextAction())[1]).assertIsDisplayed()
+            // Configuration changes before the recreated dialog finishes layout and IME insets.
+            // Scroll and inspect the restored field only once its landscape window is ready.
+            await("Landscape range dialog layout") {
+                val decor=compose.activity.window.decorView
+                decor.width>decor.height && runCatching {
+                    show(field("종료일")).assertIsDisplayed().assertTextContains("20270102")
+                    node("적용").assertIsDisplayed().assertIsEnabled()
+                }.isSuccess
+            }
+            show(field("종료일")).assertIsDisplayed().assertTextContains("20270102")
             node("적용").assertIsDisplayed().assertIsEnabled()
             screenshot("range-picker-dark-landscape.png")
             click("적용")

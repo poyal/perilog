@@ -85,6 +85,15 @@ class WidgetFlowTest {
         ui.runOnUiThread {overlay?.let {(it.parent as? ViewGroup)?.removeView(it)};host?.stopListening();host?.deleteHost();host=null;overlay=null;widgetView=null}
     }
     private fun tapText(prefix:String) {
+        // RemoteViews can render while the Activity's opening transition still
+        // routes touches to Android's ActivityRecordInputSink (system UID).
+        // Wait for the actual window and accessibility transitions before tapping.
+        await {
+            var focused=false
+            ui.runOnUiThread {focused=ui.activity.window.decorView.hasWindowFocus() && widgetView?.isShown==true}
+            focused
+        }
+        instrumentation.uiAutomation.waitForIdle(250,5000)
         val point=IntArray(2)
         ui.runOnUiThread {val view=views(requireNotNull(widgetView)).filterIsInstance<TextView>().first {it.text.toString()==prefix}
             view.getLocationOnScreen(point);point[0]+=view.width/2;point[1]+=view.height/2}

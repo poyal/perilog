@@ -451,6 +451,8 @@ class AppFlowTest {
         val saved=snapshot().treatments.single()
         assertEquals(original.startTime,saved.startTime);assertEquals(original.endTime,saved.endTime)
         assertEquals(original.dwellMinutes,saved.dwellMinutes)
+        await("Record save feedback displayed"){compose.onAllNodesWithText("기록을 저장했어요").fetchSemanticsNodes().isNotEmpty()}
+        await("Header available after save feedback"){compose.onAllNodesWithText("기록을 저장했어요").fetchSemanticsNodes().isEmpty()}
         compose.onNodeWithContentDescription("기록 추가").performClick();click("추가투석 기록 추가")
         click("메모 추가")
         node("시작 시각 · 예: 22:00").assertDoesNotExist();node("종료 시각 · 예: 07:00").assertDoesNotExist()

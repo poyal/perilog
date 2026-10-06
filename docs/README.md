@@ -16,6 +16,8 @@
 - [v1.0.6 변경 내용](releases/v1.0.6.md)
 - [v1.0.7 변경 내용](releases/v1.0.7.md)
 - [v1.0.8 변경 내용](releases/v1.0.8.md)
+- [v1.0.9 변경 내용](releases/v1.0.9.md)
+- [v1.0.10 변경 내용](releases/v1.0.10.md)
 - [실제 실행 화면과 촬영 정보](화면-안내.md)
 - [문서 캡처 코드](capture/DocumentationCapture.kt)
 

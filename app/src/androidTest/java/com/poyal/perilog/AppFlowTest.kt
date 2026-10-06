@@ -274,7 +274,9 @@ class AppFlowTest {
         compose.onNodeWithContentDescription("${p.name} 색상 #47956E").assertExists()
         click("수정");compose.onNodeWithContentDescription("${p.name} 색상 #47956E").assertExists()
         back();back();tab("홈");click("오늘 기록 시작")
+        click("이번 기록만 수량 조정")
         compose.onNodeWithContentDescription("${p.name} 색상 #47956E").assertExists()
+        click("수량 조정 마치기")
         click("밤 구성");compose.onNodeWithContentDescription("${p.name} 색상 #47956E").assertExists()
         stock(10)
     }

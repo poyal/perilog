@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.pm.ActivityInfo
 import android.view.KeyEvent
 import android.view.inputmethod.InputMethodManager
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.core.app.ApplicationProvider
@@ -29,17 +31,27 @@ class SettingsFlowTest {
     private fun systemBack(){InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);ui.waitForIdle()}
     private fun leaveExternalScreen() {
         val automation=InstrumentationRegistry.getInstrumentation().uiAutomation
+        waitFor { !ui.activity.hasWindowFocus() }
         automation.waitForIdle(500,5000)
         val externalPackage=automation.rootInActiveWindow?.packageName?.toString()
-        systemBack()
-        automation.waitForIdle(500,5000)
+        check(externalPackage!=null && externalPackage!=app.packageName)
         // A file picker can consume the first back to close its filename keyboard.
-        // Only press again while the same external screen still owns the window.
-        if(externalPackage!=app.packageName && automation.rootInActiveWindow?.packageName?.toString()==externalPackage)systemBack()
+        // Accessibility can still expose the old window during the return animation;
+        // wait for actual app focus before considering a second back.
+        repeat(2) {
+            systemBack()
+            val returned=runCatching { ui.waitUntil(3000) { ui.activity.hasWindowFocus() } }.isSuccess
+            if(returned) { ui.waitForIdle();return }
+            automation.waitForIdle(500,5000)
+            check(automation.rootInActiveWindow?.packageName?.toString()==externalPackage)
+        }
+        error("External screen did not return app window focus: $externalPackage")
     }
     private fun input(label:String,text:String) {
         show(ui.onNode(hasSetTextAction() and (hasText(label) or hasContentDescription(label)))).performTextReplacement(text)
         ui.runOnIdle{(ui.activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(ui.activity.window.decorView.windowToken,0)}
+        waitFor { ViewCompat.getRootWindowInsets(ui.activity.window.decorView)?.isVisible(WindowInsetsCompat.Type.ime())!=true }
+        InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(500,10000)
         ui.waitForIdle()
     }
     @Before fun fixture() {

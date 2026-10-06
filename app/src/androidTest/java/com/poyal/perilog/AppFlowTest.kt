@@ -197,17 +197,28 @@ class AppFlowTest {
         assertEquals(2,snapshot().adjustments.size);assertEquals(10,snapshot().receipts.single().lines.single().quantity)
     }
     @Test fun productAndBulkReceiptCanBeCreatedEditedAndCancelled() {
+        fun saveReceipt() {
+            showKeyboard("입고 수량","Receipt save")
+            var bounds=node("함께 저장").getBoundsInRoot()
+            var stableSince=android.os.SystemClock.uptimeMillis()
+            await("Receipt save button after keyboard animation") {
+                val current=node("함께 저장").getBoundsInRoot()
+                if(current!=bounds) {bounds=current;stableSince=android.os.SystemClock.uptimeMillis()}
+                android.os.SystemClock.uptimeMillis()-stableSince>=500
+            }
+            node("함께 저장").assertIsDisplayed().assertIsEnabled().performClick()
+        }
         runBlocking { app.repository.restore(Snapshot(preferences=Preferences(celebrate=false))) }
         tab("재고");click("첫 품목 등록");click("+ 품목 추가")
         input("제품명 · 농도 · 규격","카세트 테스트")
         field("제품명 · 농도 · 규격").performClick()
         node("저장").assertIsDisplayed().performClick()
         await{snapshot().products.size==1 && snapshot().products.single().name=="카세트 테스트"}
-        back();click("입고 등록");input("입고 수량","12");click("함께 저장")
+        back();click("입고 등록");input("입고 수량","12");saveReceipt()
         await{snapshot().receipts.size==1}
         assertEquals(12,inventory(snapshot()).products.values.single().balance)
         assertNull(snapshot().receipts.single().lines.single().expiry)
-        click("이력");click("수정");input("입고 수량","15");click("함께 저장")
+        click("이력");click("수정");input("입고 수량","15");saveReceipt()
         await{snapshot().receipts.single().lines.single().quantity==15}
         click("입고 취소");click("확인");await{snapshot().receipts.single().cancelled}
         assertEquals(0,inventory(snapshot()).products.values.single().balance)

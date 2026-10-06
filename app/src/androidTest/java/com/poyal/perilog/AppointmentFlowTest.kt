@@ -11,6 +11,9 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.input.key.Key
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.poyal.perilog.data.*
 import com.poyal.perilog.domain.asCareTask
 import com.poyal.perilog.domain.departmentTime
@@ -44,6 +47,9 @@ class AppointmentFlowTest {
         show(ui.onNode(hasSetTextAction() and hasText(label))).performTextReplacement(value)
         ui.runOnIdle{(ui.activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
             .hideSoftInputFromWindow(ui.activity.window.decorView.windowToken,0)}
+        await { ViewCompat.getRootWindowInsets(ui.activity.window.decorView)?.isVisible(WindowInsetsCompat.Type.ime())!=true }
+        // Compose idleness does not include the system keyboard's hide animation.
+        InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(500,10000)
         ui.waitForIdle()
     }
     private fun back(){ui.onNodeWithContentDescription("뒤로").performClick()}

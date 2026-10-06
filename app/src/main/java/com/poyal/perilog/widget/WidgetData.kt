@@ -17,7 +17,7 @@ fun nextWidgetBoundary(s: Snapshot, now: ZonedDateTime): ZonedDateTime {
 
 /** Ignore unrelated inventory and audit changes when scheduling widget refreshes. */
 data class WidgetDataKey(val today: DailyProgress, val yesterday: DailyProgress,
-    val appointments: List<Appointment>, val mode: String, val locked: Boolean)
+    val appointments: List<Appointment>, val mode: String)
 fun widgetDataKey(s: Snapshot, date: LocalDate = LocalDate.now()) = WidgetDataKey(
     s.dailyProgress(date.toString()), s.dailyProgress(date.minusDays(1).toString()), s.appointments,
-    s.preferences.darkMode, s.preferences.lock)
+    s.preferences.darkMode)

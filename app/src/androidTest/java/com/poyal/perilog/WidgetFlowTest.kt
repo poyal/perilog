@@ -108,6 +108,44 @@ class WidgetFlowTest {
         await {ui.onAllNodesWithText("오늘 기록 시작").fetchSemanticsNodes().isNotEmpty()}
     }
     @After fun cleanup() {unmount();runBlocking {WidgetUpdates.refresh(app)}}
+    @Test fun resizingSameRecordWidgetImmediatelyReflowsWithoutRefresh() {
+        for(provider in listOf(DailyRecordWidgetReceiver::class.java,CompactRecordWidgetReceiver::class.java)) {
+            mount(provider,height=274,width=303)
+            await {texts().contains("활력 상태")}
+            for((width,height) in listOf(146 to 274,158 to 172,328 to 172,303 to 80,303 to 274)) {
+                ui.runOnIdle {
+                    val view=requireNotNull(widgetView)
+                    val density=ui.activity.resources.displayMetrics.density
+                    view.layoutParams=view.layoutParams.apply {this.width=(width*density).toInt();this.height=(height*density).toInt()}
+                    view.updateAppWidgetSize(Bundle(),listOf(SizeF(width.toFloat(),height.toFloat())))
+                }
+                val narrow=width<260
+                instrumentation.sendStatus(0,Bundle().apply {putString("resize_case","${provider.simpleName} ${width}x$height")})
+                await {texts().contains(if(narrow)"어제·오늘"else"어제·오늘 기록") &&
+                    texts().contains(if(narrow || height<110)"활력"else"활력 상태") &&
+                    runCatching{assertFitsWithoutScrolling()}.isSuccess}
+                assertFitsWithoutScrolling()
+                assertEquals(6,descriptions().count{it.endsWith("완료")})
+            }
+            unmount()
+        }
+    }
+    @Test fun resizingWithStaleSizeListUsesUpdatedHostBounds() {
+        mount(DailyRecordWidgetReceiver::class.java,height=274,width=303)
+        await {texts().contains("활력 상태")}
+        ui.runOnIdle {
+            val view=requireNotNull(widgetView)
+            val density=ui.activity.resources.displayMetrics.density
+            view.layoutParams=view.layoutParams.apply {width=(146*density).toInt();height=(274*density).toInt()}
+            val manager=AppWidgetManager.getInstance(app)
+            manager.updateAppWidgetOptions(view.appWidgetId,Bundle().apply {
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,146);putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH,146)
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,274);putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT,274)
+            })
+        }
+        await {texts().contains("어제·오늘") && runCatching{assertFitsWithoutScrolling()}.isSuccess}
+        assertEquals(6,descriptions().count{it.endsWith("완료")})
+    }
     @Test fun realRecordWidgetShowsOnlyThreeStagesRefreshesAndOpensDisplayedYesterday() {
         val yesterday=LocalDate.now().minusDays(1).toString()
         val record=Treatment(id="yesterday",date=yesterday,saved=true,usageConfirmed=true,weightGrams=62000,systolic=120,diastolic=80)
@@ -126,9 +164,9 @@ class WidgetFlowTest {
         mount(DailyRecordWidgetReceiver::class.java)
         await {descriptions().contains("어제 투석 기록 완료")}
         runBlocking {app.repository.preferences(snapshot().preferences.copy(lock=true))}
-        await {texts().contains("잠금 해제 후 확인 ›")}
-        assertFalse(texts().any {it=="어제" || it.contains("활력 상태")})
-        assertFalse(descriptions().any {it.contains("어제 활력")})
+        runBlocking {WidgetUpdates.refresh(app)}
+        await {texts().contains("어제") && descriptions().contains("어제 투석 기록 완료")}
+        assertFalse(texts().contains("잠금 해제 후 확인 ›"))
     }
     @Test fun realAppointmentWidgetShowsEachTimeAndRemovedAppointmentOpensList() {
         val a=Department(id="a",name="신장내과");val b=Department(id="b",name="내분비내과")
@@ -314,7 +352,7 @@ class WidgetFlowTest {
     @Test fun contactOrderPersistsOnlyOnSaveAndSurvivesHelpAndRecreation() {
         val names=listOf("투석실","간호사","고객센터")
         names.forEachIndexed {i,name->runBlocking {app.repository.createContact(Contact(id="c$i",name=name,phone="02-123-4567",createdAt=i.toLong()))}}
-        ui.onNodeWithContentDescription("설정").performClick();click("연락처 관리")
+        ui.onNodeWithContentDescription("설정").performClick();click("연락처")
         val register=ui.onNodeWithText("+ 연락처 등록").fetchSemanticsNode().boundsInRoot
         val reorder=ui.onNodeWithText("순서 변경").fetchSemanticsNode().boundsInRoot
         assertTrue(register.right<=reorder.left);assertTrue(kotlin.math.abs(register.center.y-reorder.center.y)<2f)

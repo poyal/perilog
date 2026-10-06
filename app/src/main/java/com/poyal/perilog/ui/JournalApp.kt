@@ -16,9 +16,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.collectLatest
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.poyal.perilog.widget.WidgetOpenRequest
 import com.poyal.perilog.domain.dailyProgress
@@ -58,11 +61,14 @@ import com.poyal.perilog.domain.dailyProgress
     val route=stack.last()
     val rootTabs=listOf("home","records","stats","stock")
     val editing=route.contains('/')
-    val management=editing || route in listOf("appointments","departments","careTemplates","contacts","stockHistory","receipts","recordTable","requests","guide","widgets")
+    val management=editing || route in listOf("appointments","departments","careTemplates","contacts","stockHistory","receipts","recordTable","requests","guide","widgets","settings","about","updates")
     val snackbar=remember{SnackbarHostState()}
-    LaunchedEffect(Unit){vm.message.collect{snackbar.showSnackbar(it)}}
-    LaunchedEffect(route){snackbar.currentSnackbarData?.dismiss()}
+    var feedbackHeight by remember {mutableIntStateOf(0)}
+    val feedbackInset=with(LocalDensity.current){feedbackHeight.toDp()}
+    LaunchedEffect(Unit){vm.message.collectLatest{snackbar.showSnackbar(it)}}
+    FirstNotificationPermission(ready && unlocked && route=="home" && !updateState.prompt,vm)
     fun navigate(to:String){
+        snackbar.currentSnackbarData?.dismiss()
         focus.clearFocus();keyboard?.hide()
         // Each new contact owns its saved state, including across activity recreation.
         val destination=when(to) {
@@ -73,7 +79,7 @@ import com.poyal.perilog.domain.dailyProgress
         if(destination in rootTabs){stack.filter{it!=destination}.forEach{screenState.removeState(it)};stack=listOf(destination);tab=destination}
         else if(destination!=route)stack=stack+destination
     }
-    fun back(){if(stack.size>1){focus.clearFocus();keyboard?.hide();screenState.removeState(stack.last());stack=stack.dropLast(1)}}
+    fun back(){if(stack.size>1){snackbar.currentSnackbarData?.dismiss();focus.clearFocus();keyboard?.hide();screenState.removeState(stack.last());stack=stack.dropLast(1)}}
     fun editor(id:String?=null,kind:String="MACHINE",day:String=com.poyal.perilog.data.today()){
         vm.edit(id,kind,day);editingId=vm.editor.value?.id;navigate("edit")
     }
@@ -92,6 +98,7 @@ import com.poyal.perilog.domain.dailyProgress
         }
         val target=request.target
         // Consume once before changing routes; activity recreation must not repeat an old tap.
+        snackbar.currentSnackbarData?.dismiss()
         onWidgetHandled()
         when(target.screen) {
             "record" -> {
@@ -113,14 +120,16 @@ import com.poyal.perilog.domain.dailyProgress
         }
     }
     LaunchedEffect(ready,route){if(ready && route=="edit" && vm.editor.value==null){if(editingId!=null && (s.treatments.any{it.id==editingId} || s.drafts.any{it.id==editingId}))vm.edit(editingId)else back()}}
-    val readOnly=route.startsWith("stock/") || route.startsWith("stockHistory/") || route.startsWith("guide/") || route.startsWith("requestDetail/") || route.startsWith("appointmentStock/") || route.startsWith("appointmentDetail/")
+    val readOnly=route in listOf("settings/transfer","settings/protection","settings/reset","settings/palette") || route.startsWith("stock/") || route.startsWith("stockHistory/") || route.startsWith("guide/") || route.startsWith("requestDetail/") || route.startsWith("appointmentStock/") || route.startsWith("appointmentDetail/")
     BackHandler(stack.size>1 && (!editing || readOnly)){back()}
     CompositionLocalProvider(LocalInputErrors provides vm.inputErrors,LocalHelpAction provides {navigate("guide/${if(route=="edit" && vm.editor.value?.kind=="MANUAL")"manual"else guideForRoute(route)}")}){PerilogTheme(s.preferences.darkMode){
         val colors=MaterialTheme.colorScheme
         if (ready && unlocked) UpdatePrompt(updateState, updates::dismissPrompt) {
-            updates.dismissPrompt(); navigate("about"); updates.download()
+            updates.dismissPrompt(); navigate("updates"); updates.download()
         }
-        Scaffold(containerColor=Color.Transparent,contentColor=colors.onBackground,snackbarHost={SnackbarHost(snackbar)},
+        Scaffold(containerColor=Color.Transparent,contentColor=colors.onBackground,snackbarHost={
+            Box(Modifier.imePadding()){SnackbarHost(snackbar,Modifier.onSizeChanged{feedbackHeight=it.height})}
+        },
             bottomBar={if(!management && !WindowInsets.isImeVisible)NavigationBar(containerColor=colors.surface.copy(alpha=.97f),tonalElevation=0.dp){
                 listOf(Triple("home","홈",Icons.Outlined.Home),Triple("records","기록",Icons.Outlined.Description),Triple("stats","통계",Icons.Outlined.BarChart),Triple("stock","재고",Icons.Outlined.Inventory2)).forEach{(id,label,icon)->
                     NavigationBarItem(selected=tab==id,onClick={navigate(id)},icon={Icon(icon,label)},label={Text(label)},
@@ -128,7 +137,7 @@ import com.poyal.perilog.domain.dailyProgress
                 }
             }}){padding->
             Box(Modifier.fillMaxSize().background(colors.background)
-                .padding(padding).consumeWindowInsets(padding).imePadding()) {
+                .padding(padding).consumeWindowInsets(padding).imePadding().padding(bottom=feedbackInset)) {
                 if(!ready)CircularProgressIndicator(Modifier.align(Alignment.Center))else key(route){screenState.SaveableStateProvider(route){when {
                     route=="home"->HomeScreen(s,vm,date,{navigate("settings")},{id,kind,day->editor(id,kind,day)},::navigate,{navigate("stock")})
                     route=="records"->RecordsScreen(s,vm,snackbar,{navigate("recordTable")}){id,kind,day->editor(id,kind,day)}
@@ -147,7 +156,11 @@ import com.poyal.perilog.domain.dailyProgress
                     route=="templates"->TemplatesScreen(s,vm,::navigate,::back)
                     route=="stockHistory" || route=="receipts"->StockHistoryScreen(s,vm,null,::navigate,::back){editor(it)}
                     route=="about"->AboutScreen(updates,::back)
-                    route=="settings"->SettingsScreen(s,vm,::navigate,::back)
+                    route=="updates"->UpdatesScreen(updates,::back)
+                    route=="settings"->SettingsScreen(s,::navigate,::back)
+                    route in listOf("settings/display","settings/notifications","settings/lock","settings/backup","settings/basis")->PreferenceSettingsScreen(s,vm,route.substringAfter('/'),::back)
+                    route in listOf("settings/transfer","settings/protection","settings/reset")->DataSettingsScreen(s,vm,route.substringAfter('/'),::back)
+                    route=="settings/palette"->PaletteSettingsScreen(s,vm,::back)
                     route=="widgets"->WidgetSettingsScreen(::back)
                     route=="edit"->key(editingId){TreatmentScreen(s,vm,::back)}
                     route=="appointments"->AppointmentsScreen(s,vm,now,::navigate,::back)

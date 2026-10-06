@@ -9,6 +9,7 @@ import com.poyal.perilog.data.Appointment
 import com.poyal.perilog.data.CareTask
 import com.poyal.perilog.domain.departmentTime
 import com.poyal.perilog.domain.selectedCareItems
+import com.poyal.perilog.domain.displayLabel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -54,7 +55,7 @@ fun fitWidgetAppointment(appointment:Appointment,width:Float,height:Float,
         val chipWidth=(careWidth-8*scale-(columns-1)*4*scale)/columns
         var wrapped=(d.lines-maxOf(1,appointment.departments.size)).coerceAtLeast(0)
         val rows=items.chunked(columns).map {group ->
-            val sizes=group.map {measure.measure(it.name,chipWidth-23*scale,font)}
+            val sizes=group.map {measure.measure(it.displayLabel(),chipWidth-23*scale,font)}
             wrapped+=sizes.sumOf {(it.lines-1).coerceAtLeast(0)}
             WidgetCareRow(group,maxOf(12*scale,sizes.maxOf {it.height})+2*rowPadding)
         }

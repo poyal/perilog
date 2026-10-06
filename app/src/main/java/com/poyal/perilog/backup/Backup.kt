@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit
 
 val Context.deviceStore by preferencesDataStore("device")
 object DeviceKeys {
+    val notificationRequested=booleanPreferencesKey("notificationRequested")
     val folder=stringPreferencesKey("folder")
     val lastBackup=longPreferencesKey("lastBackup")
     val status=stringPreferencesKey("backupStatus")

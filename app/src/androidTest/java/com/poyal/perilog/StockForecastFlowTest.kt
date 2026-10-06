@@ -26,7 +26,7 @@ class StockForecastFlowTest {
     }
     private fun click(text:String)=show(ui.onNodeWithText(text)).performClick()
     private fun openForecast() {
-        ui.onNodeWithContentDescription("설정").performClick();click("병원 일정 관리");click("예상 잔량 계산 보기")
+        ui.onNodeWithContentDescription("설정").performClick();click("병원 일정");click("예상 잔량 계산 보기")
     }
     @Before fun fixture() {
         runBlocking {app.repository.restore(Snapshot(products=listOf(p),preferences=Preferences(celebrate=false),

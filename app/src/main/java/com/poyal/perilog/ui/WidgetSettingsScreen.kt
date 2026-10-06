@@ -19,7 +19,8 @@ import com.poyal.perilog.widget.*
         Paper {
             Section("어제·오늘 기록")
             Hint("4×1·4×2에서는 어제·오늘을 나란히, 2×2에서는 위아래로 표시해요. 높이를 한 칸으로 줄이면 각 날짜의 세 단계를 가로로, 높이가 넉넉하면 세로로 펼쳐요. 활력 상태·사용 구성·투석 기록의 세 단계를 확인하고 날짜를 눌러 이어서 작성해요.")
-            Action("기록 위젯 추가",{pin(DailyRecordWidgetReceiver::class.java)})
+            Action("기록 위젯 2×2 추가",{pin(CompactRecordWidgetReceiver::class.java)})
+            Action("기록 위젯 4×2 추가",{pin(DailyRecordWidgetReceiver::class.java)})
         }
         Paper {
             Section("병원 일정")
@@ -31,7 +32,7 @@ import com.poyal.perilog.widget.*
             Section("사용 방법")
             Hint("위젯을 길게 누르면 크기를 조절하거나 삭제할 수 있어요. 위젯 안에는 스크롤이 없고, 공간에 맞춰 배치·글씨·간격을 조절해요. 처치는 한 열 또는 두 열로 모두 표시해요. 처치가 많아 작게 보이면 위젯 크기를 늘려 주세요.")
             Hint("앱의 변경 내용은 자동으로 반영돼요. 오른쪽 위 새로고침 버튼으로도 갱신할 수 있어요. 절전 상태에서는 갱신이 늦어질 수 있어요.")
-            Hint("앱 잠금을 켜면 위젯 내용도 가려져요. 잠금 해제 후 앱에서 확인해 주세요.")
+            Hint("앱 잠금과 관계없이 위젯 내용은 표시돼요. 위젯을 눌러 앱에 들어갈 때는 잠금을 해제해 주세요.")
         }
     }
 }

@@ -26,6 +26,10 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_records" />
         </receiver>
+        <receiver android:name=".widget.CompactRecordWidgetReceiver" android:exported="false" android:label="@string/widget_records_compact_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_records_compact" />
+        </receiver>
         <receiver android:name=".widget.AppointmentWidgetReceiver" android:exported="false" android:label="@string/widget_appointments_name">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_appointments" />

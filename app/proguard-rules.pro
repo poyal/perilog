@@ -5,3 +5,5 @@
 # receiver-to-provider mappings identical and can render records in appointment IDs.
 -keep class com.poyal.perilog.widget.DailyRecordWidget { *; }
 -keep class com.poyal.perilog.widget.AppointmentWidget { *; }
+
+-keep class com.poyal.perilog.widget.CompactRecordWidget { *; }

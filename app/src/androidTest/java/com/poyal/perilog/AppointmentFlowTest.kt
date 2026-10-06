@@ -60,13 +60,13 @@ class AppointmentFlowTest {
         await{ui.onAllNodesWithText("오늘 기록 시작").fetchSemanticsNodes().isNotEmpty()}
     }
     @Test fun registerMultipleDepartmentsCareAndContactThenShowOnHome() {
-        settings();node("병원 일정·연락처").assertExists();node("투석 물품·사용 구성").assertExists()
-        click("진료과 관리");click("+ 진료과 등록")
+        settings();node("병원·연락처").assertExists()
+        click("진료과");click("+ 진료과 등록")
         input("진료과 이름","신장내과");click("저장");await{snapshot().departments.size==1}
         click("+ 진료과 등록");input("진료과 이름","내분비내과")
         show(ui.onNodeWithContentDescription("색상 #47956E")).performClick();click("저장")
         await{snapshot().departments.size==2};back()
-        click("치료 구성 관리");click("+ 치료 항목 등록")
+        click("검사·치료 항목");click("+ 치료 항목 등록")
         input("치료 항목 이름","피검사");click("아이콘 · 진료")
         show(ui.onNodeWithContentDescription("피검사 아이콘")).performClick();click("저장")
         await{snapshot().careTemplates.size==1};click("+ 치료 항목 등록")
@@ -131,17 +131,17 @@ class AppointmentFlowTest {
         val a=Appointment(id="original",date=LocalDate.now().plusDays(2).toString(),time="09:00",departments=listOf(d),careItems=listOf(c.asCareTask()),memo="원본 메모")
         runBlocking{app.repository.department(d);app.repository.careTemplate(c);app.repository.appointment(a)}
         await{ui.onAllNodesWithText("D-2").fetchSemanticsNodes().isNotEmpty()}
-        settings();click("진료과 관리");show(ui.onNodeWithContentDescription("신장내과 수정")).performClick()
+        settings();click("진료과");show(ui.onNodeWithContentDescription("신장내과 수정")).performClick()
         input("진료과 이름","수정한 진료과");click("저장");await{snapshot().departments.single().name=="수정한 진료과"}
         show(ui.onNodeWithContentDescription("수정한 진료과 삭제")).performClick();click("확인")
-        await{snapshot().departments.isEmpty()};back();click("치료 구성 관리")
+        await{snapshot().departments.isEmpty()};back();click("검사·치료 항목")
         show(ui.onNodeWithContentDescription("주사 수정")).performClick();input("치료 항목 이름","주사 수정")
         click("아이콘 · 주사");show(ui.onNodeWithContentDescription("약 아이콘")).performClick();click("저장")
         await{snapshot().careTemplates.single().iconKey=="medicine"}
         show(ui.onNodeWithContentDescription("주사 수정 삭제")).performClick();click("확인")
         await{snapshot().careTemplates.isEmpty()};back();back()
         assertEquals(a,snapshot().appointments.single())
-        settings();click("병원 일정 관리");click("같은 구성으로 다음 예약")
+        settings();click("병원 일정");click("같은 구성으로 다음 예약")
         ui.onNode(hasSetTextAction() and hasText("신장내과 예약시간 · HH:mm")).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
         ui.onNode(hasSetTextAction() and hasText("메모")).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
         node("예약일 선택해 주세요").assertExists()
@@ -163,14 +163,14 @@ class AppointmentFlowTest {
             app.repository.appointment(Appointment(id="future",date=future.toString(),time="10:00"))
         }
         await{ui.onAllNodesWithText("D-2").fetchSemanticsNodes().isNotEmpty()}
-        settings();click("병원 일정 관리");show(node("지난 일정")).assertIsDisplayed();assertEquals(2,snapshot().appointments.size);back();back()
+        settings();click("병원 일정");show(node("지난 일정")).assertIsDisplayed();assertEquals(2,snapshot().appointments.size);back();back()
         ui.onNodeWithText("기록",useUnmergedTree=true).performClick();ui.onNodeWithContentDescription("기록 추가").performClick();click("추가투석 기록 추가")
-        await{ui.onAllNodesWithText("구성 변경").fetchSemanticsNodes().isNotEmpty()}
+        await{ui.onAllNodesWithText("이번 기록만 수량 조정").fetchSemanticsNodes().isNotEmpty()}
         node("배액 기록 · 선택").assertExists();assertTrue(snapshot().treatments.isEmpty())
     }
     @Test fun contactEditSurvivesRecreationAndDeleteRemovesHomeActions() {
         runBlocking{app.repository.preferences(Preferences(darkMode="DARK",celebrate=false))}
-        settings();click("연락처 관리");click("+ 연락처 등록")
+        settings();click("연락처");click("+ 연락처 등록")
         input("연락처 이름","테스트 연락처");input("전화번호","010-0000-0000");click("저장")
         await{snapshot().contacts.size==1}
         contactMenu("테스트 연락처","수정")
@@ -182,13 +182,13 @@ class AppointmentFlowTest {
         assertFalse(snapshot().contacts.single().allowSms);assertEquals("🩺",snapshot().contacts.single().emoji)
         back();back();show(avatar("수정한 연락처")).performClick();show(node("02-000-0000")).assertIsDisplayed()
         ui.onNodeWithContentDescription("수정한 연락처 전화").assertExists();ui.onNodeWithContentDescription("수정한 연락처 문자").assertDoesNotExist();closeContact()
-        settings();click("연락처 관리");contactMenu("수정한 연락처","삭제");click("확인")
+        settings();click("연락처");contactMenu("수정한 연락처","삭제");click("확인")
         await{snapshot().contacts.isEmpty()};back();back()
         node("수정한 연락처").assertDoesNotExist();ui.onNodeWithContentDescription("수정한 연락처 전화").assertDoesNotExist()
         show(node("연락처 등록")).assertIsDisplayed()
     }
     @Test fun contactPhoneAcceptsSpacesHyphensAndShortNumbers() {
-        settings();click("연락처 관리");click("+ 연락처 등록")
+        settings();click("연락처");click("+ 연락처 등록")
         input("연락처 이름","번호 입력 검사")
         listOf("15771111","1577 1111","1577-1111").forEach { value ->
             input("전화번호",value)
@@ -215,7 +215,7 @@ class AppointmentFlowTest {
     }
     @OptIn(ExperimentalTestApi::class)
     @Test fun contactPhoneMiddleEditingAndBackspaceKeepDigitsAndCursor() {
-        settings();click("연락처 관리");click("+ 연락처 등록")
+        settings();click("연락처");click("+ 연락처 등록")
         input("연락처 이름","커서 검사");input("전화번호","01012345678")
         val phone=ui.onNode(hasSetTextAction() and hasText("전화번호"))
         phone.assertTextContains("010-1234-5678")
@@ -237,7 +237,7 @@ class AppointmentFlowTest {
         assertEquals("010-9876-5679",snapshot().contacts.single().phone)
     }
     @Test fun consecutiveContactRegistrationsStartEmptyAndKeepExistingContacts() {
-        settings();click("연락처 관리")
+        settings();click("연락처")
         val saved=mutableListOf<Contact>()
         repeat(3) { index ->
             click("+ 연락처 등록")
@@ -261,7 +261,7 @@ class AppointmentFlowTest {
     @Test fun contactEditCancelAndNewDraftRecreationKeepIndependentState() {
         val original=Contact(id="existing-contact",name="기존 연락처",phone="02-000-0000",emoji="🏥",allowSms=false)
         runBlocking{app.repository.createContact(original)}
-        settings();click("연락처 관리")
+        settings();click("연락처")
         contactMenu("기존 연락처","수정")
         input("연락처 이름","수정한 기존 연락처");click("저장")
         await{snapshot().contacts.single().name=="수정한 기존 연락처"}

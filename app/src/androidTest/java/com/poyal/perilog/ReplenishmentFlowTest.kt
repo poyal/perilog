@@ -167,7 +167,7 @@ class ReplenishmentFlowTest {
         ui.waitUntil(10000) {ui.onAllNodesWithText("화면 크게 보기").fetchSemanticsNodes().isNotEmpty()}
         show(ui.onAllNodesWithText("화면 크게 보기").onFirst()).performClick()
         ui.onNodeWithContentDescription("확대 화면 닫기").performClick()
-        back();back();click("품목 관리 · 색상");click("+ 품목 추가")
+        back();back();click("품목 관리");click("+ 품목 추가")
         show(ui.onNode(hasSetTextAction() and hasText("제품명 · 농도 · 규격"))).performTextReplacement("작성 중인 품목")
         hideKeyboard();ui.onNodeWithContentDescription("이 화면 사용 안내").performClick();back()
         show(ui.onNode(hasSetTextAction() and hasText("제품명 · 농도 · 규격"))).assertTextContains("작성 중인 품목")

@@ -43,8 +43,10 @@ fun guideForRoute(route: String): String = when {
     route.startsWith("product") -> "setup"
     route.startsWith("appointment") || route=="departments" || route=="careTemplates" || route.startsWith("department/") || route.startsWith("care/") -> "appointments"
     route.startsWith("contact") -> "contacts"
-    route=="about" -> "updates"
-    route=="settings" -> "settings"
+    route=="about" || route=="updates" -> "updates"
+    route in listOf("settings/backup","settings/transfer","settings/protection","settings/reset") -> "backup"
+    route=="settings/palette" -> "setup"
+    route=="settings" || route.startsWith("settings/") -> "settings"
     route=="widgets" -> "widgets"
     else -> "stock"
 }

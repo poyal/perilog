@@ -19,9 +19,10 @@ object WidgetUpdates {
     private val mutex=Mutex()
     private fun providers() = listOf(
         DailyRecordWidgetReceiver::class.java to DailyRecordWidget(),
+        CompactRecordWidgetReceiver::class.java to CompactRecordWidget(),
         AppointmentWidgetReceiver::class.java to AppointmentWidget()
     )
-    fun installed(context: Context): Boolean = listOf(DailyRecordWidgetReceiver::class.java,AppointmentWidgetReceiver::class.java)
+    fun installed(context: Context): Boolean = providers().map {it.first}
         .any { AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context,it)).isNotEmpty() }
     fun request(context: Context) {
         WorkManager.getInstance(context).enqueueUniqueWork(REQUEST,ExistingWorkPolicy.REPLACE,OneTimeWorkRequestBuilder<WidgetRefreshWorker>().build())

@@ -1,7 +1,6 @@
 @file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 package com.poyal.perilog.ui
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -18,7 +17,6 @@ import com.poyal.perilog.domain.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlinx.coroutines.delay
 
 @Composable fun HomeScreen(s:Snapshot,vm:JournalViewModel,date:String,settings:()->Unit,edit:(String?,String,String)->Unit,navigate:(String)->Unit,stockScreen:()->Unit) {
     val now by vm.localNow.collectAsState()
@@ -33,14 +31,6 @@ import kotlinx.coroutines.delay
     val progress=daily.count
     val resume=daily.resume
     val yesterday=s.yesterdaySummary(date)
-    var celebration by remember{mutableStateOf(false)}
-    LaunchedEffect(complete,date) {
-        if(complete && date !in s.preferences.celebratedDates) {
-            celebration=s.preferences.celebrate
-            vm.markCelebrated(date)
-            delay(2200);celebration=false
-        }
-    }
     val openToday={edit(resume?.id,resume?.kind ?: "MACHINE",date)}
     val hero=when {complete->"오늘도 기록을 마쳤어요";before && usage->"투석 기록이 남았어요";else->"오늘의 기록을 이어가요"}
     val action=when{complete->"오늘 기록 확인";machine==null->"오늘 기록 시작";resume?.kind=="MANUAL"->"추가투석 이어쓰기";before && usage->"기록하기";else->"이어서 입력하기"}
@@ -79,7 +69,6 @@ import kotlinx.coroutines.delay
                 else yesterday.pending.firstOrNull()?.let{edit(it.id,it.kind,yesterday.date)}
             },icon=Icons.Outlined.ChevronRight)
         }
-        AnimatedVisibility(celebration) {Paper {Text("🎀 오늘의 기록 완료!",style=MaterialTheme.typography.titleLarge);Hint("오늘 하루도 꼼꼼히 챙겼어요.")}}
         Box {
             Paper {
                 Text("오늘의 기록",style=MaterialTheme.typography.titleLarge,modifier=Modifier.padding(end=36.dp))

@@ -31,7 +31,7 @@ class WidgetDesignCapture {
     private fun views(v:View):List<View> = listOf(v)+(if(v is android.view.ViewGroup)(0 until v.childCount).flatMap {views(v.getChildAt(it))}else emptyList())
     @Before fun seed() {
         val date=LocalDate.now();val a=Department(id="a",name="신장내과");val b=Department(id="b",name="내분비내과")
-        val care=listOf("피검사" to "blood","드레싱" to "healing","소변검사" to "lab","체성분검사" to "medical").mapIndexed {i,(name,icon)->CareTask(id="care$i",name=name,iconKey=icon)}
+        val care=listOf("피검사" to "blood","드레싱" to "healing","소변검사" to "lab","체성분검사" to "medical").mapIndexed {i,(name,icon)->CareTask(id="care$i",name=name,iconKey=icon,time=if(i==0)"07:30"else null)}
         runBlocking {
             app.repository.restore(Snapshot(preferences=Preferences(celebrate=false,darkMode="LIGHT"),appointments=listOf(
                 Appointment(id="visit",date=date.plusDays(3).toString(),departments=listOf(a,b),departmentTimes=mapOf("a" to "09:30","b" to "11:20"),careItems=care))))
@@ -72,7 +72,7 @@ class WidgetDesignCapture {
             board.addView(label("기록 · 2×2                      병원 일정 · 2×2"))
             val row=LinearLayout(context);board.addView(row)
             val smallWidth=if(tall) 146 else 158
-            row.addView(widget(DailyRecordWidgetReceiver::class.java,smallWidth),LinearLayout.LayoutParams(dp(smallWidth),dp(widgetHeight)))
+            row.addView(widget(CompactRecordWidgetReceiver::class.java,smallWidth),LinearLayout.LayoutParams(dp(smallWidth),dp(widgetHeight)))
             row.addView(Space(context),LinearLayout.LayoutParams(dp(12),1))
             row.addView(widget(AppointmentWidgetReceiver::class.java,smallWidth),LinearLayout.LayoutParams(dp(smallWidth),dp(widgetHeight)))
             h.startListening()
@@ -80,7 +80,7 @@ class WidgetDesignCapture {
         runBlocking {WidgetUpdates.refresh(app)}
         ui.waitUntil(25000) {
             var ready=false
-            ui.runOnUiThread {ready=widgets.size==3 && widgets.all {v->views(v).filterIsInstance<TextView>().any {it.text.toString() in listOf("어제","피검사")}}}
+            ui.runOnUiThread {ready=widgets.size==3 && widgets.all {v->views(v).filterIsInstance<TextView>().any {it.text.toString() in listOf("어제","피검사 07:30")}}}
             ready
         }
         android.os.SystemClock.sleep(700)

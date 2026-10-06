@@ -61,26 +61,29 @@ public class HostActivity extends Activity {
         setContentView(container); views.clear();
         String[] receivers = "appointment".equals(mode)
             ? new String[]{"AppointmentWidgetReceiver"}
+            : "all".equals(mode)
+            ? new String[]{"DailyRecordWidgetReceiver", "CompactRecordWidgetReceiver", "AppointmentWidgetReceiver", "AppointmentWidgetReceiver"}
             : new String[]{"DailyRecordWidgetReceiver", "AppointmentWidgetReceiver", "AppointmentWidgetReceiver"};
         for (int index = 0; index < receivers.length; index++) {
+            int width = "CompactRecordWidgetReceiver".equals(receivers[index]) ? 158 : 320;
             ComponentName component = new ComponentName(target, "com.poyal.perilog.widget." + receivers[index]);
             int id = prefs.getInt("id" + index, -1);
             if (manager.getAppWidgetInfo(id) == null) {
                 id = host.allocateAppWidgetId();
                 Bundle options = new Bundle();
-                options.putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 320);
-                options.putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 320);
+                options.putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, width);
+                options.putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, width);
                 options.putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 172);
                 options.putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 172);
                 options.putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES,
-                    new ArrayList<>(Collections.singletonList(new SizeF(320, 172))));
+                    new ArrayList<>(Collections.singletonList(new SizeF(width, 172))));
                 if (!manager.bindAppWidgetIdIfAllowed(id, component, options)) throw new IllegalStateException("Grant test host widget binding first");
                 prefs.edit().putInt("id" + index, id).apply();
             }
             AppWidgetHostView view = host.createView(this, id, manager.getAppWidgetInfo(id));
             view.setPadding(0, 0, 0, 0);
             float density = getResources().getDisplayMetrics().density;
-            container.addView(view, new LinearLayout.LayoutParams((int)(320*density), (int)(172*density)));
+            container.addView(view, new LinearLayout.LayoutParams((int)(width*density), (int)(172*density)));
             views.add(view);
         }
         host.startListening(); handler.post(report);

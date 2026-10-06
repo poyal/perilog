@@ -81,14 +81,36 @@ class DocumentationCapture {
         val image=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
         File(directory,"$name.png").outputStream().use{image.compress(Bitmap.CompressFormat.PNG,100,it)}
     }
+    @Test fun captureSettingsNavigation() {
+        seed()
+        ui.waitUntil(15000){ui.onAllNodesWithContentDescription("설정").fetchSemanticsNodes().isNotEmpty()}
+        ui.onNodeWithContentDescription("설정").performClick();shot("18-settings")
+        click("화면·표시");shot("30-settings-toggles");back()
+        show(ui.onNodeWithText("데이터 초기화"));shot("80-settings-data")
+        show(ui.onNodeWithText("사용자 색상"));shot("85-settings-treatment")
+        show(ui.onNodeWithText("연락처"));shot("84-settings-hospital")
+        show(ui.onNodeWithText("앱 정보·문의"));shot("86-settings-help")
+        click("업데이트");shot("29-about-update")
+    }
+    @Test fun captureUsabilityChanges() {
+        seed()
+        ui.waitUntil(15000){ui.onAllNodesWithContentDescription("설정").fetchSemanticsNodes().isNotEmpty()}
+        ui.onNodeWithContentDescription("설정").performClick()
+        click("홈 화면 위젯");shot("59-widget-settings");back()
+        click("화면·표시");shot("30-settings-toggles");back()
+        click("알림");shot("78-notification-settings");back();back()
+        click("기록하기");show(ui.onNodeWithText("이번 기록만 수량 조정"));shot("03-usage-template");back()
+        click("D-7");click("일정 수정")
+        show(ui.onAllNodesWithText("시간 지정")[0]).performClick();click("확인")
+        show(ui.onNodeWithText("치료 항목 · 여러 개 선택"));shot("32-appointment-editor")
+    }
     @Test fun captureReleaseInformation() {
         seed()
         ui.waitUntil(10000){ui.onAllNodesWithText("기록하기").fetchSemanticsNodes().isNotEmpty()}
-        ui.onNodeWithContentDescription("설정").performClick();click("페리로그 정보")
+        ui.onNodeWithContentDescription("설정").performClick();click("앱 정보·문의")
         shot("25-about")
         runBlocking { app.repository.preferences(app.repository.snapshot().preferences.copy(darkMode="DARK")) }
-        SystemClock.sleep(800);shot("26-about-dark")
-        show(ui.onNodeWithText("업데이트"));shot("29-about-update")
+        SystemClock.sleep(800);shot("26-about-dark");back();click("업데이트");shot("29-about-update")
     }
     @Test fun captureChartsAndTable() {
         seed(completeToday=true)
@@ -108,20 +130,19 @@ class DocumentationCapture {
         seed()
         ui.waitUntil(10000){ui.onAllNodesWithText("기록하기").fetchSemanticsNodes().isNotEmpty()}
         ui.onNodeWithContentDescription("설정").performClick()
-        click("연락처 관리");show(ui.onNodeWithContentDescription("투석실 더보기")).performClick();click("수정")
+        click("연락처");show(ui.onNodeWithContentDescription("투석실 더보기")).performClick();click("수정")
         shot("34-contact-editor")
     }
     @Test fun captureManual() {
         seed()
         ui.waitUntil(10000){ui.onAllNodesWithText("기록하기").fetchSemanticsNodes().isNotEmpty()}
         ui.onNodeWithContentDescription("설정").performClick()
-        click("밝게");click("표시·알림·잠금 설정 저장");back()
+        click("화면·표시");click("밝게");click("화면 설정 저장");back();back()
         shot("01-home")
         click("기록하기");click("수정")
         shot("02-before-treatment")
-        click("접기");click("구성 변경")
+        click("접기")
         shot("03-usage-template")
-        click("구성 선택 접기")
         input("초기배액량","2300");input("기계 제수량","600")
         ui.onNodeWithText("투석 기록").performScrollTo()
         shot("04-after-treatment")
@@ -136,7 +157,7 @@ class DocumentationCapture {
         ui.waitUntil(10000){ui.onAllNodesWithText("오늘도 기록을 마쳤어요").fetchSemanticsNodes().isNotEmpty()}
         ui.waitUntil(10000){ui.onAllNodesWithText("기록을 저장했어요").fetchSemanticsNodes().isEmpty()}
         shot("06-completed")
-        tab("기록");ui.onNodeWithContentDescription("기록 추가").performClick();click("추가투석 기록 추가");click("구성 변경");click("추가투석 · 1.5 + 라인")
+        tab("기록");ui.onNodeWithContentDescription("기록 추가").performClick();click("추가투석 기록 추가");click("추가투석 · 1.5 + 라인")
         input("배액무게","2150")
         ui.onNodeWithText("배액 기록 · 선택").performScrollTo()
         shot("07-manual-treatment")
@@ -162,9 +183,9 @@ class DocumentationCapture {
         ui.onAllNodesWithText("수정").onFirst().performClick();shot("22-template-editor");back()
         back();tab("홈");ui.onNodeWithContentDescription("설정").performClick()
         shot("18-settings")
-        ui.onNodeWithText("지금 백업").performScrollTo()
+        click("자동 백업");ui.onNodeWithText("지금 백업").performScrollTo()
         shot("19-backup")
-        back()
+        back();back()
         tab("기록");click("표");shot("23-record-table");back()
         tab("홈")
         val before=runBlocking{app.repository.snapshot()}
@@ -180,24 +201,24 @@ class DocumentationCapture {
         show(ui.onNodeWithText("투석 기록"));shot("27-dark-treatment")
         back();tab("재고");shot("28-dark-inventory")
         tab("홈");ui.onNodeWithContentDescription("설정").performClick()
-        click("페리로그 정보");shot("26-about-dark")
-        show(ui.onNodeWithText("업데이트"));shot("29-about-update")
+        click("앱 정보·문의");shot("26-about-dark")
+        back();click("업데이트");shot("29-about-update")
         back();back()
         runBlocking { app.repository.preferences(app.repository.snapshot().preferences.copy(darkMode="LIGHT")) }
-        ui.onNodeWithContentDescription("설정").performClick();click("페리로그 정보")
+        ui.onNodeWithContentDescription("설정").performClick();click("앱 정보·문의")
         shot("25-about")
         back();back();tab("홈")
         show(ui.onNodeWithContentDescription("간호사 연락처"));shot("31-home-hospital-contacts")
         show(ui.onNodeWithContentDescription("투석실 연락처")).performClick();shot("35-contact-actions")
         InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK);ui.waitForIdle()
         ui.onNodeWithContentDescription("설정").performClick()
-        click("병원 일정 관리");shot("39-appointment-list")
+        click("병원 일정");shot("39-appointment-list")
         show(ui.onNodeWithContentDescription("next-visit 일정 수정")).performClick()
         click("날짜 선택");show(ui.onNodeWithText("예약일 ",substring=true));shot("40-appointment-calendar");click("날짜 선택 접기")
         show(ui.onNode(hasSetTextAction() and hasText("신장내과 예약시간 · HH:mm")));shot("32-appointment-editor");back();back()
-        click("치료 구성 관리");shot("33-treatment-items");back()
-        click("연락처 관리");show(ui.onNodeWithContentDescription("투석실 더보기")).performClick();click("수정");shot("34-contact-editor");back();back()
-        show(ui.onNodeWithText("표시와 안내"));shot("30-settings-toggles");back()
+        click("검사·치료 항목");shot("33-treatment-items");back()
+        click("연락처");show(ui.onNodeWithContentDescription("투석실 더보기")).performClick();click("수정");shot("34-contact-editor");back();back()
+        click("화면·표시");shot("30-settings-toggles");back();back()
         tab("재고");click("투석액 1.5%");shot("37-stock-detail")
         click("수량 추가·차감");input("변경 수량","1");input("변경 사유 · 필수","포장 손상")
         shot("36-stock-adjustment");click("조정 저장");click("확인");back()

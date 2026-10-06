@@ -11,6 +11,23 @@ class AppointmentTest {
     private val now=LocalDateTime.parse("2026-10-02T10:00:00")
     private fun booking(id:String,time:String,date:String="2026-10-02",createdAt:Long=1)=Appointment(id,date,time,createdAt=createdAt)
 
+    @Test fun optionalCareTimesRoundTripAndExtendVisitBeforeAndAfterConsultation() {
+        val old=codec.decodeFromString<CareTask>("""{"id":"blood","name":"피검사","iconKey":"blood"}""")
+        assertNull(old.time)
+        val visit=booking("times","09:45").copy(careItems=listOf(old.copy(time="07:45"),CareTask(name="주사",time="11:30"),CareTask(name="상담")))
+        validate(Snapshot(appointments=listOf(visit)))
+        assertEquals(visit,codec.decodeFromString<Appointment>(codec.encodeToString(visit)))
+        assertEquals("07:45",visit.at().toLocalTime().toString())
+        assertEquals("11:30",visit.nextAt(now)?.toLocalTime().toString())
+        assertEquals(visit,nextAppointment(listOf(visit),now))
+        assertNull(visit.nextAt(now.withHour(12)))
+        assertTrue(visit.nextBooking().careItems.all {it.time==null})
+        assertEquals("피검사 07:45",visit.careItems.first().displayLabel())
+        assertEquals("상담",visit.careItems.last().displayLabel())
+        for(time in listOf("", "25:00", "7:45", "12:60")) {
+            assertFalse(visit.copy(careItems=listOf(old.copy(time=time))).validTimes())
+        }
+    }
     @Test fun closestUpcomingAdvancesAtTimeBoundaryAndRetainsPastEntries() {
         val earlier=booking("past","09:59")
         val current=booking("current","10:00")

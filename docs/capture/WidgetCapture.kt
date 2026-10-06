@@ -40,7 +40,7 @@ class WidgetCapture {
                 Contact(id="nurse",name="담당 간호사",phone="010-1234-5678",emoji="🧑‍⚕️",createdAt=2),
                 Contact(id="service",name="고객센터",phone="1588-1234",emoji="☎️",createdAt=3))))}
         ui.waitUntil(15000) {ui.onAllNodesWithContentDescription("설정").fetchSemanticsNodes().isNotEmpty()}
-        ui.onNodeWithContentDescription("설정").performClick();click("연락처 관리")
+        ui.onNodeWithContentDescription("설정").performClick();click("연락처")
         show(ui.onNodeWithContentDescription("투석실 더보기")).performClick();shot("62-contact-menu")
     }
     @Test fun prepareScreens() {
@@ -58,7 +58,7 @@ class WidgetCapture {
         }
         ui.waitUntil(15000) {ui.onAllNodesWithContentDescription("설정").fetchSemanticsNodes().isNotEmpty()}
         ui.onNodeWithContentDescription("설정").performClick();shot("18-settings")
-        click("연락처 관리");click("순서 변경")
+        click("연락처");click("순서 변경")
         show(ui.onNodeWithContentDescription("담당 간호사 위로")).performClick();shot("60-contact-order")
         click("순서 저장");ui.waitForIdle()
         ui.onNodeWithContentDescription("뒤로").performClick();click("홈 화면 위젯");shot("59-widget-settings")

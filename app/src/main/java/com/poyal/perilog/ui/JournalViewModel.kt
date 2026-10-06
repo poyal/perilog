@@ -41,13 +41,17 @@ class JournalViewModel(application: Application,private val savedState:SavedStat
     }
     fun refreshClock() { localNow.value=java.time.LocalDateTime.now();calendarDay.value=localNow.value.toLocalDate().toString() }
     fun act(success: String?=null, block: suspend () -> Unit) {
-        viewModelScope.launch { serial.withLock {
-            if(inputErrors.isNotEmpty()) { message.emit("입력 형식을 확인해 주세요: ${inputErrors.values.joinToString()}");return@withLock }
-            busy.value=true
-            try { block(); if(success!=null) message.emit(success) }
+        // Claim the operation synchronously so double taps cannot queue duplicate writes.
+        if(busy.value)return
+        busy.value=true
+        viewModelScope.launch {
+            try { serial.withLock {
+                if(inputErrors.isNotEmpty()) { message.emit("입력 형식을 확인해 주세요: ${inputErrors.values.joinToString()}");return@withLock }
+                block(); if(success!=null) message.emit(success)
+            } }
             catch(e: Exception) { if(e is CancellationException) throw e; message.emit(e.message ?: "저장하지 못했습니다. 다시 시도해 주세요.") }
             finally { busy.value=false }
-        } }
+        }
     }
     fun edit(id: String?=null,kind: String="MACHINE",date: String=today(),source:Snapshot=state.value) {
         draftJob?.cancel()
@@ -73,13 +77,16 @@ class JournalViewModel(application: Application,private val savedState:SavedStat
     }
     fun discard(id: String,done: ()->Unit) { draftJob?.cancel();pendingDraft=null; act { repository.discardDraft(id);editor.value=null;savedState.remove<String>("editor");done() } }
     fun save(confirm: Boolean,onSaved: () -> Unit) {
+        if(busy.value)return
         val t=editor.value ?: return
         draftJob?.cancel()
         pendingDraft=null
         act("기록을 저장했어요") { repository.save(t,confirm); editor.value=null;savedState.remove<String>("editor"); onSaved() }
     }
-    fun markCelebrated(date:String) = act { repository.markCelebrated(date) }
-    fun preferences(p: Preferences) = act { repository.preferences(p); Reminders.schedule(app,p) }
+    fun preferences(success:String="설정을 저장했어요",onSaved:()->Unit={},change:(Preferences)->Preferences) = act(success) {
+        val next=change(repository.snapshot().preferences)
+        repository.preferences(next); Reminders.schedule(app,next); onSaved()
+    }
 }
 
 

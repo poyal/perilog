@@ -66,10 +66,6 @@ abstract class PerilogWidget(private val records:Boolean):GlanceAppWidget() {
                     snapshot==null -> Box(GlanceModifier.fillMaxWidth().defaultWeight().clickable(actionRunCallback<RefreshWidgetAction>()),contentAlignment=Alignment.Center) {
                         Text("불러오지 못했어요\n눌러서 다시 시도",style=colors.text())
                     }
-                    snapshot.preferences.lock -> Box(GlanceModifier.fillMaxWidth().defaultWeight().background(ImageProvider(colors.panel))
-                        .clickable(actionStartActivity(WidgetNavigation.intent(context,WidgetTarget(if(records) "home" else "appointments")))),contentAlignment=Alignment.Center) {
-                        Text("잠금 해제 후 확인 ›",style=colors.text(12f,true))
-                    }
                     records -> {
                         val yesterday=snapshot.dailyProgress(now.toLocalDate().minusDays(1).toString())
                         val today=snapshot.dailyProgress(now.toLocalDate().toString())
@@ -293,7 +289,7 @@ private fun DailyProgress.stages()=listOf("활력 상태" to vitality,"사용 �
                         verticalAlignment=Alignment.CenterVertically) {
                         Image(ImageProvider(careDrawable(item.iconKey)),null,GlanceModifier.size((12*scale).dp),colorFilter=ColorFilter.tint(colors.primary))
                         Spacer(GlanceModifier.width((3*scale).dp))
-                        Text(item.name,GlanceModifier.defaultWeight(),style=colors.text(font),maxLines=Int.MAX_VALUE)
+                        Text(item.displayLabel(),GlanceModifier.defaultWeight(),style=colors.text(font),maxLines=Int.MAX_VALUE)
                     }
                 }
                 if(row.items.size<columns) {Spacer(GlanceModifier.width((4*scale).dp));Spacer(GlanceModifier.defaultWeight())}
@@ -317,13 +313,19 @@ private fun careDrawable(key:String):Int=when(key) {
 }
 
 class DailyRecordWidget:PerilogWidget(true)
+class CompactRecordWidget:PerilogWidget(true)
 class AppointmentWidget:PerilogWidget(false)
-class DailyRecordWidgetReceiver:GlanceAppWidgetReceiver() {
+class DailyRecordWidgetReceiver:PerilogWidgetReceiver() {
     override val glanceAppWidget:GlanceAppWidget=DailyRecordWidget()
     override fun onEnabled(context:Context) {super.onEnabled(context);WidgetUpdates.request(context)}
     override fun onDisabled(context:Context) {super.onDisabled(context);WidgetUpdates.request(context)}
 }
-class AppointmentWidgetReceiver:GlanceAppWidgetReceiver() {
+class CompactRecordWidgetReceiver:PerilogWidgetReceiver() {
+    override val glanceAppWidget:GlanceAppWidget=CompactRecordWidget()
+    override fun onEnabled(context:Context) {super.onEnabled(context);WidgetUpdates.request(context)}
+    override fun onDisabled(context:Context) {super.onDisabled(context);WidgetUpdates.request(context)}
+}
+class AppointmentWidgetReceiver:PerilogWidgetReceiver() {
     override val glanceAppWidget:GlanceAppWidget=AppointmentWidget()
     override fun onEnabled(context:Context) {super.onEnabled(context);WidgetUpdates.request(context)}
     override fun onDisabled(context:Context) {super.onDisabled(context);WidgetUpdates.request(context)}

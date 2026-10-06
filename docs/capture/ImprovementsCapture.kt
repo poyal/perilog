@@ -55,7 +55,7 @@ class ImprovementsCapture {
         ui.onNodeWithTag("home-stock-shortage").performClick();shot("72-stock-forecast")
         show(ui.onNodeWithTag("forecast-line-${q.id}"));shot("73-stock-forecast-detail")
         ui.onNodeWithContentDescription("뒤로").performClick()
-        ui.onNodeWithContentDescription("설정").performClick();click("병원 일정 관리")
+        ui.onNodeWithContentDescription("설정").performClick();click("병원 일정")
         show(ui.onNodeWithTag("forecast-visit"));shot("39-appointment-list")
         ui.onNodeWithContentDescription("뒤로").performClick()
         ui.onNodeWithContentDescription("뒤로").performClick()

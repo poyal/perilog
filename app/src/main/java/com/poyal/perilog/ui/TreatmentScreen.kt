@@ -19,7 +19,6 @@ import com.poyal.perilog.domain.*
 @Composable fun TreatmentScreen(s:Snapshot,vm:JournalViewModel,back:()->Unit) {
     val t by vm.editor.collectAsStateWithLifecycle()
     val current=t ?: return
-    var picker by rememberSaveable(current.id){mutableStateOf(false)}
     var quantities by rememberSaveable(current.id){mutableStateOf(false)}
     var beforeExpanded by rememberSaveable(current.id){mutableStateOf(!current.saved || current.weightGrams==null || current.systolic==null || current.diastolic==null)}
     var options by rememberSaveable(current.id){mutableStateOf(false)}
@@ -52,31 +51,28 @@ import com.poyal.perilog.domain.*
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 if(current.kind=="MACHINE")CompletionBadge(compositionComplete)
                 Section("사용 구성");Spacer(Modifier.weight(1f))
-                TextButton(onClick={picker=!picker;quantities=false}){Text(if(picker)"구성 선택 접기"else"구성 변경")}
             }
-            current.compositionColor(s)?.let{color->
+            if(s.templates.none{it.id==current.usageTemplateId})current.compositionColor(s)?.let{color->
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     ColorDot(color,18,"${current.compositionName(s)} 대표")
                     Text(current.compositionName(s),style=MaterialTheme.typography.bodyMedium,fontWeight=FontWeight.SemiBold)
                 }
             }
             if(current.items.isEmpty())Hint("사용한 품목을 선택해 주세요.")else ProductChips(s,current.items)
-            if(picker) {
-                if(s.templates.isEmpty())Hint("설정 → 사용 구성 관리에서 자주 쓰는 조합을 만들어 보세요.")
-                s.templates.forEach{template->
-                    Surface(onClick={update(current.copy(items=template.items.map{it.copy(batchId=null)},usageTemplateId=template.id,usageTemplateName=template.name,usageTemplateColor=template.color));picker=false;quantities=false},
-                        shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surfaceContainerLow,border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)) {
-                        Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
-                            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                                ColorDot(template.color,20,"${template.name} 대표")
-                                Text(template.name,Modifier.weight(1f),fontWeight=FontWeight.Bold);Icon(Icons.Outlined.ChevronRight,null)
-                            }
-                            template.items.forEach{ProductLine(s,it,compact=true)}
+            if(s.templates.isEmpty())Hint("설정 → 사용 구성에서 자주 쓰는 조합을 만들어 보세요.")
+            FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                s.templates.forEach { template ->
+                    val selected=current.usageTemplateId==template.id
+                    SelectionChip(selected,{
+                        if(!selected) {
+                            update(current.copy(items=template.items.map{it.copy(batchId=null)},usageTemplateId=template.id,
+                                usageTemplateName=template.name,usageTemplateColor=template.color))
+                            quantities=false
                         }
-                    }
+                    },label={Text(template.name)},leadingIcon={ColorDot(template.color,18,"${template.name} 대표")})
                 }
             }
-            TextButton(onClick={quantities=!quantities;picker=false}){Text(if(quantities)"수량 조정 마치기"else"이번 기록만 수량 조정")}
+            TextButton(onClick={quantities=!quantities}){Text(if(quantities)"수량 조정 마치기"else"이번 기록만 수량 조정")}
             if(current.items.isEmpty())Row(verticalAlignment=Alignment.CenterVertically){Checkbox(current.usageConfirmed,{update(current.copy(usageConfirmed=it))});Text("이 기록에서는 사용한 물품이 없어요",Modifier.weight(1f))}
         }
         if(quantities) {

@@ -36,9 +36,9 @@ def verify_provider_classes(apk):
                 strings.append(data[offset:data.index(0, offset)].decode("utf-8", errors="replace"))
             types = [strings[u32(u32(68) + index * 4)] for index in range(u32(64))]
             names.update(types[u32(u32(100) + index * 32)] for index in range(u32(96)))
-    required = {"Lcom/poyal/perilog/widget/DailyRecordWidget;", "Lcom/poyal/perilog/widget/AppointmentWidget;"}
+    required = {"Lcom/poyal/perilog/widget/DailyRecordWidget;", "Lcom/poyal/perilog/widget/CompactRecordWidget;", "Lcom/poyal/perilog/widget/AppointmentWidget;"}
     if not required <= names:
-        raise AssertionError("Release DEX does not preserve both distinct widget provider classes")
+        raise AssertionError("Release DEX does not preserve all three distinct widget provider classes")
 
 
 def main():
@@ -175,6 +175,9 @@ def main():
     start("appointment")
     await_report("appointment-only", 1)
     cold_refresh("appointment-only-cold", 1, "appointment")
+    start("all")
+    await_report("all-providers-including-compact", 4)
+    cold_refresh("all-providers-cold", 4, "all")
     print("Widget isolation and process recovery passed", flush=True)
 
 

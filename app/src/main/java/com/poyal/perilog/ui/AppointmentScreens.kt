@@ -73,7 +73,7 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
     Surface(shape=MaterialTheme.shapes.small,color=MaterialTheme.colorScheme.surfaceVariant) {
         Row(Modifier.padding(10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp)) {
             Icon(careIcon(task.iconKey).image,null,Modifier.size(22.dp),tint=MaterialTheme.colorScheme.primary)
-            Text(task.name,style=MaterialTheme.typography.bodyMedium)
+            Text(task.displayLabel(),style=MaterialTheme.typography.bodyMedium)
         }
     }
 }
@@ -121,7 +121,7 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
                         Text(LocalDate.parse(next.date).format(DateTimeFormatter.ofPattern("yyyy. MM. dd (E)",Locale.KOREAN)),
                             style=MaterialTheme.typography.bodyMedium)
                         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-                            Text(if(next.departments.isEmpty())next.time else "다음 진료 ${next.nextAt(now)?.toLocalTime()}",
+                            Text("다음 일정 ${next.nextAt(now)?.toLocalTime()}",
                                 modifier=Modifier.weight(1f,fill=false).testTag("home-next-appointment-time"),
                                 style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
                             if(shortageCount>0) IconButton(onClick={navigate("appointmentStock/${next.id}")},
@@ -165,7 +165,7 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
     val ordered=s.appointments.sortedWith(compareBy<Appointment>{it.at()}.thenBy{it.createdAt}.thenBy{it.id})
     Page("병원 일정 관리","마지막 진료시간이 지나면 다음 일정을 표시해요",back) {
         Action("+ 병원 일정 등록",{navigate("appointment/new")})
-        if(ordered.isEmpty())Paper{Hint("예약 날짜와 시간을 등록해 주세요. 진료과와 치료 구성은 설정에서 관리할 수 있어요.")}
+        if(ordered.isEmpty())Paper{Hint("예약 날짜와 시간을 등록해 주세요. 진료과와 검사·치료 항목은 설정에서 관리할 수 있어요.")}
         listOf(false,true).forEach { past ->
             val entries=ordered.filter{it.endsAt().isBefore(now)==past}.let{if(past)it.reversed()else it}
             if(entries.isNotEmpty())Section(if(past)"지난 일정"else"예정 일정")
@@ -181,7 +181,7 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
             }}
         }
     }
-    deleting?.let{id->Confirm("일정을 삭제할까요?","선택한 예약만 삭제해요. 등록한 진료과와 치료 구성은 유지돼요.",{deleting=null}) {
+    deleting?.let{id->Confirm("일정을 삭제할까요?","선택한 예약만 삭제해요. 등록한 진료과와 검사·치료 항목은 유지돼요.",{deleting=null}) {
         vm.act("일정을 삭제했어요"){vm.repository.deleteAppointment(id);deleting=null}
     }}
 }
@@ -198,6 +198,7 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
     val validDate=runCatching{LocalDate.parse(a.date)}.isSuccess
     val validTime=a.validTimes()
     var timeTarget by rememberSaveable{mutableStateOf<String?>(null)}
+    var careTimeTarget by rememberSaveable{mutableStateOf<String?>(null)}
     EditorPage(if(id=="new" || repeat)"병원 일정 등록"else"병원 일정 수정","진료과는 색상, 치료 항목은 아이콘으로 보여요",
         codec.encodeToString(a)!=original,back,{
             vm.act("병원 일정을 저장했어요"){vm.repository.appointment(a.copy(memo=a.memo.trim(),care=null,careItems=a.selectedCareItems(),
@@ -240,8 +241,17 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
                         modifier=Modifier.semantics{contentDescription="${item.name} 치료 항목 선택"})
                 }
             }
-            if(selectedItems.isNotEmpty())CareTasks(selectedItems)
-            TextButton(onClick={navigate("careTemplates")}){Text("치료 구성 등록·관리")}
+            selectedItems.forEach { item ->
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                    Text(item.name,Modifier.weight(1f))
+                    TextButton(onClick={careTimeTarget=item.id}){Text(item.time ?: "시간 지정")}
+                    if(item.time!=null)IconButton(onClick={a=a.copy(careItems=selectedItems.map{if(it.id==item.id)it.copy(time=null)else it})}) {
+                        Icon(Icons.Outlined.Close,"${item.name} 시간 해제")
+                    }
+                }
+            }
+            Hint("시간이 필요한 항목만 지정해 주세요. 진료 전후 시각을 자유롭게 정할 수 있어요.")
+            TextButton(onClick={navigate("careTemplates")}){Text("검사·치료 항목 등록·관리")}
             Hint("할 일을 하나씩 등록하고 필요한 항목을 여러 개 고르세요. 선택한 항목을 다시 누르면 해제해요.")
         }
         Paper {OutlinedTextField(a.memo,{a=a.copy(memo=it)},label={Text("메모")},modifier=Modifier.fillMaxWidth())}
@@ -255,6 +265,18 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
                 val value=String.format(Locale.US,"%02d:%02d",clock.hour,clock.minute)
                 a=if(target.isEmpty())a.copy(time=value) else a.copy(departmentTimes=a.departmentTimes+(target to value));timeTarget=null
             }){Text("확인")}},dismissButton={TextButton(onClick={timeTarget=null}){Text("취소")}})
+    }
+    careTimeTarget?.let { target ->
+        val item=a.selectedCareItems().firstOrNull{it.id==target}
+        if(item!=null)key(target) {
+            val initial=runCatching{LocalTime.parse(item.time ?: a.time)}.getOrDefault(LocalTime.of(9,0))
+            val clock=rememberTimePickerState(initialHour=initial.hour,initialMinute=initial.minute,is24Hour=true)
+            AlertDialog(onDismissRequest={careTimeTarget=null},title={Text("${item.name} 시간")},text={TimeInput(clock)},
+                confirmButton={TextButton(onClick={
+                    val value=String.format(Locale.US,"%02d:%02d",clock.hour,clock.minute)
+                    a=a.copy(careItems=a.selectedCareItems().map{if(it.id==target)it.copy(time=value)else it});careTimeTarget=null
+                }){Text("확인")}},dismissButton={TextButton(onClick={careTimeTarget=null}){Text("취소")}})
+        }
     }
 }
 
@@ -303,7 +325,7 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
 
 @Composable fun CareTemplatesScreen(s:Snapshot,vm:JournalViewModel,navigate:(String)->Unit,back:()->Unit) {
     var deleting by rememberSaveable{mutableStateOf<String?>(null)}
-    Page("치료 구성 관리","자주 하는 검사·치료를 한 항목씩 등록해요",back) {
+    Page("검사·치료 항목","자주 하는 검사·치료를 한 항목씩 등록해요",back) {
         Action("+ 치료 항목 등록",{navigate("care/new")})
         if(s.careTemplates.isEmpty())Paper{Hint("피검사·투석실 방문·주사 등을 각각 등록해 주세요. 예약에서 여러 항목을 함께 선택할 수 있어요.")}
         s.careTemplates.sortedBy{it.name}.forEach { c -> Paper {

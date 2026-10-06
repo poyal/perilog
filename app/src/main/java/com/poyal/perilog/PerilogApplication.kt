@@ -19,6 +19,8 @@ class PerilogApplication: Application() {
     @OptIn(FlowPreview::class)
     override fun onCreate() {
         super.onCreate(); BackupManager.schedule(this)
+        Reminders.ensureChannel(this)
+        updateScope.launch(Dispatchers.IO) { Reminders.schedule(this@PerilogApplication,repository.snapshot().preferences) }
         updateScope.launch(Dispatchers.IO) {
             repository.snapshots.map { widgetDataKey(it) }.distinctUntilChanged().debounce(500).collect {
                 if(WidgetUpdates.installed(this@PerilogApplication)) try { WidgetUpdates.refresh(this@PerilogApplication) }

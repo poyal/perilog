@@ -93,24 +93,24 @@ class AppFlowTest {
         }
     }
     private fun stock(q:Int) {assertEquals(q,inventory(snapshot()).products.getValue(p.id).balance)}
-    private fun openTemplates(){compose.onNodeWithContentDescription("설정").performClick();click("사용 구성 관리")}
+    private fun openTemplates(){compose.onNodeWithContentDescription("설정").performClick();click("사용 구성")}
     private fun beforeAndTemplate() {
         input("몸무게","62.3");input("수축기 혈압","120");input("이완기 혈압","80")
-        click("구성 변경");click("밤 구성")
+        click("밤 구성")
     }
     @Test fun aboutWorksOfflineAndDarkThemeSurvivesRecreation() {
         compose.onNodeWithContentDescription("설정").performClick()
-        click("어둡게"); click("표시·알림·잠금 설정 저장")
+        click("화면·표시");click("어둡게"); click("화면 설정 저장")
         await { snapshot().preferences.darkMode == "DARK" }
-        click("페리로그 정보")
-        node("제작자  Poyal").assertExists()
+        back();click("앱 정보·문의")
+        node("제작자  Poyal").assertExists();back();click("업데이트")
         click("업데이트 확인")
         await { compose.onAllNodesWithText("아직 공개된 정식 릴리즈가 없어요.").fetchSemanticsNodes().isNotEmpty() }
         screenshot("about-dark.png")
         show(node("다운로드 폴더 열기")).assertExists()
         show(node("업데이트와 데이터")).assertExists()
         compose.activityRule.scenario.recreate()
-        await { compose.onAllNodesWithText("페리로그 정보").fetchSemanticsNodes().isNotEmpty() }
+        await { compose.onAllNodesWithText("업데이트").fetchSemanticsNodes().isNotEmpty() }
         assertEquals("DARK", snapshot().preferences.darkMode)
         back()
         await { compose.onAllNodesWithText("설정").fetchSemanticsNodes().isNotEmpty() }
@@ -132,8 +132,8 @@ class AppFlowTest {
         node("오늘도 기록을 마쳤어요").assertExists()
         assertEquals(900,snapshot().treatments.single().totalUf());stock(8)
         tab("기록");compose.onNodeWithContentDescription("기록 추가").performClick();click("추가투석 기록 추가")
-        await("Additional treatment editor after records navigation"){compose.onAllNodesWithText("구성 변경").fetchSemanticsNodes().isNotEmpty()}
-        click("구성 변경");click("밤 구성");click("기록 저장")
+        await("Additional treatment editor after records navigation"){compose.onAllNodesWithText("이번 기록만 수량 조정").fetchSemanticsNodes().isNotEmpty()}
+        click("밤 구성");click("기록 저장")
         await{snapshot().treatments.size==2}
         assertTrue(snapshot().treatments.single{it.kind=="MANUAL"}.complete())
         assertNull(snapshot().treatments.single{it.kind=="MANUAL"}.manualDrain);stock(6)
@@ -245,7 +245,7 @@ class AppFlowTest {
         selectedValue("이력 종류","입고");selectedValue("이력 품목",q.name);selectedValue("이력 상태","유효한 내역")
         show(node("수정한 입고 메모")).assertIsDisplayed();stock(5)
         select("이력 종류","사용");select("이력 품목",p.name);click("기록 보기")
-        await{compose.onAllNodesWithText("구성 변경").fetchSemanticsNodes().isNotEmpty()}
+        await{compose.onAllNodesWithText("이번 기록만 수량 조정").fetchSemanticsNodes().isNotEmpty()}
         back();selectedValue("이력 종류","사용");selectedValue("이력 품목",p.name)
         click("사용 취소");click("확인");await{snapshot().usages.single().cancelled}
         assertFalse(snapshot().treatments.single().usageConfirmed);stock(5)
@@ -273,7 +273,7 @@ class AppFlowTest {
         back();click("사용 구성 관리")
         compose.onNodeWithContentDescription("${p.name} 색상 #47956E").assertExists()
         click("수정");compose.onNodeWithContentDescription("${p.name} 색상 #47956E").assertExists()
-        back();back();tab("홈");click("오늘 기록 시작");click("구성 변경")
+        back();back();tab("홈");click("오늘 기록 시작")
         compose.onNodeWithContentDescription("${p.name} 색상 #47956E").assertExists()
         click("밤 구성");compose.onNodeWithContentDescription("${p.name} 색상 #47956E").assertExists()
         stock(10)
@@ -374,7 +374,7 @@ class AppFlowTest {
         field("기계 제수량").assertTextContains("600");node("밤 구성").assertExists()
         click("이 초안 버리기");click("확인");await {snapshot().drafts.isEmpty()}
         tab("기록");compose.onNodeWithContentDescription("기록 추가").performClick();click("추가투석 기록 추가")
-        await("New additional treatment editor"){compose.onAllNodesWithText("구성 변경").fetchSemanticsNodes().isNotEmpty()}
+        await("New additional treatment editor"){compose.onAllNodesWithText("이번 기록만 수량 조정").fetchSemanticsNodes().isNotEmpty()}
         node("사용한 품목을 선택해 주세요.").assertExists()
         field("배액무게").assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
         back();tab("기록");click("표")
@@ -629,12 +629,12 @@ class AppFlowTest {
         }
     }
     @Test fun settingsUnsavedChangesSurviveRecreationAndDarkThemeCanBeSaved() {
-        compose.onNodeWithContentDescription("설정").performClick();click("어둡게");node("어둡게").assertIsSelected()
+        compose.onNodeWithContentDescription("설정").performClick();click("화면·표시");click("어둡게");node("어둡게").assertIsSelected()
         compose.activityRule.scenario.recreate()
         await{compose.onAllNodesWithText("어둡게").fetchSemanticsNodes().isNotEmpty()}
         show(node("어둡게")).assertIsSelected()
-        click("표시·알림·잠금 설정 저장");await{snapshot().preferences.darkMode=="DARK"}
-        back();node("페리로그").assertExists();screenshot("dark-home.png")
+        click("화면 설정 저장");await{snapshot().preferences.darkMode=="DARK"}
+        back();back();node("페리로그").assertExists();screenshot("dark-home.png")
     }
     private fun screenshot(name:String) {
         if(InstrumentationRegistry.getArguments().getString("skipScreenshots")=="true")return

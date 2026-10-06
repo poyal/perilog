@@ -115,7 +115,7 @@ class RepositoryTest {
         assertTrue(0xFF5B9FA6 in s.preferences.palette)
         assertEquals(0xFF123456,s.products.single().color)
         assertTrue(0xFF123456 in s.preferences.palette)
-        repo.preferences(s.preferences.copy(darkMode="DARK"));repo.markCelebrated(today())
+        repo.preferences(s.preferences.copy(darkMode="DARK"))
         assertEquals("DARK",repo.snapshot().preferences.darkMode)
     }
     @Test fun repeatedSaveEditDeleteUndoAndCancelDoNotDoubleDebit()=runBlocking {

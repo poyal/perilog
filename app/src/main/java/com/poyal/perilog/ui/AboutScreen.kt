@@ -25,31 +25,12 @@ import java.time.format.DateTimeFormatter
 
 @Composable fun AboutScreen(updates: UpdateController, back: () -> Unit) {
     val state by updates.state.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val permission = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        updates.installationMessage(if (context.packageManager.canRequestPackageInstalls())
-            "설치가 허용됐어요. 설치 버튼을 눌러 계속해 주세요." else "설치 허용이 꺼져 있어요. Download 폴더의 APK는 보관돼요.")
+    val context=LocalContext.current
+    var message by remember {mutableStateOf("")}
+    fun link(url:String) {
+        if(!openExternal(context,url))message="연결할 앱을 찾지 못했어요."
     }
-    val installer = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        updates.installationMessage("설치를 취소했거나 완료되지 않았다면 다시 시도할 수 있어요. Download 폴더의 APK는 그대로 보관돼요.")
-    }
-    fun link(url: String) {
-        if (!openExternal(context, url)) updates.installationMessage("연결할 앱을 찾지 못했어요.")
-    }
-    fun install() { scope.launch {
-        val uri = updates.installationCopy() ?: return@launch
-        try {
-            if (!context.packageManager.canRequestPackageInstalls()) {
-                updates.installationMessage("페리로그의 ‘이 출처의 앱 설치 허용’을 켜 주세요. 다운로드한 파일은 유지돼요.")
-                permission.launch(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, "package:${context.packageName}".toUri()))
-            } else {
-                installer.launch(Intent(Intent.ACTION_VIEW).setDataAndType(uri.toUri(), "application/vnd.android.package-archive")
-                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
-            }
-        } catch (_: Exception) { updates.installationMessage("설치 화면을 열지 못했어요. 다운로드 폴더에서 APK를 직접 열어 주세요.") }
-    } }
-    Page("페리로그 정보", "나의 하루, 나의 투석 기록", back) {
+    Page("앱 정보·문의",back=back) {
         Paper {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Bow(48)
@@ -63,6 +44,35 @@ import java.time.format.DateTimeFormatter
             MenuRow("릴리즈 · 변경 내역", icon = Icons.Outlined.NewReleases) { link(state.release?.pageUrl ?: "$RELEASES_URL/latest") }
             MenuRow("이메일 문의", icon = Icons.Outlined.Email) { link("mailto:poyal.work@gmail.com") }
         }
+        if(message.isNotBlank())Paper {Hint(message)}
+        Paper {Hint("기록은 기기 내부에 저장돼요. 업데이트 확인·다운로드에만 GitHub를 사용하며 기록이나 백업은 전송하지 않아요.")}
+    }
+}
+
+@Composable fun UpdatesScreen(updates: UpdateController, back: () -> Unit) {
+    val state by updates.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        updates.installationMessage(if (context.packageManager.canRequestPackageInstalls())
+            "설치가 허용됐어요. 설치 버튼을 눌러 계속해 주세요." else "설치 허용이 꺼져 있어요. Download 폴더의 APK는 보관돼요.")
+    }
+    val installer = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        updates.installationMessage("설치를 취소했거나 완료되지 않았다면 다시 시도할 수 있어요. Download 폴더의 APK는 그대로 보관돼요.")
+    }
+    fun install() { scope.launch {
+        val uri = updates.installationCopy() ?: return@launch
+        try {
+            if (!context.packageManager.canRequestPackageInstalls()) {
+                updates.installationMessage("페리로그의 ‘이 출처의 앱 설치 허용’을 켜 주세요. 다운로드한 파일은 유지돼요.")
+                permission.launch(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, "package:${context.packageName}".toUri()))
+            } else {
+                installer.launch(Intent(Intent.ACTION_VIEW).setDataAndType(uri.toUri(), "application/vnd.android.package-archive")
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
+            }
+        } catch (_: Exception) { updates.installationMessage("설치 화면을 열지 못했어요. 다운로드 폴더에서 APK를 직접 열어 주세요.") }
+    } }
+    Page("업데이트", back=back) {
         Paper {
             Section("업데이트")
             Text(state.message, color = if (state.check == CheckStatus.ERROR) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
@@ -96,7 +106,7 @@ import java.time.format.DateTimeFormatter
         Paper {
             Section("업데이트와 데이터")
             Text("기존 앱을 삭제하지 않고 같은 서명의 APK로 업데이트하면 기록·재고·설정이 유지돼요.")
-            Hint("업데이트 전 설정에서 전체 데이터를 내보내 두세요. 앱을 삭제하거나 데이터를 초기화하면 기기 안의 기록이 지워져요.")
+            Hint("업데이트 전 설정 → 데이터 내보내기·가져오기에서 전체 데이터를 내보내 두세요. 앱을 삭제하거나 데이터를 초기화하면 기기 안의 기록이 지워져요.")
             Text("설치에 실패하거나 보안 설정으로 차단돼도 Download 폴더의 APK는 남아 있어요. 파일 앱에서 직접 열어 설치할 수 있어요.")
             Hint("설치가 끝나도 APK를 자동 삭제하지 않아요. 필요 없어진 파일은 직접 정리해 주세요.")
             HorizontalDivider()

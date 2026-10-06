@@ -9,7 +9,7 @@ import java.time.temporal.ChronoUnit
 // A legacy booking uses its common time until a department-specific time is saved.
 fun Appointment.departmentTime(d:Department): String = departmentTimes[d.id] ?: time
 private fun Appointment.scheduledTimes(): List<LocalDateTime> =
-    (if(departments.isEmpty())listOf(time) else departments.map{departmentTime(it)})
+    ((if(departments.isEmpty())listOf(time) else departments.map{departmentTime(it)}) + selectedCareItems().mapNotNull{it.time})
         .map{LocalDateTime.of(LocalDate.parse(date),LocalTime.parse(it))}.sorted()
 fun Appointment.at(): LocalDateTime = scheduledTimes().first()
 fun Appointment.endsAt(): LocalDateTime = scheduledTimes().last()
@@ -24,13 +24,14 @@ fun Appointment.dayLabel(now: LocalDateTime): String {
 }
 
 fun Appointment.nextBooking(): Appointment = copy(id = newId(), date = "", time = "", memo = "",
-    care = null, careItems = selectedCareItems(), departmentTimes=emptyMap(), createdAt = System.currentTimeMillis())
+    care = null, careItems = selectedCareItems().map{it.copy(time=null)}, departmentTimes=emptyMap(), createdAt = System.currentTimeMillis())
 
 /** Expand old bundles without losing saved task names, icons, or their catalogue identity. */
 fun CareTemplate.individualItems(): List<CareTemplate> = if(tasks.isEmpty())listOf(this) else
     tasks.mapIndexed { index,task -> CareTemplate(id=if(index==0)id else "$id:${task.id}",name=task.name,iconKey=task.iconKey) }
 
 fun CareTemplate.asCareTask(): CareTask = CareTask(id=id,name=name,iconKey=iconKey)
+fun CareTask.displayLabel(): String = time?.let { "$name $it" } ?: name
 fun Appointment.selectedCareItems(): List<CareTask> = careItems.ifEmpty {
     care?.individualItems()?.map { it.asCareTask() } ?: emptyList()
 }
@@ -47,8 +48,9 @@ fun validAppointmentTime(time: String): Boolean = time.matches(Regex("[0-9]{2}:[
     runCatching { LocalTime.parse(time) }.isSuccess
 
 fun Appointment.validTimes(): Boolean =
+    selectedCareItems().all { it.time == null || validAppointmentTime(it.time) } &&
     departmentTimes.keys.all{key->departments.any{it.id==key}} &&
-        if(departments.isEmpty())validAppointmentTime(time) else departments.all{validAppointmentTime(departmentTime(it))}
+        (if(departments.isEmpty())validAppointmentTime(time) else departments.all{validAppointmentTime(departmentTime(it))})
 
 fun validateAppointments(s: Snapshot) {
     fun ids(values: List<String>) = require(values.all { it.isNotBlank() } && values.distinct().size == values.size) {
@@ -65,7 +67,7 @@ fun validateAppointments(s: Snapshot) {
     s.departments.forEach(::department); s.careTemplates.forEach(::care)
     s.appointments.forEach {
         LocalDate.parse(it.date)
-        require(it.validTimes()) { "선택한 진료과의 예약시간을 모두 HH:mm 형식으로 입력해 주세요." }
+        require(it.validTimes()) { "예약시간과 지정한 치료 시간을 HH:mm 형식으로 입력해 주세요." }
         ids(it.departments.map { d -> d.id }); it.departments.forEach(::department); it.care?.let(::care)
         ids(it.careItems.map { task -> task.id })
         require(it.careItems.all { task -> task.name.isNotBlank() && task.iconKey.isNotBlank() }) { "치료 항목 이름과 아이콘을 확인해 주세요." }

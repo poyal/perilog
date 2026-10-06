@@ -2,7 +2,7 @@
     <string name="app_name">페리로그</string>
     <string name="app_description">나의 하루, 나의 투석 기록</string>
     <string name="unlock_title">페리로그 열기</string>
-    <string name="widget_records_name">어제·오늘 기록</string>
+    <string name="widget_records_name">어제·오늘 기록 4×2</string>
     <string name="widget_records_description">4×1·4×2·2×2에서 어제와 오늘의 활력 상태·사용 구성·투석 기록 3단계를 확인해요.</string>
     <string name="widget_appointments_name">병원 일정</string>
     <string name="widget_appointments_description">2×2에서 가까운 방문의 D-day·진료과별 시간·처치를 확인해요.</string>
@@ -27,4 +27,5 @@
     <string name="widget_preview_dressing">드레싱</string>
     <string name="widget_preview_lab">소변검사</string>
     <string name="widget_preview_body">체성분검사</string>
+    <string name="widget_records_compact_name">어제·오늘 기록 2×2</string>
 </resources>

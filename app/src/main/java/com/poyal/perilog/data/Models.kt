@@ -68,7 +68,8 @@ data class Department(@PrimaryKey val id: String = newId(), val name: String,
     val color: Long = 0xFF2167B8)
 
 @Serializable
-data class CareTask(val id: String = newId(), val name: String = "", val iconKey: String = "medical")
+data class CareTask(val id: String = newId(), val name: String = "", val iconKey: String = "medical",
+    val time: String? = null)
 
 @Entity(tableName = "care_templates") @Serializable
 data class CareTemplate(@PrimaryKey val id: String = newId(), val name: String,
@@ -96,6 +97,7 @@ data class Basis(val from: String, val ml: Int)
 @Serializable
 data class Preferences(val basis: List<Basis> = listOf(Basis("1970-01-01", 2000)),
     val expiryDays: Int = 7, val backupDays: Int = 1, val keepBackups: Int = 30,
+    // celebrate and celebratedDates are kept only for existing data/backup compatibility.
     val darkMode: String = "SYSTEM", val celebrate: Boolean = true, val lock: Boolean = false,
     val reminder: Boolean = false, val reminderHour: Int = 21, val reminderMinute: Int = 0,
     val palette: List<Long> = listOf(0xFF2167B8,0xFF47956E,0xFFEF8752,0xFF30343B,0xFFBA668B,0xFF8772B5,0xFFDAAB36,0xFF5B9FA6),

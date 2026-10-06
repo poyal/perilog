@@ -44,10 +44,17 @@ class WidgetFlowTest {
     private fun texts():List<String> {var result=emptyList<String>();ui.runOnUiThread {result=widgetView?.let {views(it).filterIsInstance<TextView>().map {v->v.text.toString()}} ?: emptyList()};return result}
     private fun descriptions():List<String> {var result=emptyList<String>();ui.runOnUiThread {result=widgetView?.let {views(it).mapNotNull {v->v.contentDescription?.toString()}} ?: emptyList()};return result}
     private fun assertFitsWithoutScrolling() {
-        ui.runOnUiThread {
+        var checked=false
+        await { ui.runOnUiThread {
             val root=requireNotNull(widgetView)
-            assertFalse(views(root).any {it is AbsListView || it is ScrollView})
-            views(root).filterIsInstance<TextView>().filter {it.visibility==View.VISIBLE && it.text.isNotEmpty()}.forEach {view->
+            val children=views(root)
+            val labels=children.filterIsInstance<TextView>().filter {it.visibility==View.VISIBLE && it.text.isNotEmpty()}
+            // RemoteViews can replace children after their text is visible but before
+            // Android has measured them. Inspect readiness and geometry in the same
+            // UI callback so a replacement cannot race between those two checks.
+            if(root.isLayoutRequested || labels.isEmpty() || labels.any {it.isLayoutRequested || !it.isLaidOut || it.layout==null})return@runOnUiThread
+            assertFalse(children.any {it is AbsListView || it is ScrollView})
+            labels.forEach {view->
                 val layout=requireNotNull(view.layout)
                 assertTrue("Clipped text: ${view.text}; layout=${layout.height}, height=${view.height}, padding=${view.paddingTop+view.paddingBottom}",layout.height<=view.height-view.paddingTop-view.paddingBottom+2)
                 for(line in 0 until layout.lineCount) assertEquals("Ellipsis: ${view.text}",0,layout.getEllipsisCount(line))
@@ -57,7 +64,8 @@ class WidgetFlowTest {
                 // Android can retain invisible spaces past a wrap. Check visible glyphs, not trailing whitespace.
                 for(line in 0 until layout.lineCount) assertTrue("Text exceeds width: ${view.text}; line=$line, text=${layout.getLineMax(line)}, available=${view.width-view.paddingLeft-view.paddingRight}",layout.getLineMax(line)<=view.width-view.paddingLeft-view.paddingRight+2)
             }
-        }
+            checked=true
+        };checked }
     }
     private fun mount(provider:Class<*>,height:Int=172,width:Int=320) {
         ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand("appwidget grantbind --package ${app.packageName} --user 0")).use {it.readBytes()}

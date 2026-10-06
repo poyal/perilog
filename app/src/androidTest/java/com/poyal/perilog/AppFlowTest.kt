@@ -303,10 +303,15 @@ class AppFlowTest {
     }
     @Test fun unsavedTemplateAndReceiptSurviveRecreationWithoutMovingStock() {
         openTemplates();click("수정");input("${p.name} 수량","5")
+        field("${p.name} 수량").assertTextContains("5")
+        compose.waitForIdle()
         compose.activityRule.scenario.recreate()
         await{compose.onAllNodes(hasSetTextAction() and hasText("5")).fetchSemanticsNodes().isNotEmpty()}
         stock(10);back();click("확인");assertEquals(2,snapshot().templates.single().items.single().quantity)
         back();back();tab("재고");click("입고 등록");input("입고 수량","8")
+        field("입고 수량").assertTextContains("8")
+        node("함께 저장").assertIsEnabled()
+        compose.waitForIdle()
         compose.activityRule.scenario.recreate()
         await{compose.onAllNodes(hasSetTextAction() and hasText("8")).fetchSemanticsNodes().isNotEmpty()}
         stock(10);back();click("확인");assertEquals(1,snapshot().receipts.size)

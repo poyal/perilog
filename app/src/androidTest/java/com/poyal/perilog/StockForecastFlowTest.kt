@@ -100,7 +100,8 @@ class StockForecastFlowTest {
         show(ui.onNodeWithText("방문일에 약 10 EA 남을 예상")).assertIsDisplayed()
         assertEquals(before.counts,snapshot().counts);assertEquals(before.usages,snapshot().usages)
         assertEquals(before.replenishmentPlans,snapshot().replenishmentPlans)
-        ui.onNodeWithContentDescription("뒤로").performClick()
+        ui.runOnIdle {ui.activity.onBackPressedDispatcher.onBackPressed()}
+        ui.onNodeWithText("병원 일정 관리").assertIsDisplayed()
         show(ui.onNodeWithText("지정한 사용 구성대로라면")).assertIsDisplayed()
     }
 }

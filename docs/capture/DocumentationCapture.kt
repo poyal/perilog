@@ -72,7 +72,7 @@ class DocumentationCapture {
         ui.waitUntil(10000){ui.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()}
         ui.onNode(matcher).performClick()
     }
-    private fun back() {ui.onNodeWithContentDescription("뒤로").performClick()}
+    private fun back() {ui.runOnIdle{ui.activity.onBackPressedDispatcher.onBackPressed()};ui.waitForIdle()}
     private fun input(label:String,value:String) {ui.onNode(hasSetTextAction() and (hasText(label) or hasContentDescription(label))).performScrollTo().performTextReplacement(value)}
     private fun shot(name:String) {
         ui.runOnIdle { (ui.activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(ui.activity.window.decorView.windowToken,0) }
@@ -91,6 +91,14 @@ class DocumentationCapture {
         show(ui.onNodeWithText("연락처"));shot("84-settings-hospital")
         show(ui.onNodeWithText("앱 정보·문의"));shot("86-settings-help")
         click("업데이트");shot("29-about-update")
+    }
+    @Test fun captureTopFeedback() {
+        seed()
+        ui.waitUntil(15000){ui.onAllNodesWithContentDescription("설정").fetchSemanticsNodes().isNotEmpty()}
+        ui.onNodeWithContentDescription("설정").performClick();click("앱 잠금");shot("81-settings-lock")
+        click("앱 잠금 설정 저장")
+        ui.waitUntil(10000){ui.onAllNodesWithText("앱 잠금 설정을 저장했어요").fetchSemanticsNodes().isNotEmpty()}
+        shot("87-top-save-feedback")
     }
     @Test fun captureUsabilityChanges() {
         seed()

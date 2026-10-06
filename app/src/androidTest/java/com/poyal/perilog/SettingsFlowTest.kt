@@ -2,9 +2,11 @@ package com.poyal.perilog
 
 import android.content.Context
 import android.content.pm.ActivityInfo
+import android.graphics.Bitmap
 import android.view.KeyEvent
 import android.view.inputmethod.InputMethodManager
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -14,6 +16,7 @@ import com.poyal.perilog.data.*
 import kotlinx.coroutines.runBlocking
 import org.junit.*
 import org.junit.Assert.*
+import java.io.File
 
 /** Run only on a disposable emulator: this fixture replaces synthetic app data. */
 class SettingsFlowTest {
@@ -27,7 +30,8 @@ class SettingsFlowTest {
         runCatching{n.performScrollTo()};return n
     }
     private fun click(text:String)=show(ui.onNode(hasText(text) and hasClickAction())).performClick()
-    private fun back()=ui.onNodeWithContentDescription("뒤로").performClick()
+    // Top feedback temporarily covers the header; system back remains available.
+    private fun back() {ui.runOnIdle{ui.activity.onBackPressedDispatcher.onBackPressed()};ui.waitForIdle()}
     private fun systemBack(){InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);ui.waitForIdle()}
     private fun leaveExternalScreen() {
         val automation=InstrumentationRegistry.getInstrumentation().uiAutomation
@@ -60,7 +64,9 @@ class SettingsFlowTest {
         ui.onNodeWithContentDescription("설정").performClick()
     }
     @Test fun allSettingsOpenDirectlyAndBackRestoresTheListWithoutChangingData() {
-        val groups=listOf("일반","백업·데이터","투석 기록·물품","병원·연락처","도움말·앱 정보")
+        val groups=listOf("일반","투석 기록·물품","병원·연락처","백업·데이터","도움말·앱 정보")
+        val positions=groups.map { ui.onNodeWithText(it).getUnclippedBoundsInRoot().top }
+        positions.zipWithNext().forEach { (above,below)->assertTrue(above<below) }
         groups.forEach { show(ui.onNodeWithText(it)).assertHasNoClickAction() }
         val before=snapshot()
         val menus=listOf(
@@ -76,6 +82,71 @@ class SettingsFlowTest {
             ui.onNode(hasText(entry) and hasClickAction()).assertIsDisplayed()
         }
         assertEquals(before,snapshot().copy(exportedAt=before.exportedAt))
+    }
+    @Test fun savingSettingsDoesNotMoveButtonsAndFeedbackClearsOnNavigation() {
+        for((entry,save,message) in listOf(
+            Triple("앱 잠금","앱 잠금 설정 저장","앱 잠금 설정을 저장했어요"),
+            Triple("화면·표시","화면 설정 저장","화면 설정을 저장했어요"),
+            Triple("알림","알림 시각 저장","알림 시각을 저장했어요")
+        )) {
+            click(entry)
+            val saveBefore=ui.onNodeWithText(save).fetchSemanticsNode().boundsInRoot
+            val cancelBefore=ui.onNodeWithText("취소").fetchSemanticsNode().boundsInRoot
+            click(save)
+            waitFor{ui.onAllNodesWithText(message).fetchSemanticsNodes().isNotEmpty()}
+            ui.waitForIdle()
+            val feedback=ui.onNodeWithText(message).fetchSemanticsNode().boundsInRoot
+            assertTrue(feedback.bottom<saveBefore.top)
+            val safe=ViewCompat.getRootWindowInsets(ui.activity.window.decorView)!!
+                .getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+            assertTrue(feedback.top>=safe.top)
+            assertEquals(saveBefore,ui.onNodeWithText(save).fetchSemanticsNode().boundsInRoot)
+            assertEquals(cancelBefore,ui.onNodeWithText("취소").fetchSemanticsNode().boundsInRoot)
+            if(entry=="앱 잠금") {
+                val dir=File(app.filesDir,"e2e-artifacts").apply{mkdirs()}
+                File(dir,"top-snackbar-lock.png").outputStream().use {
+                    InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot().compress(Bitmap.CompressFormat.PNG,100,it)
+                }
+            }
+            // A second save replaces feedback without moving the tappable controls.
+            ui.onNodeWithText(save).performTouchInput{click()}
+            waitFor{ui.onAllNodesWithText(message).fetchSemanticsNodes().isEmpty()}
+            assertEquals(saveBefore,ui.onNodeWithText(save).fetchSemanticsNode().boundsInRoot)
+            click(save)
+            waitFor{ui.onAllNodesWithText(message).fetchSemanticsNodes().isNotEmpty()}
+            systemBack()
+            ui.onNodeWithText("설정").assertIsDisplayed()
+            ui.onNodeWithText(message).assertDoesNotExist()
+        }
+    }
+    @Test fun feedbackStaysAboveKeyboardWithoutMovingLandscapeSaveButtons() {
+        click("알림")
+        try {
+            for(orientation in listOf(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT,ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)) {
+                ui.activityRule.scenario.onActivity{it.requestedOrientation=orientation}
+                val expected=if(orientation==ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
+                    android.content.res.Configuration.ORIENTATION_LANDSCAPE else android.content.res.Configuration.ORIENTATION_PORTRAIT
+                waitFor{ui.activity.resources.configuration.orientation==expected && ui.activity.hasWindowFocus()}
+                show(ui.onNode(hasSetTextAction() and (hasText("알림 시각") or hasContentDescription("알림 시각")))).performClick()
+                ui.runOnIdle {
+                    WindowCompat.getInsetsController(ui.activity.window,ui.activity.window.decorView).show(WindowInsetsCompat.Type.ime())
+                }
+                waitFor{ViewCompat.getRootWindowInsets(ui.activity.window.decorView)?.isVisible(WindowInsetsCompat.Type.ime())==true}
+                InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(500,10000)
+                ui.waitForIdle()
+                val before=ui.onNodeWithText("알림 시각 저장").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+                ui.onNodeWithText("알림 시각 저장").performTouchInput{click()}
+                waitFor{ui.onAllNodesWithText("알림 시각을 저장했어요").fetchSemanticsNodes().isNotEmpty()}
+                val feedback=ui.onNodeWithText("알림 시각을 저장했어요").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+                assertTrue(feedback.bottom<=before.top)
+                assertEquals(before,ui.onNodeWithText("알림 시각 저장").fetchSemanticsNode().boundsInRoot)
+                assertTrue(ViewCompat.getRootWindowInsets(ui.activity.window.decorView)!!.isVisible(WindowInsetsCompat.Type.ime()))
+                ui.onNode(SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsActions.Dismiss))
+                    .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.Dismiss)
+                ui.runOnIdle{WindowCompat.getInsetsController(ui.activity.window,ui.activity.window.decorView).hide(WindowInsetsCompat.Type.ime())}
+                waitFor{ViewCompat.getRootWindowInsets(ui.activity.window.decorView)?.isVisible(WindowInsetsCompat.Type.ime())!=true}
+            }
+        } finally {ui.activityRule.scenario.onActivity{it.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_PORTRAIT}}
     }
     @Test fun completedHomeDoesNotShowOrRecordLegacyCelebration() {
         runBlocking {

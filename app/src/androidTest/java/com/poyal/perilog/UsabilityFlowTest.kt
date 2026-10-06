@@ -25,7 +25,7 @@ class UsabilityFlowTest {
         runCatching{node.performScrollTo()};return node
     }
     private fun click(text:String)=show(ui.onNodeWithText(text)).performClick()
-    private fun back()=ui.onNodeWithContentDescription("뒤로").performClick()
+    private fun back() {ui.runOnIdle{ui.activity.onBackPressedDispatcher.onBackPressed()};ui.waitForIdle()}
     @Before fun fixture() {
         runBlocking{app.repository.restore(Snapshot(preferences=Preferences(celebrate=false)))}
         await{ui.onAllNodesWithText("오늘 기록 시작").fetchSemanticsNodes().isNotEmpty()}

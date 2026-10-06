@@ -75,7 +75,7 @@ class AppFlowTest {
     }
     private fun field(label:String)=compose.onNode(hasSetTextAction() and (hasText(label) or hasContentDescription(label)))
     private fun input(label:String,value:String) {show(field(label)).performTextReplacement(value)}
-    private fun back() {compose.onNodeWithContentDescription("뒤로").performClick()}
+    private fun back() {deviceBack()}
     private fun deviceBack() {compose.runOnIdle{compose.activity.onBackPressedDispatcher.onBackPressed()};compose.waitForIdle()}
     private fun hideKeyboard() {compose.runOnIdle{(compose.activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(compose.activity.window.decorView.windowToken,0)};compose.waitForIdle()}
     private fun showKeyboard(label:String,phase:String) {

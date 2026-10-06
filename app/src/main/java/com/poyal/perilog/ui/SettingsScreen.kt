@@ -49,11 +49,6 @@ private data class SettingsEntry(val title:String,val summary:String,val icon:Im
             SettingsEntry("알림", "${if(allowed)"허용됨"else"꺼짐"} · ${String.format(Locale.US,"%02d:%02d",p.reminderHour,p.reminderMinute)}",Icons.Outlined.Notifications,"settings/notifications"),
             SettingsEntry("앱 잠금",if(p.lock)"사용 중"else"사용 안 함",Icons.Outlined.Lock,"settings/lock"),
             SettingsEntry("홈 화면 위젯","어제·오늘 기록 · 병원 일정",Icons.Outlined.Widgets,"widgets")),
-        "백업·데이터" to listOf(
-            SettingsEntry("자동 백업",if(device[DeviceKeys.folder]==null)"폴더 연결 필요"else "${if(p.backupDays==1)"매일"else"매주"} · ${p.keepBackups}개 보관",Icons.Outlined.Backup,"settings/backup"),
-            SettingsEntry("데이터 내보내기·가져오기","기록·재고·설정을 파일로 보관·복원",Icons.Outlined.ImportExport,"settings/transfer"),
-            SettingsEntry("보호 백업","복원·초기화 전 보관한 자료",Icons.Outlined.Restore,"settings/protection"),
-            SettingsEntry("데이터 초기화","기록·재고·설정 전체 초기화",Icons.Outlined.DeleteOutline,"settings/reset")),
         "투석 기록·물품" to listOf(
             SettingsEntry("사용 구성","등록한 구성 ${s.templates.size}개",Icons.Outlined.ViewList,"templates"),
             SettingsEntry("품목 관리","등록한 품목 ${s.products.size}개",Icons.Outlined.Inventory2,"products"),
@@ -64,6 +59,11 @@ private data class SettingsEntry(val title:String,val summary:String,val icon:Im
             SettingsEntry("진료과","등록한 진료과 ${s.departments.size}개",Icons.Outlined.LocalHospital,"departments"),
             SettingsEntry("검사·치료 항목","등록한 항목 ${s.careTemplates.size}개",Icons.Outlined.MedicalServices,"careTemplates"),
             SettingsEntry("연락처","등록한 연락처 ${s.contacts.size}개",Icons.Outlined.ContactPhone,"contacts")),
+        "백업·데이터" to listOf(
+            SettingsEntry("자동 백업",if(device[DeviceKeys.folder]==null)"폴더 연결 필요"else "${if(p.backupDays==1)"매일"else"매주"} · ${p.keepBackups}개 보관",Icons.Outlined.Backup,"settings/backup"),
+            SettingsEntry("데이터 내보내기·가져오기","기록·재고·설정을 파일로 보관·복원",Icons.Outlined.ImportExport,"settings/transfer"),
+            SettingsEntry("보호 백업","복원·초기화 전 보관한 자료",Icons.Outlined.Restore,"settings/protection"),
+            SettingsEntry("데이터 초기화","기록·재고·설정 전체 초기화",Icons.Outlined.DeleteOutline,"settings/reset")),
         "도움말·앱 정보" to listOf(
             SettingsEntry("사용 안내","전체 사용법 · 검색 · 실제 화면",Icons.Outlined.MenuBook,"guide"),
             SettingsEntry("업데이트","현재 버전 ${BuildConfig.VERSION_NAME}",Icons.Outlined.SystemUpdate,"updates"),

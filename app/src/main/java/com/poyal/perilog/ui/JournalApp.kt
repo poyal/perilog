@@ -4,7 +4,6 @@ package com.poyal.perilog.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -13,11 +12,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.isActive
@@ -63,8 +59,6 @@ import com.poyal.perilog.domain.dailyProgress
     val editing=route.contains('/')
     val management=editing || route in listOf("appointments","departments","careTemplates","contacts","stockHistory","receipts","recordTable","requests","guide","widgets","settings","about","updates")
     val snackbar=remember{SnackbarHostState()}
-    var feedbackHeight by remember {mutableIntStateOf(0)}
-    val feedbackInset=with(LocalDensity.current){feedbackHeight.toDp()}
     LaunchedEffect(Unit){vm.message.collectLatest{snackbar.showSnackbar(it)}}
     FirstNotificationPermission(ready && unlocked && route=="home" && !updateState.prompt,vm)
     fun navigate(to:String){
@@ -127,9 +121,8 @@ import com.poyal.perilog.domain.dailyProgress
         if (ready && unlocked) UpdatePrompt(updateState, updates::dismissPrompt) {
             updates.dismissPrompt(); navigate("updates"); updates.download()
         }
-        Scaffold(containerColor=Color.Transparent,contentColor=colors.onBackground,snackbarHost={
-            Box(Modifier.imePadding()){SnackbarHost(snackbar,Modifier.onSizeChanged{feedbackHeight=it.height})}
-        },
+        Box(Modifier.fillMaxSize()) {
+        Scaffold(containerColor=Color.Transparent,contentColor=colors.onBackground,
             bottomBar={if(!management && !WindowInsets.isImeVisible)NavigationBar(containerColor=colors.surface.copy(alpha=.97f),tonalElevation=0.dp){
                 listOf(Triple("home","홈",Icons.Outlined.Home),Triple("records","기록",Icons.Outlined.Description),Triple("stats","통계",Icons.Outlined.BarChart),Triple("stock","재고",Icons.Outlined.Inventory2)).forEach{(id,label,icon)->
                     NavigationBarItem(selected=tab==id,onClick={navigate(id)},icon={Icon(icon,label)},label={Text(label)},
@@ -137,7 +130,7 @@ import com.poyal.perilog.domain.dailyProgress
                 }
             }}){padding->
             Box(Modifier.fillMaxSize().background(colors.background)
-                .padding(padding).consumeWindowInsets(padding).imePadding().padding(bottom=feedbackInset)) {
+                .padding(padding).consumeWindowInsets(padding).imePadding()) {
                 if(!ready)CircularProgressIndicator(Modifier.align(Alignment.Center))else key(route){screenState.SaveableStateProvider(route){when {
                     route=="home"->HomeScreen(s,vm,date,{navigate("settings")},{id,kind,day->editor(id,kind,day)},::navigate,{navigate("stock")})
                     route=="records"->RecordsScreen(s,vm,snackbar,{navigate("recordTable")}){id,kind,day->editor(id,kind,day)}
@@ -183,6 +176,10 @@ import com.poyal.perilog.domain.dailyProgress
                 }}}
                 if(busy)LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))
             }
+        }
+        TopSnackbarHost(snackbar,Modifier.align(Alignment.TopCenter)
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
+            .padding(top=8.dp,start=16.dp,end=16.dp))
         }
     }}
 }

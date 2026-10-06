@@ -52,7 +52,7 @@ class ReplenishmentFlowTest {
     private fun click(text:String) {show(ui.onNodeWithText(text)).performClick()}
     private fun input(label:String,value:String) {show(ui.onNode(hasSetTextAction() and hasContentDescription(label))).performTextReplacement(value)}
     private fun hideKeyboard() {ui.runOnIdle {(ui.activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(ui.activity.window.decorView.windowToken,0)};ui.waitForIdle()}
-    private fun back() {hideKeyboard();ui.onNodeWithContentDescription("뒤로").performClick()}
+    private fun back() {hideKeyboard();ui.runOnIdle{ui.activity.onBackPressedDispatcher.onBackPressed()};ui.waitForIdle()}
     private fun requests() {
         hideKeyboard();ui.onNode(hasText("재고") and SemanticsMatcher.keyIsDefined(SemanticsProperties.Selected)).performClick()
         click("입고 요청 계산기")

@@ -52,7 +52,7 @@ class AppointmentFlowTest {
         InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(500,10000)
         ui.waitForIdle()
     }
-    private fun back(){ui.onNodeWithContentDescription("뒤로").performClick()}
+    private fun back(){ui.runOnIdle{ui.activity.onBackPressedDispatcher.onBackPressed()};ui.waitForIdle()}
     private fun settings(){ui.onNodeWithContentDescription("설정").performClick()}
     private fun avatar(name:String)=ui.onNodeWithContentDescription("$name 연락처")
     private fun closeContact(){click("닫기");await{ui.onAllNodesWithText("연결 방법 선택").fetchSemanticsNodes().isEmpty()}}

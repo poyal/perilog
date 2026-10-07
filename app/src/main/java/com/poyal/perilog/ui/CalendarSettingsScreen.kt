@@ -10,12 +10,17 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.Identity
@@ -112,14 +117,22 @@ import java.time.format.DateTimeFormatter
                     resumeId = null; targets = emptyList()
                     try {chooseGoogle.launch(AccountManager.newChooseAccountIntent(null, null, arrayOf("com.google"), null, null, null, null))}
                     catch(_: android.content.ActivityNotFoundException) {error = "이 기기에서는 구글 계정을 선택할 수 없어요. 휴대폰 캘린더 연결을 이용해 주세요."}
-                }, enabled = !working) {Text("구글 계정으로 연결")}
+                }, enabled = !working, modifier = Modifier.fillMaxWidth()) {Text("구글 계정으로 연결", textAlign = TextAlign.Center)}
                 Hint("구글 직접 연결은 인터넷과 Google Play 서비스가 필요해요.")
             }
             if(connections.isNotEmpty()) Paper {Hint("이전에 남긴 캘린더 일정이 있을 수 있어요. 다른 방식이나 캘린더로 연결하기 전에 기존 일정을 확인해 주세요.")}
             if(targets.isNotEmpty()) Paper {
                 Section("캘린더 선택")
+                Hint("일정을 보낼 캘린더를 눌러 주세요.")
                 targets.forEach { target -> SecondaryButton(onClick = {selected = target; acknowledgeRestore = false}, enabled = !working, modifier = Modifier.fillMaxWidth()) {
-                    Column {Text(target.name); Text(target.account.ifBlank {"휴대폰 전용"}, style = MaterialTheme.typography.bodySmall)}
+                    Icon(Icons.Outlined.CalendarMonth, null, Modifier.size(24.dp))
+                    Column(Modifier.weight(1f).padding(horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(target.name, Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                        if(target.account != target.name) Text(target.account.ifBlank {"휴대폰 전용"},
+                            Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                    }
+                    Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, Modifier.size(24.dp))
                 } }
             }
         } else {
@@ -158,21 +171,42 @@ import java.time.format.DateTimeFormatter
             } }
         }
     }
-    selected?.let {target -> AlertDialog(onDismissRequest = {if(!working) selected = null}, title = {Text("이 캘린더에 연동할까요?")}, text = {
-        Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("${target.name}\n${target.account}\n오늘 이후 예약 ${snapshot.appointments.count {it.date >= today()}}건을 보냅니다.")
-            Text("진료과·검사·치료 항목이 캘린더에 저장돼요. 마지막 예약시간에서 30분 뒤를 표시용 종료로 사용해요.")
-            CalendarCheck("예약 메모 포함", includeMemo, !working) {includeMemo = it}
+    selected?.let {target -> AlertDialog(onDismissRequest = {if(!working) selected = null},
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {Text("캘린더에 연동할까요?", style = MaterialTheme.typography.titleLarge)}, text = {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerLowest) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(target.name, style = MaterialTheme.typography.titleMedium)
+                    if(target.account != target.name) Text(target.account.ifBlank {"휴대폰 전용"},
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("오늘 이후 예약 ${snapshot.appointments.count {it.date >= today()}}건",
+                        modifier = Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary)
+                }
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("전송할 내용", style = MaterialTheme.typography.titleSmall)
+                Text("진료과·검사·치료 항목을 보내요.\n종료 시간은 마지막 예약의 30분 뒤로 표시해요.", style = MaterialTheme.typography.bodyMedium)
+                CalendarCheck("예약 메모도 포함", includeMemo, !working) {includeMemo = it}
+            }
             if(restoreCheck && target.provider == CalendarConnection.DEVICE) {
-                Text("복원한 예약이 캘린더에 이미 있을 수 있어요. 기존 일정을 정리하지 않으면 중복될 수 있어요.")
-                CalendarCheck("기존 일정을 확인했으며 새 전송에 동의해요", acknowledgeRestore, !working) {acknowledgeRestore = it}
+                HorizontalDivider()
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("기존 일정 확인", style = MaterialTheme.typography.titleSmall)
+                    Text("이전에 보낸 일정이 남아 있으면 중복될 수 있어요. 캘린더를 먼저 확인해 주세요.", style = MaterialTheme.typography.bodyMedium)
+                    CalendarCheck("기존 일정을 확인했고, 새로 전송할게요", acknowledgeRestore, !working) {acknowledgeRestore = it}
+                }
             }
         }
-    }, confirmButton = {TextButton(enabled = !working && (!restoreCheck || target.provider != CalendarConnection.DEVICE || acknowledgeRestore), onClick = {perform {
+    }, confirmButton = {Button(modifier = Modifier.heightIn(min = 48.dp),
+        enabled = !working && (!restoreCheck || target.provider != CalendarConnection.DEVICE || acknowledgeRestore), onClick = {perform {
         store.connect(target, includeMemo, acknowledgeRestore); runtime.request(target.provider); selected = null; targets = emptyList()
-    }}) {Text("연동 시작")}}, dismissButton = {TextButton(onClick = {selected = null}, enabled = !working) {Text("취소")}}) }
-    if(disconnecting && connection != null) AlertDialog(onDismissRequest = {disconnecting = false}, title = {Text("캘린더 연결을 해제할까요?")}, text = {
-        Column(Modifier.verticalScroll(rememberScrollState())) {
+    }}) {Text("연동 시작")}}, dismissButton = {TextButton(onClick = {selected = null}, enabled = !working,
+        modifier = Modifier.heightIn(min = 48.dp)) {Text("취소")}}) }
+    if(disconnecting && connection != null) AlertDialog(onDismissRequest = {if(!working) disconnecting = false},
+        containerColor = MaterialTheme.colorScheme.surface, title = {Text("캘린더 연결을 해제할까요?", style = MaterialTheme.typography.titleLarge)}, text = {
+        Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("페리로그의 병원 예약은 유지해요. 기존 일정을 남기면 이후에는 자동으로 수정·삭제되지 않아요.")
             CalendarCheck("페리로그가 보낸 일정도 삭제", deleteEvents, !working) {deleteEvents = it}
             if(connection.state == CalendarConnection.CLEANING || connection.error.isNotBlank()) Text("정리가 불가능하면 위 항목을 끄고 기존 일정을 남긴 채 해제할 수 있어요.")
@@ -189,10 +223,12 @@ import java.time.format.DateTimeFormatter
 }
 
 @Composable private fun CalendarCheck(label: String, value: Boolean, enabled: Boolean, change: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().toggleable(value, enabled = enabled, role = Role.Checkbox, onValueChange = change),
-        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-        Checkbox(value, null, enabled = enabled)
-        Text(label, Modifier.weight(1f))
+    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
+        .toggleable(value, enabled = enabled, role = Role.Checkbox, onValueChange = change)
+        .padding(horizontal = 4.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(value, null, enabled = enabled, modifier = Modifier.size(24.dp))
+        Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
     }
 }
 

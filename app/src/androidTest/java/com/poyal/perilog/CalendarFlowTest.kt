@@ -80,7 +80,10 @@ class CalendarFlowTest {
         capture("76-calendar-connect.png")
         click("휴대폰 캘린더 연결")
         waitUntil {ui.onAllNodesWithText(name).fetchSemanticsNodes().isNotEmpty()}
+        ui.onNodeWithText(name).performScrollTo()
+        capture("78-calendar-select.png")
         click(name)
+        capture("79-calendar-confirm.png")
         // The fixture was restored; a new native connection explicitly acknowledges old copies.
         ui.onAllNodes(isToggleable()).onLast().performScrollTo().performClick()
         click("연동 시작")
@@ -99,7 +102,7 @@ class CalendarFlowTest {
         assertEquals("외부에서 바꾼 제목", remote().single().second)
         runBlocking {app.repository.appointment(visit.copy(time = "10:00", departmentTimes = mapOf("kidney" to "10:00", "eye" to "12:00"))); app.calendar.engine.drain(CalendarConnection.DEVICE)}
         assertEquals(remoteId, remote().single().first)
-        assertEquals("병원 방문 · 신장내과, 안과", remote().single().second)
+        assertEquals("병원 방문 · 신장내과 외 1개", remote().single().second)
         resolver.delete(ContentUris.withAppendedId(Events.CONTENT_URI, remoteId), null, null)
         runBlocking {app.calendar.engine.drain(CalendarConnection.DEVICE)}
         assertEquals(1, runBlocking {app.repository.snapshot().appointments.size}); assertTrue(remote().isEmpty())

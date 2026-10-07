@@ -65,8 +65,12 @@ fun Appointment.calendarPayload(connection: CalendarConnection): CalendarPayload
         .joinToString("\n") { (time, name) -> if (time.isEmpty()) name else "$time · $name" } +
         (if (connection.includeMemo && memo.isNotBlank()) "\n\n메모\n$memo" else "") +
         "\n\n페리로그에서 관리하는 병원 일정입니다. 변경은 페리로그에서 해 주세요."
-    return CalendarPayload(id,
-        if (departments.isEmpty()) "병원 방문" else "병원 방문 · ${departments.joinToString(", ") { it.name }}",
+    val title = when (departments.size) {
+        0 -> "병원 방문"
+        1 -> "병원 방문 · ${departments.first().name}"
+        else -> "병원 방문 · ${departments.first().name} 외 ${departments.size - 1}개"
+    }
+    return CalendarPayload(id, title,
         description, instant(at()), instant(endsAt()) + 30 * 60 * 1000L, zone.id)
 }
 

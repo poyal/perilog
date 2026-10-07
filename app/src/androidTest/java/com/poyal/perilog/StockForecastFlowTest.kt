@@ -68,14 +68,22 @@ class StockForecastFlowTest {
     }
     @Test fun homeAppointmentOpensReadOnlyDetailsAndReturnsAfterEditing() {
         val before=snapshot()
+        fun menu()=show(ui.onNodeWithTag("appointment-menu-${before.appointments.single().id}")).performClick()
         show(ui.onNodeWithTag("home-appointment")).performClick()
+        ui.onNodeWithText("병원 일정 상세").assertIsDisplayed()
+        ui.onNodeWithText("일정 수정").assertDoesNotExist()
+        menu()
+        ui.onNodeWithText("같은 구성으로 다음 예약").assertIsDisplayed()
+        androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
+        ui.waitForIdle()
+        ui.onNodeWithText("일정 수정").assertDoesNotExist()
         ui.onNodeWithText("병원 일정 상세").assertIsDisplayed()
         show(ui.onNodeWithText("예약일 기준 재고")).assertIsDisplayed()
         assertEquals(before,snapshot().copy(exportedAt=before.exportedAt))
         click("예상 잔량 계산 보기")
         show(ui.onNodeWithText("방문일에 약 10 EA 남을 예상")).assertIsDisplayed()
         ui.onNodeWithContentDescription("뒤로").performClick()
-        click("일정 수정")
+        menu();click("일정 수정")
         show(ui.onNode(hasSetTextAction() and hasText("메모"))).performTextReplacement("상세에서 수정한 메모")
         click("저장")
         ui.waitUntil(10000) {ui.onAllNodesWithText("병원 일정 상세").fetchSemanticsNodes().isNotEmpty()}
@@ -88,6 +96,15 @@ class StockForecastFlowTest {
         show(ui.onNodeWithContentDescription("병원 일정 추가")).performClick()
         ui.onNodeWithText("병원 일정 등록").assertIsDisplayed()
         assertEquals(1,snapshot().appointments.size)
+        ui.runOnIdle {ui.activity.onBackPressedDispatcher.onBackPressed()}
+        show(ui.onNodeWithTag("home-appointment")).performClick()
+        menu();click("일정 삭제");click("취소")
+        assertEquals(1,snapshot().appointments.size)
+        ui.onNodeWithText("병원 일정 상세").assertIsDisplayed()
+        menu();click("일정 삭제");click("확인")
+        ui.waitUntil(10000) {snapshot().appointments.isEmpty()}
+        show(ui.onNodeWithText("병원 일정 등록")).assertIsDisplayed()
+        ui.onNodeWithText("병원 일정 상세").assertDoesNotExist()
     }
     @Test fun manualPatternIsSharedAndDoesNotModifyStockOrSavedRequests() {
         val before=snapshot()

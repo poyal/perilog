@@ -46,8 +46,7 @@ internal fun inputDate(text:String):LocalDate? {
 @Composable fun DateRangeControl(from: LocalDate, to: LocalDate, onClick: () -> Unit, enabled: Boolean, modifier: Modifier = Modifier) {
     SecondaryButton(onClick, modifier.fillMaxWidth().semantics {
         contentDescription="조회 기간 변경";stateDescription=rangeLabel(from,to)
-    }, enabled=enabled, disabledContentColor=MaterialTheme.colorScheme.onSurfaceVariant,
-        contentPadding=PaddingValues(horizontal=12.dp,vertical=10.dp)) {
+    }, enabled=enabled, disabledContentColor=MaterialTheme.colorScheme.onSurfaceVariant) {
         Icon(Icons.Outlined.CalendarMonth,null,Modifier.size(20.dp))
         Spacer(Modifier.width(8.dp))
         Text(rangeLabel(from,to),Modifier.weight(1f))
@@ -102,7 +101,7 @@ internal fun inputDate(text:String):LocalDate? {
                         inputMode=!inputMode
                     }){Icon(if(inputMode)Icons.Outlined.CalendarMonth else Icons.Outlined.Edit,
                         if(inputMode)"달력으로 선택"else"날짜 직접 입력")}
-                    TextButton(onClick={if(valid)onApply(start!!,end!!)},enabled=valid){Text("적용")}
+                    SmallButton(onClick={if(valid)onApply(start!!,end!!)},enabled=valid,emphasized=true){Text("적용")}
                 }
                 if(inputMode)Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp),
                     verticalArrangement=Arrangement.spacedBy(16.dp)) {

@@ -38,7 +38,7 @@ import java.time.format.DateTimeFormatter
                 Column { Section("페리로그"); Hint("버전 ${BuildConfig.VERSION_NAME}") }
             }
             Text("제작자  Poyal")
-            TextButton(onClick = { link("mailto:poyal.work@gmail.com") }) { Text("poyal.work@gmail.com") }
+            SmallButton(onClick = { link("mailto:poyal.work@gmail.com") }) { Text("poyal.work@gmail.com") }
             HorizontalDivider()
             MenuRow("GitHub", "소스와 프로젝트 안내", Icons.Outlined.Code) { link("https://github.com/poyal/perilog") }
             MenuRow("버그 신고 · 기능 제안", icon = Icons.Outlined.BugReport) { link("https://github.com/poyal/perilog/issues") }
@@ -100,7 +100,7 @@ import java.time.format.DateTimeFormatter
             if (transfer == TransferStatus.DOWNLOADING) {
                 LinearProgressIndicator(progress = { if (state.total > 0) (state.downloaded.toFloat() / state.total).coerceIn(0f, 1f) else 0f }, modifier = Modifier.fillMaxWidth())
                 Hint("${state.downloaded / 1024} / ${state.total / 1024} KB")
-                TextButton(onClick = updates::cancelDownload) { Text("다운로드 취소") }
+                SmallButton(onClick = updates::cancelDownload) { Text("다운로드 취소") }
             }
             if (transfer == TransferStatus.VERIFYING) LinearProgressIndicator(Modifier.fillMaxWidth())
             if (matching && state.transferMessage.isNotBlank()) Text(state.transferMessage, color = if (transfer == TransferStatus.FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
@@ -132,6 +132,6 @@ import java.time.format.DateTimeFormatter
             if (state.check == CheckStatus.ERROR) Hint("이전 확인 결과예요. 지금은 GitHub에 연결하지 못했어요.")
             Hint("APK는 Download 폴더에 저장돼요. 설치는 확인 후 직접 진행해 주세요.")
         } },
-        confirmButton = { TextButton(onClick = download) { Text("다운로드") } },
-        dismissButton = { TextButton(onClick = dismiss) { Text("나중에") } })
+        confirmButton = { SmallButton(onClick = download, emphasized = true) { Text("다운로드") } },
+        dismissButton = { SmallButton(onClick = dismiss) { Text("나중에") } })
 }

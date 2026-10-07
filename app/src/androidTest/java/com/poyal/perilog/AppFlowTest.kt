@@ -341,7 +341,17 @@ class AppFlowTest {
         input("몸무게","61.");field("몸무게").assertTextContains("61.")
         field("몸무게").performTextInput("5");field("몸무게").assertTextContains("61.5")
         show(compose.onNodeWithContentDescription("몸무게 전체 지우기")).performClick()
-        input("몸무게","62.25");click("기록 저장")
+        input("몸무게","62.1234")
+        show(compose.onNodeWithContentDescription("활력 상태 저장")).assertIsNotEnabled()
+        input("몸무게","62.25")
+        show(compose.onNodeWithContentDescription("활력 상태 저장")).performClick()
+        field("몸무게").assertDoesNotExist()
+        node("62.25 kg").assertExists()
+        await{snapshot().drafts.singleOrNull()?.treatment?.weightGrams==62250}
+        compose.activityRule.scenario.recreate()
+        show(compose.onNodeWithContentDescription("활력 상태 수정")).performClick()
+        field("몸무게").assertTextContains("62.25")
+        click("기록 저장")
         await{snapshot().treatments.isNotEmpty()};assertEquals(62250,snapshot().treatments.single().weightGrams)
     }
     @Test fun invalidWholeQuantityCannotSaveThenCanBeCorrected() {
@@ -397,7 +407,7 @@ class AppFlowTest {
         field("배액무게").assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
         back();tab("기록");click("표")
         show(compose.onNodeWithTag("record-cell-previous-0")).performClick();click("기록 열기")
-        click("수정");field("몸무게").assertTextContains("61")
+        show(compose.onNodeWithContentDescription("활력 상태 수정")).performClick();field("몸무게").assertTextContains("61")
         show(compose.onNodeWithContentDescription("제수량 도움말")).performClick()
         field("이 기록의 이전 주입 기준").assertTextContains("1900");click("닫기")
         click("오늘")

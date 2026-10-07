@@ -53,7 +53,7 @@ class MainActivity: FragmentActivity() {
                     Text(getString(R.string.app_name),style=MaterialTheme.typography.headlineLarge)
                     Text(getString(R.string.app_description),style=MaterialTheme.typography.titleLarge)
                     Spacer(Modifier.height(32.dp)); Text(authMessage)
-                    Button(onClick={ authenticate() },enabled=privacyLoaded) { Text("기록 열기") }
+                    Action("기록 열기",{authenticate()},enabled=privacyLoaded)
                 }
             }
         } } }

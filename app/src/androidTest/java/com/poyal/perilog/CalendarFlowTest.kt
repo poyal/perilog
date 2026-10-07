@@ -69,6 +69,7 @@ class CalendarFlowTest {
     }
     private fun capture(fileName: String) {
         ui.waitForIdle()
+        android.os.SystemClock.sleep(400) // Let the platform dialog transition and touch ripple finish.
         val directory = File(app.filesDir, "calendar-screenshots").apply {mkdirs()}
         val bitmap = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
         val name = if(app.resources.configuration.fontScale > 1.2f) fileName.replace(".png", "-large.png") else fileName

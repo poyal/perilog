@@ -118,13 +118,13 @@ internal fun filterRecords(s:Snapshot,f:RecordFilters)=s.visibleRecords().filter
                 override val minimumTouchTargetSize=DpSize.Zero
             }}
             Column(Modifier.fillMaxSize()) {
-                FlowRow(Modifier.fillMaxWidth().testTag("record-table-controls").padding(horizontal=8.dp),horizontalArrangement=Arrangement.Center,itemVerticalAlignment=Alignment.CenterVertically) {
-                    TextButton(onClick={filterOpen=true}){Icon(Icons.Outlined.FilterList,null);Text("필터")}
-                    TextButton(onClick={changeZoom(zoom-.25f)},enabled=zoom>min(.25f,fitScale)+.001f,modifier=Modifier.sizeIn(minWidth=48.dp,minHeight=48.dp).semantics{contentDescription="표 축소"}){Text("−")}
+                ButtonRow(Modifier.fillMaxWidth().testTag("record-table-controls").padding(8.dp),centered=true) {
+                    SmallButton(onClick={filterOpen=true}){Icon(Icons.Outlined.FilterList,null,Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text("필터")}
+                    SmallButton(onClick={changeZoom(zoom-.25f)},enabled=zoom>min(.25f,fitScale)+.001f,modifier=Modifier.semantics{contentDescription="표 축소"}){Text("−")}
                     Text("${(zoom*100).roundToInt()}%",Modifier.testTag("table-zoom").semantics{stateDescription="${(zoom*100).roundToInt()}%"})
-                    TextButton(onClick={changeZoom(zoom+.25f)},enabled=zoom<2f,modifier=Modifier.sizeIn(minWidth=48.dp,minHeight=48.dp).semantics{contentDescription="표 확대"}){Text("+")}
-                    TextButton(onClick={changeZoom(fitScale,Offset.Zero);fit=true;pendingX=0}){Text("전체 열")}
-                    TextButton(onClick={changeZoom(1f)}){Text("100%로")}
+                    SmallButton(onClick={changeZoom(zoom+.25f)},enabled=zoom<2f,modifier=Modifier.semantics{contentDescription="표 확대"}){Text("+")}
+                    SmallButton(onClick={changeZoom(fitScale,Offset.Zero);fit=true;pendingX=0}){Text("전체 열")}
+                    SmallButton(onClick={changeZoom(1f)}){Text("100%로")}
                 }
                 HorizontalDivider()
                 if(entries.isEmpty())Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center){Text("선택한 조건에 해당하는 기록이 없어요.")}
@@ -196,7 +196,7 @@ internal fun filterRecords(s:Snapshot,f:RecordFilters)=s.visibleRecords().filter
                             Text("${selected.date} · ${if(selected.kind=="MACHINE")"기계투석"else"추가투석"}",style=MaterialTheme.typography.labelSmall)
                             Text("${recordColumns[selectedColumn].replace('\n',' ')}: ${recordValues(selected)[selectedColumn].replace('\n',' ')}")
                         }
-                        TextButton(onClick={open(selected)}){Text("기록 열기")}
+                        SmallButton(onClick={open(selected)}){Text("기록 열기")}
                     }
                 }
 
@@ -215,7 +215,7 @@ internal fun filterRecords(s:Snapshot,f:RecordFilters)=s.visibleRecords().filter
             SelectionBox("투석 종류",filters.type.value,listOf("전체","기계투석","추가투석"),{filters.type.value=it})
             SelectionBox("완료 상태",filters.status.value,listOf("전체 상태","미완료","완료"),{filters.status.value=it})
         }
-    },confirmButton={TextButton(onClick={filterOpen=false}){Text("닫기")}})
+    },confirmButton={SmallButton(onClick={filterOpen=false}){Text("닫기")}})
     if(periodOpen)DateRangeDialog(LocalDate.parse(filters.from.value),LocalDate.parse(filters.to.value),{periodOpen=false}){from,to->
         filters.from.value=from.toString();filters.to.value=to.toString();filters.range.value="기간 지정";filters.period.value=true;periodOpen=false
     }

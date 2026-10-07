@@ -144,21 +144,50 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
     }
 }
 
-@Composable fun AppointmentDetailScreen(s:Snapshot,id:String,now:LocalDateTime,navigate:(String)->Unit,back:()->Unit,vm:JournalViewModel?=null) {
+@Composable private fun AppointmentEntry(s:Snapshot,a:Appointment,vm:JournalViewModel,now:LocalDateTime,
+    navigate:(String)->Unit,delete:()->Unit) {
+    var menu by remember(a.id){mutableStateOf(false)}
+    Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+        Paper {
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                Text(a.dayLabel(now),Modifier.weight(1f),fontWeight=FontWeight.Bold,color=MaterialTheme.colorScheme.primary)
+                Box {
+                    IconButton(onClick={menu=true},modifier=Modifier.testTag("appointment-menu-${a.id}")) {
+                        Icon(Icons.Outlined.MoreVert,"${a.date} 일정 더보기")
+                    }
+                    DropdownMenu(expanded=menu,onDismissRequest={menu=false}) {
+                        DropdownMenuItem(text={Text("일정 수정")},leadingIcon={Icon(Icons.Outlined.Edit,null)},
+                            onClick={menu=false;navigate("appointment/${a.id}")},
+                            modifier=Modifier.semantics{contentDescription="${a.id} 일정 수정"})
+                        DropdownMenuItem(text={Text("같은 구성으로 다음 예약")},leadingIcon={Icon(Icons.Outlined.ContentCopy,null)},
+                            onClick={menu=false;navigate("appointment/next/${a.id}")})
+                        DropdownMenuItem(text={Text("일정 삭제")},leadingIcon={Icon(Icons.Outlined.DeleteOutline,null)},
+                            onClick={menu=false;delete()},modifier=Modifier.semantics{contentDescription="${a.id} 일정 삭제"},
+                            colors=MenuDefaults.itemColors(textColor=MaterialTheme.colorScheme.error,leadingIconColor=MaterialTheme.colorScheme.error))
+                    }
+                }
+            }
+            AppointmentDetails(a)
+            if(!a.endsAt().isBefore(now)) AppointmentStockSummary(s,a,now,navigate)
+        }
+        AppointmentCalendarStatus(vm,a.id,navigate)
+    }
+}
+
+@Composable private fun AppointmentDeleteDialog(id:String,vm:JournalViewModel,dismiss:()->Unit,deleted:()->Unit) {
+    Confirm("일정을 삭제할까요?","선택한 예약만 삭제해요. 등록한 진료과와 검사·치료 항목은 유지돼요.",dismiss) {
+        vm.act("일정을 삭제했어요"){vm.repository.deleteAppointment(id);deleted()}
+    }
+}
+
+@Composable fun AppointmentDetailScreen(s:Snapshot,id:String,now:LocalDateTime,navigate:(String)->Unit,back:()->Unit,vm:JournalViewModel) {
+    var deleting by rememberSaveable{mutableStateOf(false)}
     val appointment=s.appointments.find {it.id==id}
     Page("병원 일정 상세",back=back) {
         if(appointment==null) Paper {Hint("삭제된 병원 일정이에요.")}
-        else {
-            Paper {
-                Text(appointment.dayLabel(now),fontWeight=FontWeight.Bold,color=MaterialTheme.colorScheme.primary)
-                AppointmentDetails(appointment)
-                if(!appointment.endsAt().isBefore(now)) AppointmentStockSummary(s,appointment,now,navigate)
-            }
-            Action("일정 수정",{navigate("appointment/${appointment.id}")},icon=Icons.Outlined.Edit)
-            SecondaryButton(onClick={navigate("appointment/next/${appointment.id}")}) {Text("같은 구성으로 다음 예약")}
-            if(vm!=null) AppointmentCalendarStatus(vm,appointment.id,navigate)
-        }
+        else AppointmentEntry(s,appointment,vm,now,navigate){deleting=true}
     }
+    if(deleting && appointment!=null) AppointmentDeleteDialog(id,vm,{deleting=false}) {deleting=false;back()}
 }
 
 @Composable fun AppointmentsScreen(s:Snapshot,vm:JournalViewModel,now:LocalDateTime,navigate:(String)->Unit,back:()->Unit) {
@@ -170,21 +199,10 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
         listOf(false,true).forEach { past ->
             val entries=ordered.filter{it.endsAt().isBefore(now)==past}.let{if(past)it.reversed()else it}
             if(entries.isNotEmpty())Section(if(past)"지난 일정"else"예정 일정")
-            entries.forEach { a -> Paper {
-                Text(a.dayLabel(now),fontWeight=FontWeight.Bold,color=MaterialTheme.colorScheme.primary)
-                AppointmentDetails(a)
-                if(!past) AppointmentStockSummary(s,a,now,navigate)
-                FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick={navigate("appointment/${a.id}")},modifier=Modifier.semantics{contentDescription="${a.id} 일정 수정"}){Text("수정")}
-                    TextButton(onClick={navigate("appointment/next/${a.id}")}){Text("같은 구성으로 다음 예약")}
-                    TextButton(onClick={deleting=a.id},modifier=Modifier.semantics{contentDescription="${a.id} 일정 삭제"}){Text("삭제")}
-                }
-            }}
+            entries.forEach { a -> key(a.id) {AppointmentEntry(s,a,vm,now,navigate){deleting=a.id}} }
         }
     }
-    deleting?.let{id->Confirm("일정을 삭제할까요?","선택한 예약만 삭제해요. 등록한 진료과와 검사·치료 항목은 유지돼요.",{deleting=null}) {
-        vm.act("일정을 삭제했어요"){vm.repository.deleteAppointment(id);deleting=null}
-    }}
+    deleting?.let{id->AppointmentDeleteDialog(id,vm,{deleting=null}){deleting=null}}
 }
 
 @Composable fun AppointmentEditor(s:Snapshot,vm:JournalViewModel,id:String,repeat:Boolean,navigate:(String)->Unit,back:()->Unit) {
@@ -228,7 +246,7 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
                         {value->a=a.copy(departmentTimes=a.departmentTimes+(d.id to value))},"${d.name} 시간 선택"){timeTarget=d.id}
                 }
             }
-            TextButton(onClick={navigate("departments")}){Text("진료과 등록·관리")}
+            SmallButton(onClick={navigate("departments")}){Text("진료과 등록·관리")}
         }
         Paper {
             Section("치료 항목 · 여러 개 선택")
@@ -245,14 +263,14 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
             selectedItems.forEach { item ->
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                     Text(item.name,Modifier.weight(1f))
-                    TextButton(onClick={careTimeTarget=item.id}){Text(item.time ?: "시간 지정")}
+                    SmallButton(onClick={careTimeTarget=item.id}){Text(item.time ?: "시간 지정")}
                     if(item.time!=null)IconButton(onClick={a=a.copy(careItems=selectedItems.map{if(it.id==item.id)it.copy(time=null)else it})}) {
                         Icon(Icons.Outlined.Close,"${item.name} 시간 해제")
                     }
                 }
             }
             Hint("시간이 필요한 항목만 지정해 주세요. 진료 전후 시각을 자유롭게 정할 수 있어요.")
-            TextButton(onClick={navigate("careTemplates")}){Text("검사·치료 항목 등록·관리")}
+            SmallButton(onClick={navigate("careTemplates")}){Text("검사·치료 항목 등록·관리")}
             Hint("할 일을 하나씩 등록하고 필요한 항목을 여러 개 고르세요. 선택한 항목을 다시 누르면 해제해요.")
         }
         Paper {OutlinedTextField(a.memo,{a=a.copy(memo=it)},label={Text("메모")},modifier=Modifier.fillMaxWidth())}
@@ -262,10 +280,10 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
         val initial=runCatching{LocalTime.parse(value)}.getOrDefault(LocalTime.of(9,0))
         val clock=rememberTimePickerState(initialHour=initial.hour,initialMinute=initial.minute,is24Hour=true)
         AlertDialog(onDismissRequest={timeTarget=null},title={Text(if(target.isEmpty())"예약시간"else"${a.departments.find{it.id==target}?.name} 예약시간")},text={TimeInput(clock)},
-            confirmButton={TextButton(onClick={
+            confirmButton={SmallButton(emphasized=true,onClick={
                 val value=String.format(Locale.US,"%02d:%02d",clock.hour,clock.minute)
                 a=if(target.isEmpty())a.copy(time=value) else a.copy(departmentTimes=a.departmentTimes+(target to value));timeTarget=null
-            }){Text("확인")}},dismissButton={TextButton(onClick={timeTarget=null}){Text("취소")}})
+            }){Text("확인")}},dismissButton={SmallButton(onClick={timeTarget=null}){Text("취소")}})
     }
     careTimeTarget?.let { target ->
         val item=a.selectedCareItems().firstOrNull{it.id==target}
@@ -273,10 +291,10 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
             val initial=runCatching{LocalTime.parse(item.time ?: a.time)}.getOrDefault(LocalTime.of(9,0))
             val clock=rememberTimePickerState(initialHour=initial.hour,initialMinute=initial.minute,is24Hour=true)
             AlertDialog(onDismissRequest={careTimeTarget=null},title={Text("${item.name} 시간")},text={TimeInput(clock)},
-                confirmButton={TextButton(onClick={
+                confirmButton={SmallButton(emphasized=true,onClick={
                     val value=String.format(Locale.US,"%02d:%02d",clock.hour,clock.minute)
                     a=a.copy(careItems=a.selectedCareItems().map{if(it.id==target)it.copy(time=value)else it});careTimeTarget=null
-                }){Text("확인")}},dismissButton={TextButton(onClick={careTimeTarget=null}){Text("취소")}})
+                }){Text("확인")}},dismissButton={SmallButton(onClick={careTimeTarget=null}){Text("취소")}})
         }
     }
 }
@@ -286,7 +304,7 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
     OutlinedTextField(value,onChange,label={Text(label)},placeholder={Text("예: 09:30")},
         modifier=Modifier.fillMaxWidth(),singleLine=true,isError=value.isNotBlank() && !valid,
         supportingText={if(value.isNotBlank() && !valid)Text("00:00~23:59 형식으로 입력해 주세요.")})
-    TextButton(onClick=openClock){Icon(Icons.Outlined.Schedule,null);Spacer(Modifier.width(8.dp));Text(clockLabel)}
+    SmallButton(onClick=openClock){Icon(Icons.Outlined.Schedule,null);Spacer(Modifier.width(8.dp));Text(clockLabel)}
 }
 
 @Composable fun DepartmentsScreen(s:Snapshot,vm:JournalViewModel,navigate:(String)->Unit,back:()->Unit) {
@@ -296,9 +314,9 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
         if(s.departments.isEmpty())Paper{Hint("자주 방문하는 진료과를 등록해 주세요.")}
         s.departments.sortedBy{it.name}.forEach { d -> Paper {
             DepartmentTags(listOf(d))
-            Row {
-                TextButton(onClick={navigate("department/${d.id}")},modifier=Modifier.semantics{contentDescription="${d.name} 수정"}){Text("수정")}
-                TextButton(onClick={deleting=d.id},modifier=Modifier.semantics{contentDescription="${d.name} 삭제"}){Text("삭제")}
+            ButtonRow {
+                SmallButton(onClick={navigate("department/${d.id}")},modifier=Modifier.semantics{contentDescription="${d.name} 수정"}){Text("수정")}
+                SmallButton(onClick={deleting=d.id},modifier=Modifier.semantics{contentDescription="${d.name} 삭제"},contentColor=MaterialTheme.colorScheme.error){Text("삭제")}
             }
         }}
     }
@@ -318,7 +336,7 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
         Paper {
             Section("진료과 색상");DepartmentTags(listOf(d.copy(name=d.name.ifBlank{"진료과"})))
             ColorPalette(s.preferences.palette,d.color){d=d.copy(color=it)}
-            TextButton(onClick={picker=!picker}){Text(if(picker)"컬러 피커 접기"else"컬러 피커 열기")}
+            SmallButton(onClick={picker=!picker}){Text(if(picker)"컬러 피커 접기"else"컬러 피커 열기")}
             if(picker)InlineColorPicker(d.color){d=d.copy(color=it)}
         }
     }
@@ -333,9 +351,9 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                 Icon(careIcon(c.iconKey).image,null,Modifier.size(28.dp),tint=MaterialTheme.colorScheme.primary);Section(c.name)
             }
-            Row {
-                TextButton(onClick={navigate("care/${c.id}")},modifier=Modifier.semantics{contentDescription="${c.name} 수정"}){Text("수정")}
-                TextButton(onClick={deleting=c.id},modifier=Modifier.semantics{contentDescription="${c.name} 삭제"}){Text("삭제")}
+            ButtonRow {
+                SmallButton(onClick={navigate("care/${c.id}")},modifier=Modifier.semantics{contentDescription="${c.name} 수정"}){Text("수정")}
+                SmallButton(onClick={deleting=c.id},modifier=Modifier.semantics{contentDescription="${c.name} 삭제"},contentColor=MaterialTheme.colorScheme.error){Text("삭제")}
             }
         }}
     }
@@ -353,7 +371,7 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
     },c.name.isNotBlank(),busy=vm.busy.collectAsState().value) {
         Paper {
             OutlinedTextField(c.name,{c=c.copy(name=it)},label={Text("치료 항목 이름")},placeholder={Text("예: 피검사")},modifier=Modifier.fillMaxWidth(),singleLine=true)
-            TextButton(onClick={icons=!icons}) {
+            SmallButton(onClick={icons=!icons}) {
                 Icon(careIcon(c.iconKey).image,null);Spacer(Modifier.width(8.dp));Text("아이콘 · ${careIcon(c.iconKey).label}")
             }
             if(icons)FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {

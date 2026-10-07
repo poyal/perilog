@@ -31,6 +31,23 @@ class ImprovementsCapture {
         val dir=File(app.filesDir,"manual-screenshots").apply {mkdirs()}
         File(dir,"$name.png").outputStream().use {InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot().compress(Bitmap.CompressFormat.PNG,100,it)}
     }
+    @Test fun captureVitalActions() {
+        val product=Product(id="fluid",name="투석액 1.5%")
+        val template=UsageTemplate(id="base",name="기본 구성",items=listOf(Item(product.id,product.name,2)))
+        val record=Treatment(id="vital-example",date=today(),weightGrams=62300,systolic=120,diastolic=80,
+            initialDrain=2200,machineUf=800,saved=true,usageConfirmed=true,items=template.items,
+            usageTemplateId=template.id,usageTemplateName=template.name)
+        runBlocking {app.repository.restore(Snapshot(products=listOf(product),templates=listOf(template),treatments=listOf(record),
+            usages=listOf(Usage(record.id,record.date,record.items,record.kind,record.createdAt)),
+            preferences=Preferences(celebrate=false,darkMode=InstrumentationRegistry.getArguments().getString("theme") ?: "LIGHT")))}
+        ui.waitUntil(10000) {ui.onAllNodesWithText("오늘 기록 확인").fetchSemanticsNodes().isNotEmpty()}
+        click("오늘 기록 확인")
+        show(ui.onNodeWithContentDescription("활력 상태 수정"));shot("92-vital-summary")
+        ui.onNodeWithContentDescription("활력 상태 수정").performClick();shot("02-before-treatment")
+        ui.onNodeWithContentDescription("활력 상태 저장").performClick()
+        ui.onNodeWithText("62.3 kg").assertExists()
+        show(ui.onNodeWithText("이번 기록만 수량 조정"));shot("03-usage-template")
+    }
     @Test fun captureForecastExtraAndTable() {
         val now=LocalDate.now()
         val p=Product(id="fluid",name="투석액 1.5%")
@@ -43,7 +60,7 @@ class ImprovementsCapture {
             counts=listOf(StockCount(productId=p.id,quantity=30),StockCount(productId=q.id,quantity=6)),
             appointments=listOf(Appointment(id="visit",date=now.plusDays(10).toString(),time="09:30",
                 departments=listOf(Department(id="dept",name="신장내과")),careItems=listOf(CareTask(name="피검사",iconKey="blood")))),
-            preferences=Preferences(celebrate=false,darkMode="LIGHT"))
+            preferences=Preferences(celebrate=false,darkMode=InstrumentationRegistry.getArguments().getString("theme") ?: "LIGHT"))
         val input=ReplenishmentInput(visitDate=now.toString(),nextVisitDate=now.plusDays(10).toString(),
             calculationVersion=2,bufferDays=3,extraQuantities=mapOf(p.id to 5))
         val plan=ReplenishmentPlan(id="extra",input=input,calculation=calculateReplenishment(source,input,today()))
@@ -51,12 +68,16 @@ class ImprovementsCapture {
         ui.waitUntil(10000) {ui.onAllNodesWithText("오늘 기록 시작").fetchSemanticsNodes().isNotEmpty()}
         show(ui.onNodeWithText("피검사"));shot("71-appointment-forecast")
         show(ui.onNodeWithTag("home-appointment")).performClick();shot("75-appointment-detail")
+        show(ui.onNodeWithTag("appointment-menu-visit")).performClick();shot("88-appointment-detail-actions")
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK);ui.waitForIdle()
         ui.onNodeWithContentDescription("뒤로").performClick()
         ui.onNodeWithTag("home-stock-shortage").performClick();shot("72-stock-forecast")
         show(ui.onNodeWithTag("forecast-line-${q.id}"));shot("73-stock-forecast-detail")
         ui.onNodeWithContentDescription("뒤로").performClick()
         ui.onNodeWithContentDescription("설정").performClick();click("병원 일정")
         show(ui.onNodeWithTag("forecast-visit"));shot("39-appointment-list")
+        show(ui.onNodeWithTag("appointment-menu-visit")).performClick();shot("89-appointment-list-actions")
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK);ui.waitForIdle()
         ui.onNodeWithContentDescription("뒤로").performClick()
         ui.onNodeWithContentDescription("뒤로").performClick()
         ui.onNode(hasText("재고") and SemanticsMatcher.keyIsDefined(SemanticsProperties.Selected)).performClick()

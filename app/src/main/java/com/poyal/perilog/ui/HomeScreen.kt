@@ -82,7 +82,7 @@ import java.util.Locale
                     Hint("$progress / 3")
                 }
                 Action(action,openToday,icon=Icons.Outlined.ChevronRight)
-                todayEntries.filter{it.kind=="MANUAL"}.forEach{t->TextButton(onClick={edit(t.id,t.kind,t.date)}){Text("추가투석 · ${if(t.complete())"완료"else t.missing().joinToString()}")}}
+                todayEntries.filter{it.kind=="MANUAL"}.forEach{t->SmallButton(onClick={edit(t.id,t.kind,t.date)}){Text("추가투석 · ${if(t.complete())"완료"else t.missing().joinToString()}")}}
             }
             Bookmark(Modifier.align(Alignment.TopEnd).padding(end=24.dp))
         }

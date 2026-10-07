@@ -2,6 +2,13 @@
 
 사용자에게 항상 한국어 존댓말로 응답한다.
 
+# 버튼 UI 일관성
+
+- 글자가 있는 동작에는 `Action`(주요 동작), `SecondaryButton`(일반 보조 동작), `SmallButton`(작은 보조 동작·대화상자)을 사용한다. 화면에서 Material `TextButton`·`Button`·`OutlinedButton`을 직접 만들지 않는다.
+- 작은 버튼 여러 개는 `ButtonRow`로 묶어 가로·세로 8dp 간격과 자동 줄바꿈을 유지한다. 버튼 높이·글자 크기·안쪽 여백·모서리는 공통 컴포넌트에서 관리하고 화면별로 덮어쓰지 않는다.
+- 삭제·초기화는 공통 버튼의 `contentColor`로 구분한다. 아이콘 버튼·탐색 행·선택 칩은 기존 역할을 유지한다.
+- UI 변경 시 [개발 안내의 버튼 기준](docs/개발-안내.md#버튼-ui-기준)을 따르고 `python3 scripts/check-ui-buttons.py`를 실행한다. `scripts/build.sh`도 이 검사를 먼저 실행한다. 기본·큰 글씨와 밝게·어둡게에서 버튼 겹침·잘림·긴 문구 줄바꿈을 확인한다.
+
 # README 유지 원칙
 
 README를 작성·수정하거나 릴리즈에 맞춰 갱신할 때는 먼저 [페리로그 README 작성 가이드](docs/README-작성-가이드.md)를 읽고 따른다.

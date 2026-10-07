@@ -117,7 +117,7 @@ import java.util.Locale
         Paper {
             Section("품목 색상")
             ColorPalette(s.preferences.palette,p.color){p=p.copy(color=it)}
-            TextButton(onClick={colorPicker=!colorPicker}){Text(if(colorPicker)"컬러 피커 접기"else"컬러 피커 · 색 추가")}
+            SmallButton(onClick={colorPicker=!colorPicker}){Text(if(colorPicker)"컬러 피커 접기"else"컬러 피커 · 색 추가")}
             if(colorPicker)InlineColorPicker(p.color){p=p.copy(color=it)}
             Hint("이 색상은 재고와 모든 사용 구성에 함께 표시돼요.")
         }
@@ -167,9 +167,9 @@ import java.util.Locale
                 ColorDot(t.color,22,"${t.name} 대표");Text(t.name,Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
             }
             t.items.forEach{ProductLine(s,it)}
-            Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
-                TextButton(onClick={navigate("template/${t.id}")}){Text("수정")}
-                TextButton(onClick={deleting=t.id}){Text("삭제",color=MaterialTheme.colorScheme.secondary)}
+            ButtonRow {
+                SmallButton(onClick={navigate("template/${t.id}")}){Text("수정")}
+                SmallButton(onClick={deleting=t.id},contentColor=MaterialTheme.colorScheme.error){Text("삭제")}
             }
         }}
     }
@@ -186,7 +186,7 @@ import java.util.Locale
         Paper {
             Section("대표 색상")
             ColorPalette(s.preferences.palette,t.color){t=t.copy(color=it)}
-            TextButton(onClick={colorPicker=!colorPicker}){Text(if(colorPicker)"컬러 피커 접기"else"컬러 피커 · 색 추가")}
+            SmallButton(onClick={colorPicker=!colorPicker}){Text(if(colorPicker)"컬러 피커 접기"else"컬러 피커 · 색 추가")}
             if(colorPicker)InlineColorPicker(t.color){t=t.copy(color=it)}
             Hint("구성 선택과 기록의 구성 이름 옆에 함께 표시돼요.")
         }
@@ -211,10 +211,10 @@ import java.util.Locale
                 if(item==null)Hint("빈 수량과 0EA는 사용에서 제외해요.")
                 if(batches && item!=null) {
                     var expanded by rememberSaveable{mutableStateOf(false)}
-                    TextButton(onClick={expanded=!expanded}){Text(if(item.batchId==null)"사용 재고 자동 배정"else"사용 재고 직접 선택됨")}
+                    SmallButton(onClick={expanded=!expanded}){Text(if(item.batchId==null)"사용 재고 자동 배정"else"사용 재고 직접 선택됨")}
                     if(expanded) {
-                        TextButton(onClick={onChange(items.map{if(it.productId==p.id)it.copy(batchId=null)else it});expanded=false}){Text("자동 배정")}
-                        stock?.products?.get(p.id)?.lots?.forEach{lot->TextButton(onClick={onChange(items.map{if(it.productId==p.id)it.copy(batchId=lot.id)else it});expanded=false}){Text("${lot.date} 재고 · ${lot.remaining}EA")}}
+                        SmallButton(onClick={onChange(items.map{if(it.productId==p.id)it.copy(batchId=null)else it});expanded=false}){Text("자동 배정")}
+                        stock?.products?.get(p.id)?.lots?.forEach{lot->SmallButton(onClick={onChange(items.map{if(it.productId==p.id)it.copy(batchId=lot.id)else it});expanded=false}){Text("${lot.date} 재고 · ${lot.remaining}EA")}}
                     }
                 }
             }
@@ -239,7 +239,7 @@ import java.util.Locale
             }
         }}
         Paper {
-            TextButton(onClick={add=!add}){Text(if(add)"품목 선택 접기"else"다른 품목 추가")}
+            SmallButton(onClick={add=!add}){Text(if(add)"품목 선택 접기"else"다른 품목 추가")}
             if(add)s.products.filter{p->r.lines.none{it.productId==p.id}}.forEach{p->MenuRow(p.name){r=r.copy(lines=r.lines+ReceiptLine(productId=p.id,quantity=0));add=false}}
             OutlinedTextField(r.memo,{r=r.copy(memo=it)},label={Text("입고 메모")},modifier=Modifier.fillMaxWidth())
             Hint("빈 수량과 0EA는 저장에서 제외해요.")

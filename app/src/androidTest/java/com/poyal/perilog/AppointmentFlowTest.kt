@@ -147,7 +147,8 @@ class AppointmentFlowTest {
         show(ui.onNodeWithContentDescription("주사 수정 삭제")).performClick();click("확인")
         await{snapshot().careTemplates.isEmpty()};back();back()
         assertEquals(a,snapshot().appointments.single())
-        settings();click("병원 일정");click("같은 구성으로 다음 예약")
+        settings();click("병원 일정")
+        show(ui.onNodeWithTag("appointment-menu-${a.id}")).performClick();click("같은 구성으로 다음 예약")
         ui.onNode(hasSetTextAction() and hasText("신장내과 예약시간 · HH:mm")).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
         ui.onNode(hasSetTextAction() and hasText("메모")).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
         node("예약일 선택해 주세요").assertExists()
@@ -156,8 +157,10 @@ class AppointmentFlowTest {
         val next=snapshot().appointments.single{it.id!=a.id}
         assertEquals(a.departments,next.departments);assertEquals(a.careItems,next.careItems)
         assertEquals("14:20",next.departmentTime(d))
+        show(ui.onNodeWithTag("appointment-menu-${next.id}")).performClick()
         show(ui.onNodeWithContentDescription("${next.id} 일정 수정")).performClick();input("메모","수정 메모");click("저장")
         await{snapshot().appointments.any{it.memo=="수정 메모"}}
+        show(ui.onNodeWithTag("appointment-menu-${next.id}")).performClick()
         show(ui.onNodeWithContentDescription("${next.id} 일정 삭제")).performClick();click("확인")
         await{snapshot().appointments.size==1};assertEquals(a,snapshot().appointments.single())
     }

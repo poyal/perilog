@@ -131,7 +131,7 @@ private val contactEmojis=listOf(
                     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {Section(c.name);Text(formattedPhone(c.phone))}
                 }
                 ContactActions(c,vm)
-                TextButton(onClick={connecting=null}){Text("닫기")}
+                SmallButton(onClick={connecting=null}){Text("닫기")}
             }
         }
     }
@@ -142,8 +142,7 @@ private val contactEmojis=listOf(
     Page("연락처 관리","등록한 이름과 번호를 홈에서 바로 확인해요",back) {
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
             Action("+ 연락처 등록",{navigate("contact/new")},modifier=Modifier.weight(1f).fillMaxHeight())
-            if(s.contacts.size>1)SecondaryButton(onClick={navigate("contacts/order")},modifier=Modifier.weight(1f).fillMaxHeight(),
-                contentPadding=PaddingValues(horizontal=10.dp,vertical=12.dp)) {
+            if(s.contacts.size>1)SecondaryButton(onClick={navigate("contacts/order")},modifier=Modifier.weight(1f).fillMaxHeight()) {
                 Icon(Icons.Outlined.SwapVert,null,Modifier.size(20.dp));Spacer(Modifier.width(6.dp));Text("순서 변경")
             }
         }
@@ -203,7 +202,7 @@ private val contactEmojis=listOf(
         Paper {
             Section("이모지 아바타")
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
-                ContactAvatar(c);TextButton(onClick={emojis=!emojis}){Text(if(emojis)"이모지 선택 접기"else"이모지 선택")}
+                ContactAvatar(c);SmallButton(onClick={emojis=!emojis}){Text(if(emojis)"이모지 선택 접기"else"이모지 선택")}
             }
             if(emojis)FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 contactEmojis.forEach { (emoji,label) ->

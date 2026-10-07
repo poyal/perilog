@@ -219,7 +219,7 @@ private fun backupTime(at:Long)=Instant.ofEpochMilli(at).atZone(ZoneId.systemDef
                 }
                 if(files.isNotEmpty())Paper {
                     Section("연결한 폴더의 최근 자동 백업")
-                    files.take(10).forEach{(name,uri)->TextButton(onClick={vm.act{restoring=vm.app.backup.read(uri)}},enabled=!busy){Text(name,style=MaterialTheme.typography.bodySmall)}}
+                    files.take(10).forEach{(name,uri)->SmallButton(onClick={vm.act{restoring=vm.app.backup.read(uri)}},enabled=!busy){Text(name)}}
                 }
             }
             "protection"->Paper {
@@ -227,13 +227,13 @@ private fun backupTime(at:Long)=Instant.ofEpochMilli(at).atZone(ZoneId.systemDef
                 if(protection.isEmpty())Text("보관된 보호 백업이 없어요")
                 protection.forEach{f->Column {
                     Text(f.name,style=MaterialTheme.typography.bodySmall)
-                    TextButton(onClick={exportProtectionPath=f.path;exportProtected.launch(f.name)},enabled=!busy){Text("내보내기")}
+                    SmallButton(onClick={exportProtectionPath=f.path;exportProtected.launch(f.name)},enabled=!busy){Text("내보내기")}
                 }}
             }
             "reset"->Paper {
                 Text("기록·재고·설정을 초기화하고 자동 백업 폴더 연결을 해제해요.")
                 Hint("현재 자료는 앱 내부 보호 백업에 남겨요. 외부로 내보낸 파일은 삭제하지 않아요.")
-                TextButton(onClick={reset=true},enabled=!busy){Text("모든 앱 데이터 초기화",color=MaterialTheme.colorScheme.error)}
+                SmallButton(onClick={reset=true},enabled=!busy,contentColor=MaterialTheme.colorScheme.error){Text("모든 앱 데이터 초기화")}
             }
         }
     }

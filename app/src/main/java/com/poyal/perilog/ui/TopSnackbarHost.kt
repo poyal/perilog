@@ -64,8 +64,8 @@ fun TopSnackbarHost(hostState: SnackbarHostState, modifier: Modifier = Modifier)
             } else Modifier.clearAndSetSemantics {}) {
                 Snackbar(
                     action = data.visuals.actionLabel?.let { label ->
-                        { TextButton(onClick = { if (active) data.performAction() }, enabled = active,
-                            colors = ButtonDefaults.textButtonColors(contentColor = SnackbarDefaults.actionContentColor)
+                        { SmallButton(onClick = { if (active) data.performAction() }, enabled = active,
+                            contentColor = SnackbarDefaults.actionContentColor, containerColor = SnackbarDefaults.color
                         ) { Text(label) } }
                     },
                     dismissAction = if (data.visuals.withDismissAction) {

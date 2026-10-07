@@ -77,24 +77,24 @@ import kotlin.math.min
             Text("● 수축기",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.primary)
             Text("◆ 이완기",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.secondary)
         }
-        if(entries.isNotEmpty())TextButton(onClick={choosing=true},modifier=Modifier.testTag("chart-dates-${metric.name}")) {
-            Text("날짜별 값 확인",style=MaterialTheme.typography.bodySmall)
+        if(entries.isNotEmpty())SmallButton(onClick={choosing=true},modifier=Modifier.testTag("chart-dates-${metric.name}")) {
+            Text("날짜별 값 확인")
         }
         entries.filter{it.date==selectedDate}.forEachIndexed{index,t->
             Column(Modifier.fillMaxWidth().testTag("chart-value-${metric.name}-${t.id}")) {
                 Text("${t.date.replace('-','.')} · 기록 ${index+1}",style=MaterialTheme.typography.bodySmall)
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                     Text(metric.values(t).joinToString(" / "){it?.let{value->BigDecimal.valueOf(value).stripTrailingZeros().toPlainString()} ?: "—"}+" ${metric.unit}",Modifier.weight(1f))
-                    TextButton(onClick={open(t.id)}){Text("기록 열기")}
+                    SmallButton(onClick={open(t.id)}){Text("기록 열기")}
                 }
             }
         }
     }
     if(choosing)AlertDialog(onDismissRequest={choosing=false},title={Text("${metric.label} · 날짜 선택")},text={
-        LazyColumn {items(entries.map{it.date}.distinct(),key={it}){date->
-            TextButton(onClick={selectedDate=date;choosing=false},modifier=Modifier.fillMaxWidth()){Text(date.replace('-','.'))}
+        LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)) {items(entries.map{it.date}.distinct(),key={it}){date->
+            SmallButton(onClick={selectedDate=date;choosing=false},modifier=Modifier.fillMaxWidth()){Text(date.replace('-','.'))}
         }}
-    },confirmButton={TextButton(onClick={choosing=false}){Text("닫기")}})
+    },confirmButton={SmallButton(onClick={choosing=false}){Text("닫기")}})
 }
 
 @Composable private fun MetricPlot(metric:ChartMetric,entries:List<Treatment>,values:List<List<Double?>>,from:LocalDate,to:LocalDate,

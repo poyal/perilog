@@ -64,7 +64,7 @@ fun guideForRoute(route: String): String = when {
                 if(found.isEmpty()) Paper {Hint("검색한 사용법을 찾지 못했어요. 다른 단어로 찾아보세요.")}
                 found.forEach { t->Paper {MenuRow(t.title,icon=Icons.Outlined.MenuBook) {navigate("guide/${t.id}")}} }
             } else {
-                TextButton(onClick={navigate("guide")}) {Icon(Icons.Outlined.MenuBook,null);Spacer(Modifier.width(8.dp));Text("전체 사용 안내")}
+                SmallButton(onClick={navigate("guide")}) {Icon(Icons.Outlined.MenuBook,null);Spacer(Modifier.width(8.dp));Text("전체 사용 안내")}
                 topic.steps.forEachIndexed { index,step->Paper(Modifier.testTag("guide-${topic.id}-$index")) {
                     Section("${index+1}. ${step.title}")
                     Text(step.text)
@@ -84,13 +84,13 @@ fun guideForRoute(route: String): String = when {
     var expanded by rememberSaveable(name) { mutableStateOf(false) }
     bitmap?.let { img->
         Image(img,"$description 실제 화면 · 눌러서 확대",modifier=Modifier.fillMaxWidth().heightIn(max=480.dp).clickable {expanded=true},contentScale=ContentScale.Fit)
-        TextButton(onClick={expanded=true}) {Text("화면 크게 보기")}
+        SmallButton(onClick={expanded=true}) {Text("화면 크게 보기")}
         if(expanded) Dialog(onDismissRequest={expanded=false},properties=DialogProperties(usePlatformDefaultWidth=false)) {
             var scale by remember { mutableFloatStateOf(1f) }
             var offset by remember { mutableStateOf(Offset.Zero) }
             Surface(Modifier.fillMaxSize()) {Column {
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
-                    TextButton(onClick={scale=1f;offset=Offset.Zero}) {Text("크기 초기화")}
+                    SmallButton(onClick={scale=1f;offset=Offset.Zero}) {Text("크기 초기화")}
                     IconButton(onClick={expanded=false}) {Icon(Icons.Outlined.Close,"확대 화면 닫기")}
                 }
                 Text("두 손가락으로 확대하고 움직여 보세요",Modifier.padding(horizontal=20.dp))

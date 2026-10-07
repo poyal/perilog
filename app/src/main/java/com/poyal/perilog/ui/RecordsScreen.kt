@@ -76,8 +76,10 @@ import kotlinx.coroutines.launch
         }
         if(calendar) Paper {
             val ym=YearMonth.parse(month)
-            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween) {
-                TextButton(onClick={month=ym.minusMonths(1).toString()}){Text("이전")};Section("${ym.year}년 ${ym.monthValue}월");TextButton(onClick={month=ym.plusMonths(1).toString()}){Text("다음")}
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                SmallButton(onClick={month=ym.minusMonths(1).toString()}){Text("이전")}
+                Text("${ym.year}년 ${ym.monthValue}월",Modifier.weight(1f),style=MaterialTheme.typography.titleMedium,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
+                SmallButton(onClick={month=ym.plusMonths(1).toString()}){Text("다음")}
             }
             CalendarWeekdayHeader()
             val offset=ym.atDay(1).dayOfWeek.value%7
@@ -133,8 +135,8 @@ import kotlinx.coroutines.launch
                 }
                 if(usage?.cancelled==true)Hint("사용이 취소된 내역이에요.")
             }},containerColor=MaterialTheme.colorScheme.surface,
-            confirmButton={TextButton(onClick={itemDetailsId=null}){Text("닫기")}},
-            dismissButton={if(usage!=null && !usage.cancelled && usage.items.isNotEmpty())TextButton(onClick={itemDetailsId=null;cancelling=usage}){Text("사용 취소",color=MaterialTheme.colorScheme.secondary)}})
+            confirmButton={SmallButton(onClick={itemDetailsId=null}){Text("닫기")}},
+            dismissButton={if(usage!=null && !usage.cancelled && usage.items.isNotEmpty())SmallButton(onClick={itemDetailsId=null;cancelling=usage},contentColor=MaterialTheme.colorScheme.error){Text("사용 취소")}})
     }
     deleting?.let{t->Confirm("${if(t.saved)"기록"else"초안"}을 삭제할까요?",
         if(t.saved)"연결된 물품 사용도 함께 취소해 재고에 반영해요. ‘되돌리기’로 기록과 사용 내역을 함께 복구할 수 있어요."

@@ -146,12 +146,37 @@ internal val dark=darkColorScheme(
 private val actionButtonMinHeight=54.dp
 private val actionButtonPadding=PaddingValues(horizontal=18.dp,vertical=15.dp)
 @Composable fun SecondaryButton(onClick:()->Unit,modifier:Modifier=Modifier,enabled:Boolean=true,
-    contentPadding:PaddingValues=actionButtonPadding,disabledContentColor:Color=Color.Unspecified,
+    disabledContentColor:Color=Color.Unspecified,
     content:@Composable RowScope.()->Unit) {
     OutlinedButton(onClick=onClick,modifier=modifier.heightIn(min=actionButtonMinHeight),enabled=enabled,
-        shape=MaterialTheme.shapes.medium,contentPadding=contentPadding,
+        shape=MaterialTheme.shapes.medium,contentPadding=actionButtonPadding,
         colors=ButtonDefaults.outlinedButtonColors(containerColor=MaterialTheme.colorScheme.surfaceContainerLowest,
             disabledContainerColor=MaterialTheme.colorScheme.surfaceContainerLowest,disabledContentColor=disabledContentColor),content=content)
+}
+/** Compact secondary action with a visible boundary and Material's 48 dp touch target. */
+@Composable fun SmallButton(onClick:()->Unit,modifier:Modifier=Modifier,enabled:Boolean=true,
+    emphasized:Boolean=false,
+    contentColor:Color=MaterialTheme.colorScheme.primary,
+    containerColor:Color=MaterialTheme.colorScheme.surfaceContainerLowest,
+    content:@Composable RowScope.()->Unit) {
+    val foreground=if(emphasized)MaterialTheme.colorScheme.onPrimary else contentColor
+    val background=if(emphasized)MaterialTheme.colorScheme.primary else containerColor
+    val borderColor=when {
+        !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha=.12f)
+        emphasized -> background
+        else -> foreground.copy(alpha=.45f)
+    }
+    OutlinedButton(onClick=onClick,modifier=modifier.defaultMinSize(minWidth=48.dp,minHeight=40.dp),enabled=enabled,
+        shape=MaterialTheme.shapes.small,contentPadding=PaddingValues(horizontal=12.dp,vertical=8.dp),
+        border=BorderStroke(1.dp,borderColor),
+        colors=ButtonDefaults.outlinedButtonColors(containerColor=background,contentColor=foreground,
+            disabledContainerColor=MaterialTheme.colorScheme.surfaceVariant,disabledContentColor=MaterialTheme.colorScheme.onSurface.copy(alpha=.38f))) {
+        ProvideTextStyle(MaterialTheme.typography.labelLarge.copy(fontSize=14.sp,lineHeight=20.sp,textAlign=TextAlign.Center)) {content()}
+    }
+}
+@Composable fun ButtonRow(modifier:Modifier=Modifier,centered:Boolean=false,content:@Composable FlowRowScope.()->Unit) {
+    FlowRow(modifier,horizontalArrangement=Arrangement.spacedBy(8.dp,if(centered)Alignment.CenterHorizontally else Alignment.Start),
+        verticalArrangement=Arrangement.spacedBy(8.dp),itemVerticalAlignment=Alignment.CenterVertically,content=content)
 }
 @Composable fun SelectionChip(selected:Boolean,onClick:()->Unit,label:@Composable ()->Unit,modifier:Modifier=Modifier,
     enabled:Boolean=true,leadingIcon:(@Composable ()->Unit)?=null,
@@ -174,9 +199,9 @@ private val actionButtonPadding=PaddingValues(horizontal=18.dp,vertical=15.dp)
             Text(text,style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurface,
                 maxLines=if(expanded)Int.MAX_VALUE else 3,overflow=TextOverflow.Ellipsis,
                 onTextLayout={if(!expanded)overflowing=it.hasVisualOverflow})
-            if(expanded || overflowing)CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 24.dp) {
-                TextButton(onClick={expanded=!expanded},modifier=Modifier.defaultMinSize(minHeight=24.dp),contentPadding=PaddingValues(0.dp)) {
-                    Text(if(expanded)"접기"else"더 보기",style=MaterialTheme.typography.bodySmall)
+            if(expanded || overflowing) {
+                SmallButton(onClick={expanded=!expanded}) {
+                    Text(if(expanded)"접기"else"더 보기")
                 }
             }
         }
@@ -205,7 +230,7 @@ private val actionButtonPadding=PaddingValues(horizontal=18.dp,vertical=15.dp)
     val colors=MaterialTheme.colorScheme
     Button(onClick,modifier.fillMaxWidth().heightIn(min=actionButtonMinHeight),enabled=enabled,shape=MaterialTheme.shapes.medium,
         contentPadding=actionButtonPadding,colors=ButtonDefaults.buttonColors(containerColor=colors.primary,contentColor=colors.onPrimary,disabledContainerColor=colors.surfaceVariant)) {
-        if(icon!=null){Icon(icon,null,Modifier.size(22.dp));Spacer(Modifier.width(10.dp))};Text(text)
+        if(icon!=null){Icon(icon,null,Modifier.size(22.dp));Spacer(Modifier.width(8.dp))};Text(text,textAlign=TextAlign.Center)
     }
 }
 @Composable fun Bow(size:Int=44) {Image(painterResource(R.drawable.journal_bow),stringResource(R.string.app_name),Modifier.size(size.dp).clip(RoundedCornerShape(12.dp)))}
@@ -281,7 +306,7 @@ private val actionButtonPadding=PaddingValues(horizontal=18.dp,vertical=15.dp)
                     SelectionChip(date==today(),{onChange(today())},{Text("오늘")},border=null)
                     SelectionChip(date==LocalDate.now().minusDays(1).toString(),{onChange(LocalDate.now().minusDays(1).toString())},{Text("어제")},border=null)
                 }
-                TextButton(onClick={month=date.ifBlank{today()}.take(7);open=!open}){Icon(Icons.Outlined.CalendarMonth,null,Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(if(open)"날짜 선택 접기"else"날짜 선택")}
+                SmallButton(onClick={month=date.ifBlank{today()}.take(7);open=!open}){Icon(Icons.Outlined.CalendarMonth,null,Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(if(open)"날짜 선택 접기"else"날짜 선택")}
             }
         }
         if(open)Paper(contentPadding=8.dp) {
@@ -344,10 +369,10 @@ private val actionButtonPadding=PaddingValues(horizontal=18.dp,vertical=15.dp)
             shape=RoundedCornerShape(14.dp),modifier=Modifier.fillMaxWidth().semantics{contentDescription=label},singleLine=true,
             colors=OutlinedTextFieldDefaults.colors(unfocusedBorderColor=MaterialTheme.colorScheme.outline,focusedBorderColor=MaterialTheme.colorScheme.primary,
                 unfocusedContainerColor=MaterialTheme.colorScheme.surfaceContainerLowest,focusedContainerColor=MaterialTheme.colorScheme.surfaceContainerLowest))
-        if(large && value!=null)TextButton(onClick={text="";emitted=null;invalid=false;errors.remove(errorId);onChange(null)},contentPadding=PaddingValues(horizontal=4.dp)){Text("지우기",style=MaterialTheme.typography.bodySmall)}
+        if(large && value!=null)SmallButton(onClick={text="";emitted=null;invalid=false;errors.remove(errorId);onChange(null)}){Text("지우기")}
     }
 }
 @Composable fun Confirm(title:String,text:String,onDismiss:()->Unit,onConfirm:()->Unit) {
     AlertDialog(onDismissRequest=onDismiss,title={Text(title)},text={Text(text)},containerColor=MaterialTheme.colorScheme.surface,
-        confirmButton={TextButton(onClick=onConfirm){Text("확인")}},dismissButton={TextButton(onClick=onDismiss){Text("취소")}})
+        confirmButton={SmallButton(onClick=onConfirm,emphasized=true){Text("확인")}},dismissButton={SmallButton(onClick=onDismiss){Text("취소")}})
 }

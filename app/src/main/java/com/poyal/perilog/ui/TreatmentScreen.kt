@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -19,6 +20,8 @@ import com.poyal.perilog.domain.*
 @Composable fun TreatmentScreen(s:Snapshot,vm:JournalViewModel,back:()->Unit) {
     val t by vm.editor.collectAsStateWithLifecycle()
     val current=t ?: return
+    val focus=LocalFocusManager.current
+    val inputErrors=LocalInputErrors.current
     var quantities by rememberSaveable(current.id){mutableStateOf(false)}
     var beforeExpanded by rememberSaveable(current.id){mutableStateOf(!current.saved || current.weightGrams==null || current.systolic==null || current.diastolic==null)}
     var options by rememberSaveable(current.id){mutableStateOf(false)}
@@ -37,7 +40,11 @@ import com.poyal.perilog.domain.*
             Paper {
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     CompletionBadge(beforeComplete);Section("활력 상태");Spacer(Modifier.weight(1f))
-                    TextButton(onClick={beforeExpanded=!beforeExpanded}){Text(if(beforeExpanded)"접기"else"수정")}
+                    IconButton(onClick={focus.clearFocus();beforeExpanded=!beforeExpanded},
+                        enabled=!beforeExpanded || inputErrors.values.none{it in setOf("몸무게","수축기 혈압","이완기 혈압")}) {
+                        Icon(if(beforeExpanded)Icons.Outlined.Save else Icons.Outlined.Edit,
+                            if(beforeExpanded)"활력 상태 저장"else"활력 상태 수정")
+                    }
                 }
                 if(!beforeExpanded)AdaptivePair(first={MeasurementSummary(current.weightGrams?.let{"${it/1000.0} kg"} ?: "—","몸무게")},second={MeasurementSummary("${current.systolic ?: "—"} / ${current.diastolic ?: "—"}","혈압 · mmHg")})
                 else {
@@ -72,7 +79,7 @@ import com.poyal.perilog.domain.*
                     },label={Text(template.name)},leadingIcon={ColorDot(template.color,18,"${template.name} 대표")})
                 }
             }
-            TextButton(onClick={quantities=!quantities}){Text(if(quantities)"수량 조정 마치기"else"이번 기록만 수량 조정")}
+            SmallButton(onClick={quantities=!quantities}){Text(if(quantities)"수량 조정 마치기"else"이번 기록만 수량 조정")}
             if(current.items.isEmpty())Row(verticalAlignment=Alignment.CenterVertically){Checkbox(current.usageConfirmed,{update(current.copy(usageConfirmed=it))});Text("이 기록에서는 사용한 물품이 없어요",Modifier.weight(1f))}
         }
         if(quantities) {
@@ -87,7 +94,7 @@ import com.poyal.perilog.domain.*
             AdaptivePair(first={NumberInput("초기배액량",current.initialDrain,{update(current.copy(initialDrain=it))},"mL",large=true)},second={
                 NumberInput("기계 제수량",current.machineUf,{update(current.copy(machineUf=it))},"mL",signed=true,large=true)
             })
-            if(current.machineUf!=null)TextButton(onClick={update(current.copy(machineUf=current.machineUf.let{-it}))}){Text("제수량 + / − 바꾸기",style=MaterialTheme.typography.bodyMedium)}
+            if(current.machineUf!=null)SmallButton(onClick={update(current.copy(machineUf=current.machineUf.let{-it}))}){Text("제수량 + / − 바꾸기")}
             Surface(color=MaterialTheme.colorScheme.primaryContainer,shape=MaterialTheme.shapes.medium,modifier=Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
                     Row(verticalAlignment=Alignment.CenterVertically) {
@@ -109,7 +116,7 @@ import com.poyal.perilog.domain.*
             }else Hint("무게 그대로 보관해요. 부피 환산이나 용기 무게 자동 차감은 하지 않아요.")
         }
         Paper {
-            TextButton(onClick={options=!options}){Icon(Icons.Outlined.Notes,null);Spacer(Modifier.width(8.dp));Text(if(current.kind=="MACHINE")"평균저류시간 · 메모 ${if(options)"접기"else"추가"}"else"메모 ${if(options)"접기"else"추가"}")}
+            SmallButton(onClick={options=!options}){Icon(Icons.Outlined.Notes,null);Spacer(Modifier.width(8.dp));Text(if(current.kind=="MACHINE")"평균저류시간 · 메모 ${if(options)"접기"else"추가"}"else"메모 ${if(options)"접기"else"추가"}")}
             if(options) {
                 if(current.kind=="MACHINE")AdaptivePair(first={NumberInput("평균저류 시간",current.dwellMinutes?.div(60),{update(current.copy(dwellMinutes=it?.let{h->h*60+(current.dwellMinutes?.rem(60)?:0)}))},"시")},second={NumberInput("분",current.dwellMinutes?.rem(60),{if(it==null || it<60)update(current.copy(dwellMinutes=it?.let{m->(current.dwellMinutes?.div(60)?:0)*60+m}))},"분")})
                 Row(verticalAlignment=Alignment.CenterVertically){Checkbox(current.interrupted,{update(current.copy(interrupted=it))});Text("중단·재시작 등 특이사항이 있었어요",Modifier.weight(1f))}
@@ -117,7 +124,7 @@ import com.poyal.perilog.domain.*
             }
         }
         Hint("입력한 내용은 초안으로 보관해요. 사용 물품은 기록 저장 시 재고에 반영해요.")
-        TextButton(onClick={discard=true}){Text("이 초안 버리기",color=MaterialTheme.colorScheme.secondary)}
+        SmallButton(onClick={discard=true},contentColor=MaterialTheme.colorScheme.error){Text("이 초안 버리기")}
     }
     if(calculation && current.kind=="MACHINE")AlertDialog(onDismissRequest={calculation=false},title={Text("제수량 도움말")},
         text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -125,7 +132,7 @@ import com.poyal.perilog.domain.*
             Hint("설정값 기준으로 자동 계산해요. 이전 최종 주입 설정값은 이 기록에 따로 보관해요.")
             NumberInput("이 기록의 이전 주입 기준",current.basisMl,{update(current.copy(basisMl=it))},"mL")
             Hint("초기배액량, 기계 제수량, 이전 주입 기준이 모두 있어야 제수량을 계산해요.")
-        }},containerColor=MaterialTheme.colorScheme.surface,confirmButton={TextButton(onClick={calculation=false}){Text("닫기")}})
+        }},containerColor=MaterialTheme.colorScheme.surface,confirmButton={SmallButton(onClick={calculation=false}){Text("닫기")}})
     if(discard)Confirm("초안을 버릴까요?","기존에 저장한 기록과 사용 내역은 유지됩니다.",{discard=false}){vm.discard(current.id){discard=false;back()}}
 }
 @Composable private fun MeasurementSummary(value:String,label:String) {

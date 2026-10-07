@@ -98,17 +98,17 @@ import java.time.LocalDate
                 }
                 if(e.description.isNotBlank())Hint(e.description)
                 MemoBlock(e.memo)
-                FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                ButtonRow {
                     if(e.type==StockHistoryType.RECEIPT && !e.cancelled) {
-                        TextButton(onClick={navigate("receipt/${e.sourceId}")}){Text("수정")}
-                        TextButton(onClick={cancellingId=e.id}){Text("입고 취소")}
+                        SmallButton(onClick={navigate("receipt/${e.sourceId}")}){Text("수정")}
+                        SmallButton(onClick={cancellingId=e.id},contentColor=MaterialTheme.colorScheme.error){Text("입고 취소")}
                     }
                     if(e.type==StockHistoryType.USAGE) {
-                        e.treatmentId?.let{id->TextButton(onClick={openTreatment(id)}){Text("기록 보기")}}
-                        if(!e.cancelled)TextButton(onClick={cancellingId=e.id}){Text("사용 취소")}
+                        e.treatmentId?.let{id->SmallButton(onClick={openTreatment(id)}){Text("기록 보기")}}
+                        if(!e.cancelled)SmallButton(onClick={cancellingId=e.id},contentColor=MaterialTheme.colorScheme.error){Text("사용 취소")}
                     }
                     if(e.type in listOf(StockHistoryType.ADD,StockHistoryType.LOSS) && !e.cancelled)
-                        TextButton(onClick={cancellingId=e.id}){Text("조정 취소")}
+                        SmallButton(onClick={cancellingId=e.id},contentColor=MaterialTheme.colorScheme.error){Text("조정 취소")}
                 }
             }
         }}

@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")/.."
+python3 scripts/check-ui-buttons.py
 if [ -d "$PWD/.tools/jdk" ]; then export JAVA_HOME="$PWD/.tools/jdk"; fi
 if [ -d "$PWD/.tools/android-sdk" ]; then export ANDROID_HOME="$PWD/.tools/android-sdk"; fi
 if [ -d "$PWD/.tools/gradle-home" ]; then export GRADLE_USER_HOME="$PWD/.tools/gradle-home"; fi

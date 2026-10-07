@@ -162,12 +162,12 @@ import java.time.format.DateTimeFormatter
                     else {googleAccount = c.account; authorizeGoogle()}
                 }, enabled = !working)
                 SecondaryButton(onClick = {deleteEvents = true; disconnecting = true}, enabled = !working) {Text("캘린더 변경")}
-                TextButton(onClick = {deleteEvents = false; disconnecting = true}, enabled = !working) {Text("연결 해제")}
+                SmallButton(onClick = {deleteEvents = false; disconnecting = true}, enabled = !working) {Text("연결 해제")}
             }
             pending.filter {it.error.isNotEmpty()}.forEach {job -> Paper {
                 val a = snapshot.appointments.find {"${c.id}:${it.id}" == job.linkId}
                 Section(a?.let {"${it.date} 병원 방문"} ?: "삭제할 캘린더 일정"); Text(job.error)
-                if(job.blocked && a != null && c.state == CalendarConnection.ACTIVE) TextButton(onClick = {freshLink = job.linkId}, enabled = !working) {Text("중복 확인 후 새 전송")}
+                if(job.blocked && a != null && c.state == CalendarConnection.ACTIVE) SmallButton(onClick = {freshLink = job.linkId}, enabled = !working) {Text("중복 확인 후 새 전송")}
             } }
         }
     }
@@ -199,11 +199,10 @@ import java.time.format.DateTimeFormatter
                 }
             }
         }
-    }, confirmButton = {Button(modifier = Modifier.heightIn(min = 48.dp),
+    }, confirmButton = {SmallButton(emphasized = true,
         enabled = !working && (!restoreCheck || target.provider != CalendarConnection.DEVICE || acknowledgeRestore), onClick = {perform {
         store.connect(target, includeMemo, acknowledgeRestore); runtime.request(target.provider); selected = null; targets = emptyList()
-    }}) {Text("연동 시작")}}, dismissButton = {TextButton(onClick = {selected = null}, enabled = !working,
-        modifier = Modifier.heightIn(min = 48.dp)) {Text("취소")}}) }
+    }}) {Text("연동 시작")}}, dismissButton = {SmallButton(onClick = {selected = null}, enabled = !working) {Text("취소")}}) }
     if(disconnecting && connection != null) AlertDialog(onDismissRequest = {if(!working) disconnecting = false},
         containerColor = MaterialTheme.colorScheme.surface, title = {Text("캘린더 연결을 해제할까요?", style = MaterialTheme.typography.titleLarge)}, text = {
         Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -211,9 +210,9 @@ import java.time.format.DateTimeFormatter
             CalendarCheck("페리로그가 보낸 일정도 삭제", deleteEvents, !working) {deleteEvents = it}
             if(connection.state == CalendarConnection.CLEANING || connection.error.isNotBlank()) Text("정리가 불가능하면 위 항목을 끄고 기존 일정을 남긴 채 해제할 수 있어요.")
         }
-    }, confirmButton = {TextButton(onClick = {perform {
+    }, confirmButton = {SmallButton(emphasized = true, onClick = {perform {
         store.disconnect(connection.id, deleteEvents); runtime.request(connection.provider); disconnecting = false
-    }}, enabled = !working) {Text("연결 해제")}}, dismissButton = {TextButton(onClick = {disconnecting = false}) {Text("취소")}})
+    }}, enabled = !working) {Text("연결 해제")}}, dismissButton = {SmallButton(onClick = {disconnecting = false}) {Text("취소")}})
     if(fullApply && connection != null) Confirm("전체 일정을 다시 반영할까요?", "캘린더에서 바꾼 날짜·시간·내용을 페리로그 내용으로 덮어써요. 캘린더에서 삭제한 일정도 다시 생성해요.", {fullApply = false}) {
         perform {store.reapply(connection.id); runtime.request(connection.provider); fullApply = false}
     }
@@ -248,6 +247,6 @@ import java.time.format.DateTimeFormatter
             link?.lastSuccess != null && !link.deleted -> if(c.provider == CalendarConnection.DEVICE) "휴대폰 캘린더 반영 완료" else "반영 완료"
             else -> "전송 대상이 아닌 지난 일정이에요."
         })
-        TextButton(onClick = {navigate("settings/calendar")}) {Text("캘린더 연동 설정")}
+        SmallButton(onClick = {navigate("settings/calendar")}) {Text("캘린더 연동 설정")}
     }
 }

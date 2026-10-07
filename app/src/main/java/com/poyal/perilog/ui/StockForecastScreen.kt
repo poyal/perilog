@@ -110,7 +110,7 @@ private fun StockForecastLine.balanceLabel(): String = when {
             else Text("예약일 사용 전 예상",style=MaterialTheme.typography.bodySmall,color=colors.onSurfaceVariant)
         }
     }
-    TextButton(onClick={navigate("appointmentStock/${appointment.id}")},modifier=Modifier.testTag("forecast-${appointment.id}")) {Text("예상 잔량 계산 보기")}
+    SmallButton(onClick={navigate("appointmentStock/${appointment.id}")},modifier=Modifier.testTag("forecast-${appointment.id}")) {Text("예상 잔량 계산 보기")}
 }
 
 @Composable fun StockForecastScreen(s: Snapshot, vm: JournalViewModel, id: String,
@@ -161,7 +161,7 @@ private fun StockForecastLine.balanceLabel(): String = when {
                         Text(line.balanceLabel(),color=if((line.balance?.numerator ?: 0)<0)MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
                         if(result.days==0) Hint("오늘 방문이므로 현재 재고를 표시해요.")
                         else Hint("오늘 이미 기록한 사용은 다시 빼지 않아요. 방문 전날까지의 남은 사용을 예상해요.")
-                        if(line.currentStock==null) TextButton(onClick={navigate("count/${line.productId}")}) {Text("현재 재고 등록")}
+                        if(line.currentStock==null) SmallButton(onClick={navigate("count/${line.productId}")}) {Text("현재 재고 등록")}
                     }
                 } }
             }

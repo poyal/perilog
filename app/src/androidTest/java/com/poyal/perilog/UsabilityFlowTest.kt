@@ -74,11 +74,11 @@ class UsabilityFlowTest {
             careItems=listOf(CareTask(id="blood",name="피검사",iconKey="blood")))
         runBlocking {app.repository.careTemplate(care);app.repository.appointment(visit)}
         await{ui.onAllNodesWithText("D-2").fetchSemanticsNodes().isNotEmpty()}
-        click("D-2");click("일정 수정")
+        click("D-2");show(ui.onNodeWithTag("appointment-menu-${visit.id}")).performClick();click("일정 수정")
         click("시간 지정");click("확인");click("저장")
         await{snapshot().appointments.single().careItems.single().time=="09:45"}
         await{ui.onAllNodesWithText("병원 일정을 저장했어요").fetchSemanticsNodes().isNotEmpty()}
-        click("일정 수정")
+        show(ui.onNodeWithTag("appointment-menu-${visit.id}")).performClick();click("일정 수정")
         show(ui.onNodeWithContentDescription("피검사 시간 해제")).performClick()
         click("저장")
         await{snapshot().appointments.single().careItems.single().time==null}

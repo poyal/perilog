@@ -144,7 +144,7 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
     }
 }
 
-@Composable fun AppointmentDetailScreen(s:Snapshot,id:String,now:LocalDateTime,navigate:(String)->Unit,back:()->Unit) {
+@Composable fun AppointmentDetailScreen(s:Snapshot,id:String,now:LocalDateTime,navigate:(String)->Unit,back:()->Unit,vm:JournalViewModel?=null) {
     val appointment=s.appointments.find {it.id==id}
     Page("병원 일정 상세",back=back) {
         if(appointment==null) Paper {Hint("삭제된 병원 일정이에요.")}
@@ -156,6 +156,7 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
             }
             Action("일정 수정",{navigate("appointment/${appointment.id}")},icon=Icons.Outlined.Edit)
             SecondaryButton(onClick={navigate("appointment/next/${appointment.id}")}) {Text("같은 구성으로 다음 예약")}
+            if(vm!=null) AppointmentCalendarStatus(vm,appointment.id,navigate)
         }
     }
 }

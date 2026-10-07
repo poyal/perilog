@@ -56,6 +56,7 @@ private data class SettingsEntry(val title:String,val summary:String,val icon:Im
             SettingsEntry("사용자 색상","저장한 색상 ${p.palette.size}개",Icons.Outlined.Palette,"settings/palette")),
         "병원·연락처" to listOf(
             SettingsEntry("병원 일정","예약 날짜·시간·메모",Icons.Outlined.Event,"appointments"),
+            SettingsEntry("캘린더 연동","구글·휴대폰 캘린더에 예약 반영",Icons.Outlined.EventAvailable,"settings/calendar"),
             SettingsEntry("진료과","등록한 진료과 ${s.departments.size}개",Icons.Outlined.LocalHospital,"departments"),
             SettingsEntry("검사·치료 항목","등록한 항목 ${s.careTemplates.size}개",Icons.Outlined.MedicalServices,"careTemplates"),
             SettingsEntry("연락처","등록한 연락처 ${s.contacts.size}개",Icons.Outlined.ContactPhone,"contacts")),

@@ -16,6 +16,7 @@ class GuideTest {
         }
         listOf("settings/backup","settings/transfer","settings/protection","settings/reset").forEach {assertEquals("backup",guideForRoute(it))}
         assertEquals("updates",guideForRoute("updates"))
+        assertEquals("calendar",guideForRoute("settings/calendar"))
         assertTrue("request-patterns" in ids && "manual" in ids && "backup" in ids)
         guideTopics.forEach { topic->assertTrue(topic.title.isNotBlank() && topic.steps.isNotEmpty());topic.steps.forEach {assertTrue(it.title.isNotBlank() && it.text.isNotBlank())} }
     }

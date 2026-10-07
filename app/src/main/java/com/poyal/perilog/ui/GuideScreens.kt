@@ -46,6 +46,7 @@ fun guideForRoute(route: String): String = when {
     route=="about" || route=="updates" -> "updates"
     route in listOf("settings/backup","settings/transfer","settings/protection","settings/reset") -> "backup"
     route=="settings/palette" -> "setup"
+    route=="settings/calendar" -> "calendar"
     route=="settings" || route.startsWith("settings/") -> "settings"
     route=="widgets" -> "widgets"
     else -> "stock"

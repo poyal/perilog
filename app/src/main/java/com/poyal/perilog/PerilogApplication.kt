@@ -16,9 +16,11 @@ class PerilogApplication: Application() {
         com.poyal.perilog.update.AndroidUpdateDownloads(this), updateScope) }
     val repository by lazy { Repository(JournalDb.open(this)) }
     val backup by lazy { BackupManager(this,repository) }
+    val calendar by lazy { com.poyal.perilog.calendar.CalendarRuntime(this,repository) }
     @OptIn(FlowPreview::class)
     override fun onCreate() {
         super.onCreate(); BackupManager.schedule(this)
+        calendar.start(updateScope)
         Reminders.ensureChannel(this)
         updateScope.launch(Dispatchers.IO) { Reminders.schedule(this@PerilogApplication,repository.snapshot().preferences) }
         updateScope.launch(Dispatchers.IO) {

@@ -265,6 +265,7 @@ class RepositoryTest {
     @Test fun versionFiveMigrationKeepsLegacySharedTimeAndAllExistingData()=migrationPreservesData(5)
     @Test fun versionSixMigrationPreservesDepartmentTimesAndCreatesEmptyAdjustments()=migrationPreservesData(6)
     @Test fun versionSevenMigrationPreservesExistingDataAndAddsRequests()=migrationPreservesData(7)
+    @Test fun versionEightMigrationPreservesExistingDataAndAddsCalendarState()=migrationPreservesData(8)
     private fun migrationPreservesData(version:Int)=runBlocking {
         val context=ApplicationProvider.getApplicationContext<Context>()
         val file=File("schemas/com.poyal.perilog.data.JournalDb/$version.json").takeIf{it.exists()}
@@ -328,7 +329,7 @@ class RepositoryTest {
         val upgraded=JournalDb.open(context)
         try {
             val restored=Repository(upgraded).snapshot()
-            assertEquals(8,upgraded.openHelper.readableDatabase.version)
+            assertEquals(9,upgraded.openHelper.readableDatabase.version)
             assertEquals(if(version>=7)listOf(adjustment)else emptyList<StockAdjustment>(),restored.adjustments)
             assertTrue(restored.replenishmentPlans.isEmpty())
             assertEquals(listOf(p),restored.products)

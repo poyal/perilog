@@ -67,6 +67,7 @@ dependencies {
     ksp("androidx.room:room-compiler:2.8.4")
     implementation("androidx.datastore:datastore-preferences:1.2.0")
     implementation("androidx.work:work-runtime-ktx:2.11.0")
+    implementation("com.google.android.gms:play-services-auth:22.0.0")
     implementation("androidx.glance:glance-appwidget:1.2.0")
     implementation("androidx.documentfile:documentfile:1.1.0")
     implementation("androidx.biometric:biometric:1.1.0")

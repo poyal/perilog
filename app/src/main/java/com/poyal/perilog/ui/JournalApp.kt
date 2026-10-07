@@ -114,7 +114,7 @@ import com.poyal.perilog.domain.dailyProgress
         }
     }
     LaunchedEffect(ready,route){if(ready && route=="edit" && vm.editor.value==null){if(editingId!=null && (s.treatments.any{it.id==editingId} || s.drafts.any{it.id==editingId}))vm.edit(editingId)else back()}}
-    val readOnly=route in listOf("settings/transfer","settings/protection","settings/reset","settings/palette") || route.startsWith("stock/") || route.startsWith("stockHistory/") || route.startsWith("guide/") || route.startsWith("requestDetail/") || route.startsWith("appointmentStock/") || route.startsWith("appointmentDetail/")
+    val readOnly=route in listOf("settings/transfer","settings/protection","settings/reset","settings/palette","settings/calendar") || route.startsWith("stock/") || route.startsWith("stockHistory/") || route.startsWith("guide/") || route.startsWith("requestDetail/") || route.startsWith("appointmentStock/") || route.startsWith("appointmentDetail/")
     BackHandler(unlocked && stack.size>1 && (!editing || readOnly)){back()}
     if(!unlocked) return
     CompositionLocalProvider(LocalInputErrors provides vm.inputErrors,LocalHelpAction provides {navigate("guide/${if(route=="edit" && vm.editor.value?.kind=="MANUAL")"manual"else guideForRoute(route)}")}){PerilogTheme(s.preferences.darkMode){
@@ -144,7 +144,7 @@ import com.poyal.perilog.domain.dailyProgress
                     route.startsWith("requestDetail/")->ReplenishmentDetailScreen(s,route.substringAfter('/'),::navigate,::back)
                     route.startsWith("requestReceive/")->RequestReceiptScreen(s,vm,route.substringAfter('/'),::back)
                     route.startsWith("appointmentStock/")->StockForecastScreen(s,vm,route.substringAfterLast('/'),now,::navigate,::back)
-                    route.startsWith("appointmentDetail/")->AppointmentDetailScreen(s,route.substringAfter('/'),now,::navigate,::back)
+                    route.startsWith("appointmentDetail/")->AppointmentDetailScreen(s,route.substringAfter('/'),now,::navigate,::back,vm)
                     route.startsWith("request/")->ReplenishmentEditor(s,vm,route.substringAfterLast('/'),if(route.startsWith("request/copy/"))route.split('/')[2]else null,::navigate,::back)
                     route=="products"->ProductsScreen(s,::navigate,::back)
                     route=="templates"->TemplatesScreen(s,vm,::navigate,::back)
@@ -152,6 +152,7 @@ import com.poyal.perilog.domain.dailyProgress
                     route=="about"->AboutScreen(updates,::back)
                     route=="updates"->UpdatesScreen(updates,::back)
                     route=="settings"->SettingsScreen(s,::navigate,::back)
+                    route=="settings/calendar"->CalendarSettingsScreen(vm,::back)
                     route in listOf("settings/display","settings/notifications","settings/lock","settings/backup","settings/basis")->PreferenceSettingsScreen(s,vm,route.substringAfter('/'),::back)
                     route in listOf("settings/transfer","settings/protection","settings/reset")->DataSettingsScreen(s,vm,route.substringAfter('/'),::back)
                     route=="settings/palette"->PaletteSettingsScreen(s,vm,::back)

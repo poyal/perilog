@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import com.poyal.perilog.domain.*
+import com.poyal.perilog.calendar.*
+import kotlinx.coroutines.sync.withLock
 
 class Converters {
     @TypeConverter fun replenishmentInput(value: ReplenishmentInput): String = codec.encodeToString(value)
@@ -86,10 +88,12 @@ class Converters {
 
 @Database(entities=[Product::class,UsageTemplate::class,Treatment::class,Usage::class,Receipt::class,
     StockCount::class,Audit::class,Draft::class,SettingsRow::class,Department::class,CareTemplate::class,
-    Appointment::class,Contact::class,StockAdjustment::class,ReplenishmentPlan::class],version=8,exportSchema=true)
+    Appointment::class,Contact::class,StockAdjustment::class,ReplenishmentPlan::class,
+    CalendarConnection::class,CalendarLink::class,CalendarJob::class,CalendarDeviceState::class],version=9,exportSchema=true)
 @TypeConverters(Converters::class)
 abstract class JournalDb : RoomDatabase() {
     abstract fun dao(): JournalDao
+    abstract fun calendarDao(): CalendarDao
     companion object {
         val MIGRATION_1_2=object:Migration(1,2) {
             override fun migrate(db:SupportSQLiteDatabase) {
@@ -147,7 +151,16 @@ abstract class JournalDb : RoomDatabase() {
                 db.execSQL("ALTER TABLE receipts ADD COLUMN requestPlanId TEXT")
             }
         }
-        fun open(context: Context) = Room.databaseBuilder(context,JournalDb::class.java,"perilog.db").addMigrations(MIGRATION_1_2,MIGRATION_2_3,MIGRATION_3_4,MIGRATION_4_5,MIGRATION_5_6,MIGRATION_6_7,MIGRATION_7_8).build()
+        val MIGRATION_8_9=object:Migration(8,9) {
+            override fun migrate(db:SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS calendar_connections (id TEXT NOT NULL PRIMARY KEY, provider TEXT NOT NULL, account TEXT NOT NULL, accountType TEXT NOT NULL, calendarId TEXT NOT NULL, calendarName TEXT NOT NULL, zoneId TEXT NOT NULL, includeMemo INTEGER NOT NULL, state TEXT NOT NULL, generation INTEGER NOT NULL, lastSuccess INTEGER, error TEXT NOT NULL)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS calendar_links (id TEXT NOT NULL PRIMARY KEY, connectionId TEXT NOT NULL, appointmentId TEXT NOT NULL, remoteId TEXT, createKey TEXT NOT NULL, attempted INTEGER NOT NULL, revision INTEGER NOT NULL, lastSuccess INTEGER, deleted INTEGER NOT NULL)")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_calendar_links_connectionId_appointmentId ON calendar_links (connectionId, appointmentId)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS calendar_jobs (linkId TEXT NOT NULL PRIMARY KEY, connectionId TEXT NOT NULL, generation INTEGER NOT NULL, revision INTEGER NOT NULL, payload TEXT, attempts INTEGER NOT NULL, error TEXT NOT NULL, blocked INTEGER NOT NULL)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS calendar_device_state (id INTEGER NOT NULL PRIMARY KEY, restored INTEGER NOT NULL)")
+            }
+        }
+        fun open(context: Context) = Room.databaseBuilder(context,JournalDb::class.java,"perilog.db").addMigrations(MIGRATION_1_2,MIGRATION_2_3,MIGRATION_3_4,MIGRATION_4_5,MIGRATION_5_6,MIGRATION_6_7,MIGRATION_7_8,MIGRATION_8_9).build()
     }
 }
 
@@ -253,6 +266,7 @@ class Repository(val db: JournalDb) {
     }
     suspend fun appointment(value: Appointment) = db.withTransaction {
         val s=read(); validate(s.copy(appointments=s.appointments.filterNot{it.id==value.id}+value)); d.put(value)
+        CalendarStore(db).appointmentChanged(value,value.id)
     }
     suspend fun createContact(value: Contact) = saveContact(value,creating=true)
     suspend fun updateContact(value: Contact) = saveContact(value,creating=false)
@@ -266,14 +280,17 @@ class Repository(val db: JournalDb) {
     }
     suspend fun deleteDepartment(id: String) = d.deleteDepartment(id)
     suspend fun deleteCareTemplate(id: String) = d.deleteCareTemplate(id)
-    suspend fun deleteAppointment(id: String) = d.deleteAppointment(id)
+    suspend fun deleteAppointment(id: String) = db.withTransaction {
+        d.deleteAppointment(id); CalendarStore(db).appointmentChanged(null,id)
+    }
     suspend fun deleteContact(id: String) = db.withTransaction {
         val p=read().preferences
         d.deleteContact(id)
         d.put(SettingsRow(payload=codec.encodeToString(p.copy(contactOrder=p.contactOrder-id))))
     }
-    suspend fun restore(s: Snapshot) = db.withTransaction {
+    suspend fun restore(s: Snapshot) = CalendarSyncLock.mutex.withLock { db.withTransaction {
         validate(s)
+        CalendarStore(db).pauseForRestore()
         val careItems=s.careTemplates.flatMap{it.individualItems()}
         validate(s.copy(careTemplates=careItems))
         d.clearDrafts(); d.clearTreatments(); d.clearUsages(); d.clearReceipts(); d.clearReplenishmentPlans(); d.clearCounts(); d.clearAdjustments(); d.clearTemplates(); d.clearProducts(); d.clearAudit()
@@ -283,5 +300,5 @@ class Repository(val db: JournalDb) {
         s.replenishmentPlans.forEach{d.put(it)}
         s.departments.forEach{d.put(it)}; careItems.forEach{d.put(it)}; s.appointments.forEach{d.put(it)}; s.contacts.forEach{d.put(it)}
         d.put(SettingsRow(payload=codec.encodeToString(s.preferences)))
-    }
+    } }
 }

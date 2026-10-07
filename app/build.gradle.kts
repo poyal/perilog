@@ -16,8 +16,8 @@ android {
         applicationId = "com.poyal.perilog"
         minSdk = 31
         targetSdk = 36
-        versionCode = 13
-        versionName = "1.0.12"
+        versionCode = 14
+        versionName = "1.0.13"
         testInstrumentationRunner = "com.poyal.perilog.PerilogTestRunner"
     }
     signingConfigs {

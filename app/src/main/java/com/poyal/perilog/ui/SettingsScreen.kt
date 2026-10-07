@@ -47,7 +47,7 @@ private data class SettingsEntry(val title:String,val summary:String,val icon:Im
         "일반" to listOf(
             SettingsEntry("화면·표시", theme,Icons.Outlined.Palette,"settings/display"),
             SettingsEntry("알림", "${if(allowed)"허용됨"else"꺼짐"} · ${String.format(Locale.US,"%02d:%02d",p.reminderHour,p.reminderMinute)}",Icons.Outlined.Notifications,"settings/notifications"),
-            SettingsEntry("앱 잠금",if(p.lock)"사용 중"else"사용 안 함",Icons.Outlined.Lock,"settings/lock"),
+            SettingsEntry("앱 잠금·화면 보호","잠금 ${if(p.lock) "켜짐" else "꺼짐"} · 화면 보호 ${if(p.screenProtection) "켜짐" else "꺼짐"}",Icons.Outlined.Lock,"settings/lock"),
             SettingsEntry("홈 화면 위젯","어제·오늘 기록 · 병원 일정",Icons.Outlined.Widgets,"widgets")),
         "투석 기록·물품" to listOf(
             SettingsEntry("사용 구성","등록한 구성 ${s.templates.size}개",Icons.Outlined.ViewList,"templates"),
@@ -94,12 +94,12 @@ private data class SettingsEntry(val title:String,val summary:String,val icon:Im
     var originalBasis by rememberSaveable{mutableStateOf(basis)}
     var originalFrom by rememberSaveable{mutableStateOf(basisFrom)}
     val allowed=notificationAllowed()
-    val title=when(section){"display"->"화면·표시";"lock"->"앱 잠금";"notifications"->"알림";"backup"->"자동 백업";else->"투석 계산 기준"}
-    val saveLabel=when(section){"display"->"화면 설정 저장";"lock"->"앱 잠금 설정 저장";"notifications"->"알림 시각 저장";"backup"->"백업 설정 저장";else->"이 날짜부터 기준 저장"}
-    val success=when(section){"display"->"화면 설정을 저장했어요";"lock"->"앱 잠금 설정을 저장했어요";"notifications"->"알림 시각을 저장했어요";"backup"->"백업 설정을 저장했어요";else->"계산 기준을 저장했어요"}
+    val title=when(section){"display"->"화면·표시";"lock"->"앱 잠금·화면 보호";"notifications"->"알림";"backup"->"자동 백업";else->"투석 계산 기준"}
+    val saveLabel=when(section){"display"->"화면 설정 저장";"lock"->"잠금·보호 설정 저장";"notifications"->"알림 시각 저장";"backup"->"백업 설정 저장";else->"이 날짜부터 기준 저장"}
+    val success=when(section){"display"->"화면 설정을 저장했어요";"lock"->"잠금·보호 설정을 저장했어요";"notifications"->"알림 시각을 저장했어요";"backup"->"백업 설정을 저장했어요";else->"계산 기준을 저장했어요"}
     val dirty=when(section) {
         "display"->p.darkMode!=original.darkMode
-        "lock"->p.lock!=original.lock
+        "lock"->p.lock!=original.lock || p.screenProtection!=original.screenProtection
         "notifications"->p.reminderHour!=original.reminderHour || p.reminderMinute!=original.reminderMinute
         "backup"->p.backupDays!=original.backupDays || p.keepBackups!=original.keepBackups
         else->basis!=originalBasis || basisFrom!=originalFrom
@@ -115,7 +115,7 @@ private data class SettingsEntry(val title:String,val summary:String,val icon:Im
         vm.preferences(success,onSaved={original=draft;originalBasis=ml;originalFrom=from}) {saved->
             when(section) {
                 "display"->saved.copy(darkMode=draft.darkMode)
-                "lock"->saved.copy(lock=draft.lock)
+                "lock"->saved.copy(lock=draft.lock,screenProtection=draft.screenProtection)
                 "notifications"->saved.copy(reminderHour=draft.reminderHour,reminderMinute=draft.reminderMinute)
                 "backup"->saved.copy(backupDays=draft.backupDays,keepBackups=draft.keepBackups)
                 else->saved.copy(basis=(saved.basis.filterNot{it.from==from}+Basis(from,requireNotNull(ml))).sortedBy{it.from})
@@ -135,8 +135,13 @@ private data class SettingsEntry(val title:String,val summary:String,val icon:Im
                     val authenticators=BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
                     if(!enabled || BiometricManager.from(context).canAuthenticate(authenticators)==BiometricManager.BIOMETRIC_SUCCESS)p=p.copy(lock=enabled)
                     else vm.act{vm.message.emit("먼저 휴대폰 설정에서 화면 잠금을 설정해 주세요.")}
-                },description="생체 인증 또는 기기 잠금 사용")
-                Hint("앱 잠금을 사용해도 홈 화면 위젯 내용은 표시돼요. 위젯을 눌러 앱으로 들어올 때 인증해요.")
+                },description="앱을 열거나 다른 앱에서 돌아올 때 생체 인증 또는 휴대폰 화면 잠금으로 인증해요.")
+                Hint("앱 잠금만 켜면 스크린샷과 화면 녹화는 허용돼요.")
+                HorizontalDivider()
+                SettingsSwitch("화면 보호",p.screenProtection,{p=p.copy(screenProtection=it)},
+                    description="앱 화면의 스크린샷·화면 녹화·화면 공유를 막고 최근 앱 미리보기를 가려요.")
+                Hint("앱 잠금과 별개로 켤 수 있어요. 화면을 캡처하거나 공유하려면 화면 보호를 끄고 저장해 주세요.")
+                Hint("두 옵션은 홈 화면 위젯과 앱 밖에 저장한 백업 파일을 보호하지 않아요. 위젯을 눌러 앱으로 들어올 때는 앱 잠금 설정에 따라 인증해요.")
             }
             "notifications"->Paper {
                 Text(if(allowed)"시스템 알림이 켜져 있어요"else"시스템 알림이 꺼져 있어요")

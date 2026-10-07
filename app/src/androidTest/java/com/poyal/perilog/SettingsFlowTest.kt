@@ -70,7 +70,7 @@ class SettingsFlowTest {
         groups.forEach { show(ui.onNodeWithText(it)).assertHasNoClickAction() }
         val before=snapshot()
         val menus=listOf(
-            "화면·표시" to "화면 설정 저장","알림" to "알림 시각 저장","앱 잠금" to "앱 잠금 설정 저장","홈 화면 위젯" to "기록 위젯 2×2 추가",
+            "화면·표시" to "화면 설정 저장","알림" to "알림 시각 저장","앱 잠금·화면 보호" to "잠금·보호 설정 저장","홈 화면 위젯" to "기록 위젯 2×2 추가",
             "자동 백업" to "백업 설정 저장","데이터 내보내기·가져오기" to "전체 데이터 내보내기","보호 백업" to "보호 백업","데이터 초기화" to "모든 앱 데이터 초기화",
             "사용 구성" to "사용 구성 관리","품목 관리" to "+ 품목 추가","투석 계산 기준" to "이 날짜부터 기준 저장","사용자 색상" to "사용자 색상",
             "병원 일정" to "병원 일정 관리","진료과" to "+ 진료과 등록","검사·치료 항목" to "+ 치료 항목 등록","연락처" to "+ 연락처 등록",
@@ -85,7 +85,7 @@ class SettingsFlowTest {
     }
     @Test fun savingSettingsDoesNotMoveButtonsAndFeedbackClearsOnNavigation() {
         for((entry,save,message) in listOf(
-            Triple("앱 잠금","앱 잠금 설정 저장","앱 잠금 설정을 저장했어요"),
+            Triple("앱 잠금·화면 보호","잠금·보호 설정 저장","잠금·보호 설정을 저장했어요"),
             Triple("화면·표시","화면 설정 저장","화면 설정을 저장했어요"),
             Triple("알림","알림 시각 저장","알림 시각을 저장했어요")
         )) {
@@ -102,7 +102,7 @@ class SettingsFlowTest {
             assertTrue(feedback.top>=safe.top)
             assertEquals(saveBefore,ui.onNodeWithText(save).fetchSemanticsNode().boundsInRoot)
             assertEquals(cancelBefore,ui.onNodeWithText("취소").fetchSemanticsNode().boundsInRoot)
-            if(entry=="앱 잠금") {
+            if(entry=="앱 잠금·화면 보호") {
                 val dir=File(app.filesDir,"e2e-artifacts").apply{mkdirs()}
                 File(dir,"top-snackbar-lock.png").outputStream().use {
                     InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot().compress(Bitmap.CompressFormat.PNG,100,it)

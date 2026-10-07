@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -53,30 +54,34 @@ import java.time.format.DateTimeFormatter
     val state by updates.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    var installationId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var folderMessage by remember { mutableStateOf("") }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        updates.installationMessage(if (context.packageManager.canRequestPackageInstalls())
+        updates.installationMessage(installationId, if (context.packageManager.canRequestPackageInstalls())
             "설치가 허용됐어요. 설치 버튼을 눌러 계속해 주세요." else "설치 허용이 꺼져 있어요. Download 폴더의 APK는 보관돼요.")
     }
     val installer = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        updates.installationMessage("설치를 취소했거나 완료되지 않았다면 다시 시도할 수 있어요. Download 폴더의 APK는 그대로 보관돼요.")
+        updates.installationMessage(installationId, "설치를 취소했거나 완료되지 않았다면 다시 시도할 수 있어요. Download 폴더의 APK는 그대로 보관돼요.")
     }
     fun install() { scope.launch {
-        val uri = updates.installationCopy() ?: return@launch
+        val prepared = updates.installationCopy() ?: return@launch
+        if (!updates.isInstallationCurrent(prepared)) return@launch
+        installationId = prepared.download.id
         try {
             if (!context.packageManager.canRequestPackageInstalls()) {
-                updates.installationMessage("페리로그의 ‘이 출처의 앱 설치 허용’을 켜 주세요. 다운로드한 파일은 유지돼요.")
+                updates.installationMessage(installationId, "페리로그의 ‘이 출처의 앱 설치 허용’을 켜 주세요. 다운로드한 파일은 유지돼요.")
                 permission.launch(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, "package:${context.packageName}".toUri()))
             } else {
-                installer.launch(Intent(Intent.ACTION_VIEW).setDataAndType(uri.toUri(), "application/vnd.android.package-archive")
+                installer.launch(Intent(Intent.ACTION_VIEW).setDataAndType(prepared.uri.toUri(), "application/vnd.android.package-archive")
                     .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
             }
-        } catch (_: Exception) { updates.installationMessage("설치 화면을 열지 못했어요. 다운로드 폴더에서 APK를 직접 열어 주세요.") }
+        } catch (_: Exception) { updates.installationMessage(installationId, "설치 화면을 열지 못했어요. 다운로드 폴더에서 APK를 직접 열어 주세요.") }
     } }
     Page("업데이트", back=back) {
         Paper {
             Section("업데이트")
             Text(state.message, color = if (state.check == CheckStatus.ERROR) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
-            Hint("현재 버전 ${BuildConfig.VERSION_NAME}")
+            Hint("현재 버전 ${updates.installedVersion}")
             state.release?.let { Hint("최신 확인 버전 ${it.version}") }
             if (state.checkedAt > 0) Hint("마지막 성공 확인: " + Instant.ofEpochMilli(state.checkedAt).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yyyy. M. d HH:mm")))
             if (state.check == CheckStatus.ERROR && state.release != null) Hint("이전 확인 결과예요. 새 정보를 받지 못했어요.")
@@ -84,23 +89,27 @@ import java.time.format.DateTimeFormatter
                 Icon(Icons.Outlined.Refresh, null); Spacer(Modifier.width(8.dp)); Text(if (state.check == CheckStatus.CHECKING) "확인 중…" else "업데이트 확인")
             }
             val newer = state.release?.let { compareVersions(it.version, updates.installedVersion) > 0 } == true
+            val matching = newer && state.transferRelease == state.release
+            val transfer = if (matching) state.transfer else TransferStatus.NONE
             if (newer) {
-                val running = state.transfer in setOf(TransferStatus.DOWNLOADING, TransferStatus.VERIFYING)
-                if (state.transfer != TransferStatus.READY) Action(if (state.transfer in setOf(TransferStatus.FAILED, TransferStatus.CANCELLED)) "다시 다운로드" else "APK 다운로드", updates::download, !running, Icons.Outlined.Download)
-                if (state.transfer == TransferStatus.READY) Action("업데이트 설치", ::install, icon = Icons.Outlined.InstallMobile)
+                val running = transfer in setOf(TransferStatus.DOWNLOADING, TransferStatus.VERIFYING)
+                val version = state.release!!.version
+                if (transfer != TransferStatus.READY) Action("$version " + if (transfer in setOf(TransferStatus.FAILED, TransferStatus.CANCELLED)) "다시 다운로드" else "APK 다운로드", updates::download, !running, Icons.Outlined.Download)
+                if (transfer == TransferStatus.READY) Action("$version 업데이트 설치", ::install, icon = Icons.Outlined.InstallMobile)
             }
-            if (state.transfer == TransferStatus.DOWNLOADING) {
+            if (transfer == TransferStatus.DOWNLOADING) {
                 LinearProgressIndicator(progress = { if (state.total > 0) (state.downloaded.toFloat() / state.total).coerceIn(0f, 1f) else 0f }, modifier = Modifier.fillMaxWidth())
                 Hint("${state.downloaded / 1024} / ${state.total / 1024} KB")
                 TextButton(onClick = updates::cancelDownload) { Text("다운로드 취소") }
             }
-            if (state.transfer == TransferStatus.VERIFYING) LinearProgressIndicator(Modifier.fillMaxWidth())
-            if (state.transferMessage.isNotBlank()) Text(state.transferMessage, color = if (state.transfer == TransferStatus.FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
-            state.fileName?.let { Hint("저장 파일: $it") }
+            if (transfer == TransferStatus.VERIFYING) LinearProgressIndicator(Modifier.fillMaxWidth())
+            if (matching && state.transferMessage.isNotBlank()) Text(state.transferMessage, color = if (transfer == TransferStatus.FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+            if (matching) state.fileName?.let { Hint("${if (transfer == TransferStatus.READY) "저장 파일" else "다운로드 파일"}: $it") }
             SecondaryButton(onClick = {
                 try { context.startActivity(Intent(DownloadManager.ACTION_VIEW_DOWNLOADS)) }
-                catch (_: Exception) { updates.installationMessage("파일 앱의 Download 또는 다운로드 폴더에서 APK를 찾아 주세요.") }
+                catch (_: Exception) { folderMessage = "파일 앱의 Download 또는 다운로드 폴더에서 APK를 찾아 주세요." }
             }) { Icon(Icons.Outlined.FolderOpen, null); Spacer(Modifier.width(8.dp)); Text("다운로드 폴더 열기") }
+            if (folderMessage.isNotBlank()) Hint(folderMessage)
             Hint("앱을 새로 실행하면 새 버전을 알려드려요. 자동 조회는 하루 한 번, 직접 확인은 언제든 가능해요.")
         }
         Paper {

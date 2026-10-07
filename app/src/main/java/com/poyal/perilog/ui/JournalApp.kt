@@ -115,7 +115,8 @@ import com.poyal.perilog.domain.dailyProgress
     }
     LaunchedEffect(ready,route){if(ready && route=="edit" && vm.editor.value==null){if(editingId!=null && (s.treatments.any{it.id==editingId} || s.drafts.any{it.id==editingId}))vm.edit(editingId)else back()}}
     val readOnly=route in listOf("settings/transfer","settings/protection","settings/reset","settings/palette") || route.startsWith("stock/") || route.startsWith("stockHistory/") || route.startsWith("guide/") || route.startsWith("requestDetail/") || route.startsWith("appointmentStock/") || route.startsWith("appointmentDetail/")
-    BackHandler(stack.size>1 && (!editing || readOnly)){back()}
+    BackHandler(unlocked && stack.size>1 && (!editing || readOnly)){back()}
+    if(!unlocked) return
     CompositionLocalProvider(LocalInputErrors provides vm.inputErrors,LocalHelpAction provides {navigate("guide/${if(route=="edit" && vm.editor.value?.kind=="MANUAL")"manual"else guideForRoute(route)}")}){PerilogTheme(s.preferences.darkMode){
         val colors=MaterialTheme.colorScheme
         if (ready && unlocked) UpdatePrompt(updateState, updates::dismissPrompt) {

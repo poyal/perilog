@@ -40,15 +40,40 @@ class AndroidUpdateDownloadTest {
         try {
             val downloads = AndroidUpdateDownloads(app)
             val release = ReleaseInfo("99.0.0", "http://127.0.0.1:${server.localPort}/update.apk", "perilog-99.0.0.apk", bytes.size.toLong(), hash, "fixture")
-            val record = downloads.enqueue(release)
-            withTimeout(45000) { while (downloads.progress(record).status == TransferStatus.DOWNLOADING) delay(250) }
+            val previous = downloads.enqueue(release.copy(version = "1.0.10", apkName = "perilog-1.0.10.apk"))
+            withTimeout(45000) { while (downloads.progress(previous).status == TransferStatus.DOWNLOADING) delay(250) }
+            assertEquals(TransferStatus.READY, downloads.progress(previous).status)
+            val memory = object: UpdatePersistence {
+                @Volatile var record = UpdateRecord(release, 1000, 1000, previous)
+                override suspend fun read() = record
+                override suspend fun write(record: UpdateRecord) { this.record = record }
+            }
+            val controller = UpdateController(BuildConfig.VERSION_NAME, object: ReleaseSource { override suspend fun latest() = release },
+                memory, downloads, this) { 2000 }
+            controller.refreshDownload()
+            assertEquals(TransferStatus.NONE, controller.state.value.transfer)
+            assertNull(controller.state.value.fileName)
+            assertNull(controller.installationCopy())
+            controller.download()
+            withTimeout(45000) { while (controller.state.value.downloadId == null) delay(100) }
+            val record = memory.record.download!!
+            assertNotEquals(previous.id, record.id)
+            withTimeout(45000) {
+                while (controller.state.value.transfer != TransferStatus.READY) {
+                    controller.refreshDownload()
+                    check(controller.state.value.transfer != TransferStatus.FAILED) { controller.state.value.transferMessage }
+                    delay(250)
+                }
+            }
             assertEquals(TransferStatus.READY, downloads.progress(record).status)
-            downloads.verify(record)
-            val uri = Uri.parse(downloads.installationCopy(record))
+            val prepared = controller.installationCopy()!!
+            assertTrue(controller.isInstallationCurrent(prepared))
+            val uri = Uri.parse(prepared.uri)
             assertArrayEquals(bytes, app.contentResolver.openInputStream(uri)!!.use { it.readBytes() })
             val manager = app.getSystemService(DownloadManager::class.java)
             val publicUri = manager.getUriForDownloadedFile(record.id)
             assertNotNull(publicUri)
+            assertNotNull("Previous APK must be retained", manager.getUriForDownloadedFile(previous.id))
             // A completed download must survive cancel/retry and installer cancellation.
             downloads.cancel(record)
             assertEquals(TransferStatus.READY, downloads.progress(record).status)
@@ -78,7 +103,7 @@ class AndroidUpdateDownloadTest {
             assertTrue("Modified APK must not reach installer", rejected)
             assertArrayEquals(bytes, app.contentResolver.openInputStream(uri)!!.use { it.readBytes() })
             assertNotNull("Public file retained even after validation failure", manager.getUriForDownloadedFile(record.id))
-            println("Verified DownloadManager, private copy, Android installer cancellation, public retention and tamper rejection: ${record.fileName}")
+            println("Verified stale download isolation, DownloadManager, private copy, Android installer cancellation, public retention and tamper rejection: ${record.fileName}")
         } finally { server.close(); serving.join(1000) }
     }
 }

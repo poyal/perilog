@@ -99,6 +99,8 @@ data class Preferences(val basis: List<Basis> = listOf(Basis("1970-01-01", 2000)
     val expiryDays: Int = 7, val backupDays: Int = 1, val keepBackups: Int = 30,
     // celebrate and celebratedDates are kept only for existing data/backup compatibility.
     val darkMode: String = "SYSTEM", val celebrate: Boolean = true, val lock: Boolean = false,
+    // Missing in older settings/backups: preserve their app-lock screen protection.
+    val screenProtection: Boolean = lock,
     val reminder: Boolean = false, val reminderHour: Int = 21, val reminderMinute: Int = 0,
     val palette: List<Long> = listOf(0xFF2167B8,0xFF47956E,0xFFEF8752,0xFF30343B,0xFFBA668B,0xFF8772B5,0xFFDAAB36,0xFF5B9FA6),
     val celebratedDates: Set<String> = emptySet(), val lastDrainUnit: String = "g",

@@ -2,6 +2,9 @@ package com.poyal.perilog
 
 import com.poyal.perilog.update.*
 import kotlinx.coroutines.test.*
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.ByteArrayInputStream
@@ -24,10 +27,14 @@ class UpdateTest {
         var broken = false
         var cancelled = false
         var status = TransferStatus.DOWNLOADING
-        override suspend fun enqueue(release: ReleaseInfo) = DownloadRecord((++enqueues).toLong(), release, "download-$enqueues.apk")
-        override suspend fun progress(record: DownloadRecord) = DownloadProgress(status, 3, 10)
-        override suspend fun verify(record: DownloadRecord) { verifications++; check(!broken) { "APK 체크섬이 일치하지 않아요." } }
-        override suspend fun installationCopy(record: DownloadRecord): String { verify(record); copies++; return "content://verified" }
+        var beforeEnqueue: suspend () -> Unit = {}
+        var beforeProgress: suspend () -> Unit = {}
+        var beforeVerify: suspend () -> Unit = {}
+        var beforeCopy: suspend () -> Unit = {}
+        override suspend fun enqueue(release: ReleaseInfo): DownloadRecord { beforeEnqueue(); return DownloadRecord((++enqueues).toLong(), release, "download-$enqueues.apk") }
+        override suspend fun progress(record: DownloadRecord): DownloadProgress { beforeProgress(); return DownloadProgress(status, 3, 10) }
+        override suspend fun verify(record: DownloadRecord) { beforeVerify(); verifications++; check(!broken) { "APK 체크섬이 일치하지 않아요." } }
+        override suspend fun installationCopy(record: DownloadRecord): String { beforeCopy(); verify(record); copies++; return "content://verified" }
         override suspend fun cancel(record: DownloadRecord) { cancelled = status == TransferStatus.DOWNLOADING }
     }
     @Test fun numericVersionComparisonAndInvalidVersions() {
@@ -109,7 +116,7 @@ class UpdateTest {
         val resumed = controller(); resumed.startSession(); runCurrent()
         assertEquals(TransferStatus.READY, resumed.state.value.transfer)
         resumed.download(); runCurrent(); assertEquals(1, downloads.enqueues)
-        assertEquals("content://verified", resumed.installationCopy())
+        assertEquals("content://verified", resumed.installationCopy()?.uri)
         downloads.broken = true
         assertNull(resumed.installationCopy()); assertEquals(TransferStatus.FAILED, resumed.state.value.transfer)
         assertFalse(downloads.cancelled)
@@ -119,7 +126,135 @@ class UpdateTest {
         val downloads = Downloads().apply { status = TransferStatus.READY }
         val memory = Memory(UpdateRecord(release, 1000, 1000, DownloadRecord(1, release, "existing.apk")))
         val controller = UpdateController("1.0.3", object : ReleaseSource { override suspend fun latest() = release }, memory, downloads, backgroundScope) { 2000 }
+        controller.startSession(false); runCurrent()
         controller.cancelDownload(); runCurrent(); assertFalse(downloads.cancelled)
         assertNull(memory.value.download)
+    }
+
+    @Test fun installedOldDownloadNeverBecomesTheNewReleaseTransferEvenOfflineOrAfterRestart() = runTest {
+        val latest = release.copy(version = "1.0.11")
+        val old = DownloadRecord(42, release.copy(version = "1.0.10"), "perilog-1.0.10-old.apk")
+        for (transfer in listOf(TransferStatus.READY, TransferStatus.DOWNLOADING, TransferStatus.FAILED, TransferStatus.CANCELLED)) {
+            val memory = Memory(UpdateRecord(latest, 1000, 1000, old))
+            val downloads = Downloads().apply { status = transfer }
+            val source = object : ReleaseSource { override suspend fun latest(): ReleaseInfo = error("offline") }
+            fun controller() = UpdateController("1.0.10", source, memory, downloads, backgroundScope) { 10000 }
+            val first = controller(); first.startSession(false); runCurrent()
+            assertEquals(TransferStatus.NONE, first.state.value.transfer)
+            assertNull(first.state.value.fileName)
+            assertEquals(0, downloads.verifications)
+            first.check()
+            assertEquals(CheckStatus.ERROR, first.state.value.check)
+            assertEquals(TransferStatus.NONE, first.state.value.transfer)
+            assertNull(first.installationCopy())
+            assertTrue(first.state.value.transferMessage.contains("이전 버전의 다운로드 기록"))
+            assertEquals(0, downloads.copies)
+            assertEquals(old, memory.value.download)
+            val restarted = controller(); restarted.startSession(false); runCurrent()
+            assertEquals(TransferStatus.NONE, restarted.state.value.transfer)
+            restarted.download(); runCurrent()
+            assertEquals(1, downloads.enqueues)
+            assertEquals(latest, memory.value.download!!.release)
+            assertFalse(downloads.cancelled)
+        }
+    }
+    @Test fun releaseIdentityIncludesUrlHashSizeAndInstalledReleaseHidesAllTransfers() = runTest {
+        val old = DownloadRecord(42, release, "old.apk")
+        for (latest in listOf(release.copy(apkUrl = release.apkUrl + "?changed"),
+            release.copy(sha256 = "0".repeat(64)), release.copy(bytes = release.bytes + 1))) {
+            val downloads = Downloads().apply { status = TransferStatus.READY }
+            val controller = UpdateController("1.0.3", object : ReleaseSource { override suspend fun latest() = latest },
+                Memory(UpdateRecord(latest, 1000, 1000, old)), downloads, backgroundScope) { 2000 }
+            controller.startSession(false); runCurrent()
+            assertEquals(TransferStatus.NONE, controller.state.value.transfer)
+            assertNull(controller.state.value.fileName)
+            controller.download(); runCurrent(); assertEquals(1, downloads.enqueues)
+        }
+        val downloads = Downloads().apply { status = TransferStatus.READY }
+        val current = UpdateController(release.version, object : ReleaseSource { override suspend fun latest() = release },
+            Memory(UpdateRecord(release, 1000, 1000, old)), downloads, backgroundScope) { 2000 }
+        current.startSession(false); runCurrent(); current.download(); runCurrent()
+        assertEquals(CheckStatus.CURRENT, current.state.value.check)
+        assertEquals(TransferStatus.NONE, current.state.value.transfer)
+        assertNull(current.state.value.fileName)
+        assertEquals(0, downloads.enqueues)
+    }
+    @Test fun checkingANewerReleaseClearsOldProgressFailureFilenameAndInstallCallbacks() = runTest {
+        var latest: ReleaseInfo? = release
+        var now = 2000L
+        val downloads = Downloads().apply { status = TransferStatus.READY }
+        val memory = Memory(UpdateRecord(release, 1000, 1000, DownloadRecord(42, release, "old.apk")))
+        val controller = UpdateController("1.0.3", object : ReleaseSource { override suspend fun latest() = latest }, memory, downloads, backgroundScope) { now }
+        controller.startSession(false); runCurrent()
+        val prepared = controller.installationCopy()!!
+        assertTrue(controller.isInstallationCurrent(prepared))
+        downloads.broken = true; controller.installationCopy()
+        assertEquals(TransferStatus.FAILED, controller.state.value.transfer)
+        latest = release.copy(version = "1.0.5"); now += 6000; controller.check()
+        assertFalse(controller.isInstallationCurrent(prepared))
+        controller.installationMessage(prepared.download.id, "old installer returned")
+        controller.refreshDownload()
+        assertEquals(TransferStatus.NONE, controller.state.value.transfer)
+        assertNull(controller.state.value.fileName)
+        assertEquals("", controller.state.value.transferMessage)
+        assertNotNull(memory.value.download)
+        latest = null; now += 6000; controller.check()
+        assertNull(controller.state.value.release)
+        assertEquals(TransferStatus.NONE, controller.state.value.transfer)
+    }
+    @Test fun lateProgressVerificationEnqueueAndInstallationResultsCannotOverwriteNewTarget() = runTest {
+        for (operation in listOf("progress", "verify", "enqueue", "copy")) for (fail in listOf(false, true)) {
+            var latest = release
+            val barrier = CompletableDeferred<Unit>()
+            val waiting: suspend () -> Unit = { barrier.await(); if (fail) error("이전 파일 실패") }
+            val downloads = Downloads().apply { status = TransferStatus.READY }
+            val old = if (operation == "enqueue") null else DownloadRecord(42, release, "old.apk")
+            val memory = Memory(UpdateRecord(release, 1000, 1000, old))
+            val controller = UpdateController("1.0.3", object : ReleaseSource { override suspend fun latest() = latest }, memory, downloads, backgroundScope) { 10000 }
+            // Initialize before installing the suspension so this isn't a startup-check test.
+            controller.startSession(false); runCurrent()
+            when (operation) {
+                "progress" -> downloads.beforeProgress = waiting
+                "verify" -> downloads.beforeVerify = waiting
+                "enqueue" -> downloads.beforeEnqueue = waiting
+                "copy" -> downloads.beforeCopy = waiting
+            }
+            val result = backgroundScope.async {
+                when (operation) {
+                    "progress" -> { controller.refreshDownload(); null }
+                    "verify", "enqueue" -> { controller.download(); null }
+                    else -> controller.installationCopy()
+                }
+            }
+            runCurrent()
+            latest = release.copy(version = "1.0.5")
+            controller.check()
+            barrier.complete(Unit); runCurrent()
+            assertNull(result.await())
+            assertEquals(latest, controller.state.value.release)
+            assertEquals(TransferStatus.NONE, controller.state.value.transfer)
+            assertNull(controller.state.value.fileName)
+            assertEquals("", controller.state.value.transferMessage)
+            assertFalse(downloads.cancelled)
+        }
+    }
+    @Test fun retryAndCancelAreOnlyForTheCurrentAttemptAndOldCallbacksAreIgnored() = runTest {
+        val downloads = Downloads()
+        val controller = UpdateController("1.0.3", object : ReleaseSource { override suspend fun latest() = release },
+            Memory(UpdateRecord(release, 1000, 1000)), downloads, backgroundScope) { 2000 }
+        controller.startSession(false); runCurrent()
+        assertEquals(TransferStatus.NONE, controller.state.value.transfer)
+        controller.download(); runCurrent()
+        val oldId = controller.state.value.downloadId
+        controller.cancelDownload(); runCurrent()
+        assertTrue(downloads.cancelled)
+        assertEquals(TransferStatus.CANCELLED, controller.state.value.transfer)
+        controller.download(); runCurrent()
+        controller.installationMessage(oldId, "stale callback")
+        assertFalse(controller.state.value.transferMessage.contains("stale"))
+        downloads.status = TransferStatus.FAILED
+        controller.refreshDownload()
+        assertEquals(TransferStatus.FAILED, controller.state.value.transfer)
+        assertNull(controller.state.value.fileName)
     }
 }

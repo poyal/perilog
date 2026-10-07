@@ -17,6 +17,7 @@ val updateJson = Json { ignoreUnknownKeys = true }
 ) { val pageUrl get() = "$RELEASES_URL/tag/v$version" }
 
 @Serializable data class DownloadRecord(val id: Long, val release: ReleaseInfo, val fileName: String)
+data class InstallationCopy(val download: DownloadRecord, val uri: String)
 @Serializable data class UpdateRecord(
     val release: ReleaseInfo? = null, val checkedAt: Long = 0,
     val attemptedAt: Long = 0, val download: DownloadRecord? = null,
@@ -29,6 +30,7 @@ data class UpdateState(
     val release: ReleaseInfo? = null, val checkedAt: Long = 0,
     val message: String = "GitHub에서 새 버전을 확인할 수 있어요.",
     val transfer: TransferStatus = TransferStatus.NONE,
+    val transferRelease: ReleaseInfo? = null, val downloadId: Long? = null,
     val downloaded: Long = 0, val total: Long = 0,
     val fileName: String? = null, val transferMessage: String = "",
     val prompt: Boolean = false,

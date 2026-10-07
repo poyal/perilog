@@ -84,9 +84,9 @@ class AndroidUpdateDownloads(private val context: Context) : UpdateDownloads {
         val candidate = pm.getPackageArchiveInfo(file.path, PackageManager.GET_SIGNING_CERTIFICATES)
             ?: error("유효한 Android 설치 파일이 아니에요.")
         val installed = pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
-        require(candidate.packageName == context.packageName && candidate.versionName == release.version && candidate.longVersionCode > installed.longVersionCode) {
-            "이 앱의 업데이트 파일이 아니거나 이미 설치된 버전이에요. 공식 출시 앱에서 다시 확인해 주세요."
-        }
+        require(candidate.packageName == context.packageName) { "현재 앱용 APK가 아니에요. 공식 릴리즈에서 설치 파일을 확인해 주세요." }
+        require(candidate.versionName == release.version) { "APK 버전이 최신 확인 버전과 달라요. 업데이트를 다시 확인해 주세요." }
+        require(candidate.longVersionCode > installed.longVersionCode) { "설치된 앱보다 새 빌드가 아니에요. 업데이트를 다시 확인해 주세요." }
         fun certificates(info: android.content.pm.PackageInfo) = info.signingInfo?.apkContentsSigners?.map {
             MessageDigest.getInstance("SHA-256").digest(it.toByteArray()).joinToString("") { b -> "%02x".format(b) }
         }?.toSet().orEmpty()

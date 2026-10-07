@@ -24,6 +24,21 @@ class RepositoryTest {
     private val p=Product(id="p",name="테스트 물품")
     @Before fun setup() {db=Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(),JournalDb::class.java).allowMainThreadQueries().build();repo=Repository(db)}
     @After fun close() {db.close()}
+    @Test fun legacyPrivacySettingsPersistIndependentlyThroughBackupAndEdits()=runBlocking {
+        db.dao().put(SettingsRow(payload="""{"lock":true}"""))
+        val migrated=repo.snapshot().preferences
+        assertTrue(migrated.screenProtection)
+        repo.preferences(migrated.copy(lock=false))
+        assertTrue(repo.snapshot().preferences.screenProtection)
+        assertTrue(db.dao().settings()!!.payload.contains("\"screenProtection\":true"))
+        repo.preferences(repo.snapshot().preferences.copy(lock=true,screenProtection=false))
+        val backup=codec.decodeFromString<Snapshot>(codec.encodeToString(Snapshot.serializer(),repo.snapshot()))
+        repo.restore(Snapshot());repo.restore(backup)
+        assertTrue(repo.snapshot().preferences.lock)
+        assertFalse(repo.snapshot().preferences.screenProtection)
+        repo.preferences(repo.snapshot().preferences.copy(darkMode="DARK"))
+        assertFalse(repo.snapshot().preferences.screenProtection)
+    }
     @Test fun forecastAndExtraRequestSettingsRoundTripWithoutChangingLegacyRequests()=runBlocking {
         repo.product(p)
         val pattern=UsagePattern(mode="DIRECT",directPeriodDays=1,directItems=listOf(Item(p.id,p.name,2)))

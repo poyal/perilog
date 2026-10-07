@@ -23,15 +23,16 @@ import com.poyal.perilog.ui.*
 import kotlinx.coroutines.launch
 import com.poyal.perilog.widget.*
 import com.poyal.perilog.data.codec
+import com.poyal.perilog.data.Preferences
 import kotlinx.serialization.encodeToString
 
 class MainActivity: FragmentActivity() {
     private var themeMode by mutableStateOf("SYSTEM")
     private var unlocked by mutableStateOf(false)
     private var lockEnabled by mutableStateOf(false)
+    private var privacyLoaded by mutableStateOf(false)
     private var authMessage by mutableStateOf("")
     private var authenticating=false
-    private var backgrounded=false
     private var widgetRequest by mutableStateOf<WidgetOpenRequest?>(null)
     private val app get()=application as PerilogApplication
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,24 +47,30 @@ class MainActivity: FragmentActivity() {
         }
         enableEdgeToEdge()
         setContent { PerilogTheme(themeMode) { Box(Modifier.fillMaxSize()) {
-            JournalApp(unlocked = unlocked,widgetRequest=widgetRequest,onWidgetHandled={widgetRequest=null})
+            if(privacyLoaded) JournalApp(unlocked = unlocked,widgetRequest=widgetRequest,onWidgetHandled={widgetRequest=null})
             if(!unlocked) Surface(Modifier.fillMaxSize()) {
                 Column(Modifier.padding(32.dp),verticalArrangement=Arrangement.Center,horizontalAlignment=Alignment.CenterHorizontally) {
                     Text(getString(R.string.app_name),style=MaterialTheme.typography.headlineLarge)
                     Text(getString(R.string.app_description),style=MaterialTheme.typography.titleLarge)
                     Spacer(Modifier.height(32.dp)); Text(authMessage)
-                    Button(onClick={ authenticate() }) { Text("기록 열기") }
+                    Button(onClick={ authenticate() },enabled=privacyLoaded) { Text("기록 열기") }
                 }
             }
         } } }
         lifecycleScope.launch { app.repository.snapshots.collect {
+            applyPrivacy(it.preferences)
             themeMode=it.preferences.darkMode
-            lockEnabled=it.preferences.lock
             val dark=it.preferences.darkMode=="DARK" || (it.preferences.darkMode=="SYSTEM" && resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK==Configuration.UI_MODE_NIGHT_YES)
             WindowCompat.getInsetsController(window,window.decorView).apply { isAppearanceLightStatusBars=!dark;isAppearanceLightNavigationBars=!dark }
-            if(lockEnabled) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE) else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
-            if(!lockEnabled) unlocked=true
         } }
+    }
+    private fun applyPrivacy(preferences: Preferences) {
+        // Set the window policy before exposing content, including the first frame after restart.
+        if(preferences.screenProtection) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        lockEnabled=preferences.lock
+        privacyLoaded=true
+        if(!lockEnabled) unlocked=true
     }
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -76,13 +83,14 @@ class MainActivity: FragmentActivity() {
     override fun onStart() {
         super.onStart()
         lifecycleScope.launch {
-            lockEnabled=app.repository.snapshot().preferences.lock
+            applyPrivacy(app.repository.snapshot().preferences)
             if(!lockEnabled) unlocked=true else if(!unlocked) authenticate()
             runCatching{app.backup.automatic()}
         }
     }
-    override fun onStop() { super.onStop(); if(lockEnabled && !isChangingConfigurations && !authenticating) { unlocked=false; backgrounded=true } }
+    override fun onStop() { super.onStop(); if(lockEnabled && !isChangingConfigurations && !authenticating) unlocked=false }
     private fun authenticate() {
+        if(!privacyLoaded) return
         if(!lockEnabled) { unlocked=true; return }
         if(authenticating) return
         val authenticators=BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL

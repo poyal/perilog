@@ -95,9 +95,10 @@ class DocumentationCapture {
     @Test fun captureTopFeedback() {
         seed()
         ui.waitUntil(15000){ui.onAllNodesWithContentDescription("설정").fetchSemanticsNodes().isNotEmpty()}
-        ui.onNodeWithContentDescription("설정").performClick();click("앱 잠금");shot("81-settings-lock")
-        click("앱 잠금 설정 저장")
-        ui.waitUntil(10000){ui.onAllNodesWithText("앱 잠금 설정을 저장했어요").fetchSemanticsNodes().isNotEmpty()}
+        ui.onNodeWithContentDescription("설정").performClick();shot("18-settings")
+        click("앱 잠금·화면 보호");shot("81-settings-lock")
+        click("잠금·보호 설정 저장")
+        ui.waitUntil(10000){ui.onAllNodesWithText("잠금·보호 설정을 저장했어요").fetchSemanticsNodes().isNotEmpty()}
         shot("87-top-save-feedback")
     }
     @Test fun captureUsabilityChanges() {

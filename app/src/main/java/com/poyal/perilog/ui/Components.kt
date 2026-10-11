@@ -301,10 +301,13 @@ private val actionButtonPadding=PaddingValues(horizontal=18.dp,vertical=15.dp)
     Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         Text(if(date.isBlank())"$label 선택해 주세요"else"$label ${date.replace('-', '.')}",fontWeight=FontWeight.SemiBold)
         Surface(shape=RoundedCornerShape(18.dp),color=MaterialTheme.colorScheme.surface) {
-            FlowRow(Modifier.fillMaxWidth().padding(4.dp),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+            ButtonRow(Modifier.fillMaxWidth().padding(4.dp)) {
                 if(showQuickDates) {
-                    SelectionChip(date==today(),{onChange(today())},{Text("오늘")},border=null)
-                    SelectionChip(date==LocalDate.now().minusDays(1).toString(),{onChange(LocalDate.now().minusDays(1).toString())},{Text("어제")},border=null)
+                    val currentDay=LocalDate.now()
+                    listOf("어제" to currentDay.minusDays(1).toString(),"오늘" to currentDay.toString()).forEach { (title,quickDate) ->
+                        SmallButton(onClick={onChange(quickDate)},modifier=Modifier.semantics{selected=date==quickDate},
+                            emphasized=date==quickDate){Text(title)}
+                    }
                 }
                 SmallButton(onClick={month=date.ifBlank{today()}.take(7);open=!open}){Icon(Icons.Outlined.CalendarMonth,null,Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(if(open)"날짜 선택 접기"else"날짜 선택")}
             }

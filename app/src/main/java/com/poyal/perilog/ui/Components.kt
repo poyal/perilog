@@ -304,8 +304,9 @@ private val actionButtonPadding=PaddingValues(horizontal=18.dp,vertical=15.dp)
             ButtonRow(Modifier.fillMaxWidth().padding(4.dp)) {
                 if(showQuickDates) {
                     val currentDay=LocalDate.now()
-                    listOf("어제" to currentDay.minusDays(1).toString(),"오늘" to currentDay.toString()).forEach { (title,quickDate) ->
-                        SmallButton(onClick={onChange(quickDate)},modifier=Modifier.semantics{selected=date==quickDate},
+                    listOf("어제" to 1L,"오늘" to 0L).forEach { (title,daysAgo) ->
+                        val quickDate=currentDay.minusDays(daysAgo).toString()
+                        SmallButton(onClick={onChange(LocalDate.now().minusDays(daysAgo).toString())},modifier=Modifier.semantics{selected=date==quickDate},
                             emphasized=date==quickDate){Text(title)}
                     }
                 }

@@ -4,7 +4,7 @@ android {
     compileSdk = 36
     defaultConfig {
         applicationId = "com.poyal.perilog.widgettest"
-        minSdk = 31
+        minSdk = 30
         targetSdk = 36
         versionCode = 1
         versionName = "1"

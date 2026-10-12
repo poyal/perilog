@@ -17,6 +17,7 @@ import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -107,12 +108,32 @@ internal val dark=darkColorScheme(
         // A landscape keyboard can leave less room than the header + save bar.
         // Keep the focused input visible; the title/back button returns with keyboard dismissal.
         val compactInput=WindowInsets.isImeVisible && maxHeight<300.dp
-        Column(Modifier.fillMaxSize()) {
-        if(!compactInput)ScreenHeader(title,subtitle,back,brand,actions)
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal=20.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-            content();Spacer(Modifier.height(10.dp))
-        }
-        footer?.let { Surface(color=MaterialTheme.colorScheme.background){Box(Modifier.padding(horizontal=20.dp,vertical=if(compactInput)4.dp else 10.dp)){it()}} }
+        // A tall landscape IME plus large text can leave too little height for
+        // both a full input and the save bar. Use the available width instead.
+        // Keep the same composition tree so moving actions never resets drafts.
+        val sideActions=compactInput && footer!=null && maxHeight<180.dp && maxWidth>=500.dp
+        Layout(modifier=Modifier.fillMaxSize(),content={
+            Box {if(!compactInput)ScreenHeader(title,subtitle,back,brand,actions)}
+            Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal=20.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+                content();Spacer(Modifier.height(10.dp))
+            }
+            Box {footer?.let { Surface(color=MaterialTheme.colorScheme.background){Box(Modifier.padding(horizontal=20.dp,vertical=if(compactInput)4.dp else 10.dp)){it()}} }}
+        }) {children,constraints->
+            val width=constraints.maxWidth
+            val height=constraints.maxHeight
+            val loose=constraints.copy(minWidth=0,minHeight=0)
+            val header=children[0].measure(loose)
+            val actionWidth=if(sideActions)minOf(360.dp.roundToPx(),width/2)else width
+            val actions=children[2].measure(loose.copy(minWidth=actionWidth,maxWidth=actionWidth,maxHeight=(height-header.height).coerceAtLeast(0)))
+            val bodyWidth=if(sideActions)width-actions.width else width
+            val bodyHeight=(height-header.height-if(sideActions)0 else actions.height).coerceAtLeast(0)
+            val body=children[1].measure(Constraints.fixed(bodyWidth,bodyHeight))
+            layout(width,height) {
+                header.placeRelative(0,0)
+                body.placeRelative(0,header.height)
+                if(sideActions)actions.placeRelative(bodyWidth,height-actions.height)
+                else actions.placeRelative(0,height-actions.height)
+            }
         }
     }
 }

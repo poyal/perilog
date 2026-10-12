@@ -17,7 +17,7 @@ import org.robolectric.annotation.Config
 import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk=[31,35],application=android.app.Application::class)
+@Config(sdk=[30,31,35],application=android.app.Application::class)
 class RepositoryTest {
     private lateinit var db:JournalDb
     private lateinit var repo:Repository

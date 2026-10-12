@@ -2,6 +2,7 @@ package com.poyal.perilog
 
 import android.app.ActivityManager
 import android.graphics.Bitmap
+import android.graphics.Rect
 import android.media.MediaMetadataRetriever
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
@@ -31,12 +32,62 @@ class PrivacyFlowTest {
         runCatching { node.performScrollTo() }; node.performClick()
     }
     private fun secure() = ui.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0
-    private fun foreground() = ui.activity.getSystemService(ActivityManager::class.java).appTasks
-        .first { it.taskInfo.taskId == ui.activity.taskId }.moveToFront()
+    private fun foreground() {
+        if(android.os.Build.VERSION.SDK_INT<=30) {
+            // API 30 blocks AppTask.moveToFront from the now-background test
+            // process. Reopen its existing task with the launcher's shell path.
+            shell("am start -W -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -f 0x10200000 -n ${app.packageName}/com.poyal.perilog.MainActivity")
+        } else ui.activity.getSystemService(ActivityManager::class.java).appTasks
+            .first { it.taskInfo.taskId == ui.activity.taskId }.moveToFront()
+    }
+    private fun AccessibilityNodeInfo.descendants(): Sequence<AccessibilityNodeInfo> = sequence {
+        yield(this@descendants)
+        for (index in 0 until childCount) getChild(index)?.let { yieldAll(it.descendants()) }
+    }
     private fun waitForCredentialInput() {
-        waitFor { automation.rootInActiveWindow?.packageName?.toString() in setOf("com.android.settings", "com.android.systemui") &&
-            automation.rootInActiveWindow?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)?.isEditable == true }
+        try {
+            waitFor {
+                val root = automation.rootInActiveWindow
+                root?.packageName?.toString() in setOf("com.android.settings", "com.android.systemui") &&
+                    (root?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)?.isEditable == true ||
+                        root?.descendants()?.any { it.viewIdResourceName == "cred_pin_pad" } == true)
+            }
+        } catch(error:Throwable) {
+            fun describe(node:AccessibilityNodeInfo?):String = if(node==null) "<no window>" else
+                "${node.packageName} ${node.className} ${node.viewIdResourceName} text=${node.text} editable=${node.isEditable} focused=${node.isFocused}\n"+
+                    (0 until node.childCount).joinToString(""){describe(node.getChild(it))}
+            File(app.filesDir,"e2e-artifacts").apply{mkdirs()}.resolve("credential-window.txt").writeText(describe(automation.rootInActiveWindow))
+            screenshot("credential-timeout")
+            throw error
+        }
         automation.waitForIdle(500, 5000)
+    }
+    private fun enterCredential() {
+        val root = requireNotNull(automation.rootInActiveWindow)
+        if (root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)?.isEditable == true) {
+            // Send distinct keys after the credential IME is ready. A text burst
+            // can race its initial selection update on a cold software image.
+            for (digit in "1234") {
+                shell("input keyevent KEYCODE_$digit")
+                SystemClock.sleep(150)
+            }
+            automation.waitForIdle(500, 5000)
+            shell("input keyevent KEYCODE_ENTER")
+            return
+        }
+        // Android 17 uses a system Compose PIN pad instead of an EditText.
+        // Tap its actual digits and submit button; still require OS authentication.
+        check(root.packageName.toString() == "com.android.systemui")
+        check(root.descendants().any { it.viewIdResourceName == "cred_pin_pad" })
+        fun tap(match: (AccessibilityNodeInfo) -> Boolean) {
+            val node = requireNotNull(automation.rootInActiveWindow).descendants().first(match)
+            val bounds = Rect().also(node::getBoundsInScreen)
+            check(!bounds.isEmpty)
+            shell("input tap ${bounds.centerX()} ${bounds.centerY()}")
+            automation.waitForIdle(200, 5000)
+        }
+        for (digit in "1234") tap { it.text?.toString() == digit.toString() }
+        tap { it.viewIdResourceName == "com.android.systemui:id/key_enter" }
     }
     private fun preferences(lock: Boolean, protection: Boolean) {
         runBlocking { app.repository.preferences(snapshot().preferences.copy(lock = lock, screenProtection = protection)) }
@@ -80,7 +131,8 @@ class PrivacyFlowTest {
             val name = "lock-$lock-protection-$protection"
             assertContentVisibility(screenshot(name), protection)
             val video = File(app.cacheDir, "$name.mp4")
-            val recording = shell("screenrecord --time-limit 1 /data/local/tmp/$name.mp4")
+            // Cold software encoders can spend the entire first second starting.
+            val recording = shell("screenrecord --time-limit 3 /data/local/tmp/$name.mp4")
             ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand("cat /data/local/tmp/$name.mp4")).use { input ->
                 video.outputStream().use { input.copyTo(it) }
             }
@@ -152,8 +204,7 @@ class PrivacyFlowTest {
             ui.onNodeWithContentDescription("설정").assertDoesNotExist()
             click("기록 열기")
             waitForCredentialInput()
-            shell("input text 1234")
-            shell("input keyevent KEYCODE_ENTER")
+            enterCredential()
             waitFor { ui.activity.hasWindowFocus() && ui.onAllNodesWithText("잠금·보호 설정 저장").fetchSemanticsNodes().isNotEmpty() }
             assertFalse(secure())
             ui.onNodeWithText("앱 잠금").assertIsOn()

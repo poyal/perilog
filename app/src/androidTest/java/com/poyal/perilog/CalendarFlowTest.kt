@@ -54,6 +54,10 @@ class CalendarFlowTest {
             put(Calendars.OWNER_ACCOUNT, fixtureAccount); put(Calendars.CALENDAR_TIME_ZONE, "Asia/Seoul")
             put(Calendars.VISIBLE, 1); put(Calendars.SYNC_EVENTS, 1)
         })))
+        // Permission/AppOps changes and provider startup can become visible after
+        // insert() returns on API 30. Await the fixture through the app's real
+        // read path before asserting synchronization behavior.
+        waitUntil { runBlocking { DeviceCalendarGateway(app).targets().any {it.id == calendarId.toString()} } }
         waitUntil {ui.onAllNodesWithContentDescription("설정").fetchSemanticsNodes().isNotEmpty()}
     }
     @After fun cleanup() {

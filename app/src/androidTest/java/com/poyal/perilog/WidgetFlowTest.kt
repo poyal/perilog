@@ -3,6 +3,7 @@ package com.poyal.perilog
 import android.appwidget.*
 import android.content.ComponentName
 import android.os.Bundle
+import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.view.*
 import android.widget.*
@@ -52,10 +53,19 @@ class WidgetFlowTest {
             // RemoteViews can replace children after their text is visible but before
             // Android has measured them. Inspect readiness and geometry in the same
             // UI callback so a replacement cannot race between those two checks.
-            if(root.isLayoutRequested || labels.isEmpty() || labels.any {it.isLayoutRequested || !it.isLaidOut || it.layout==null})return@runOnUiThread
+            if(root.isLayoutRequested || root.isDirty || labels.isEmpty() || labels.any {it.isLayoutRequested || it.isDirty || !it.isLaidOut || it.layout==null})return@runOnUiThread
             assertFalse(children.any {it is AbsListView || it is ScrollView})
             labels.forEach {view->
                 val layout=requireNotNull(view.layout)
+                if(layout.height>view.height-view.paddingTop-view.paddingBottom+2) {
+                    val diagnostic=java.io.File(app.filesDir,"e2e-artifacts").apply {mkdirs()}
+                    diagnostic.resolve("widget-clipping.txt").writeText(
+                        "host=${root.width}x${root.height}, configuration=${ui.activity.resources.configuration}, metrics=${ui.activity.resources.displayMetrics}\n"+
+                        labels.joinToString("\n") {label->"${label.text}: view=${label.width}x${label.height}, measured=${label.measuredWidth}x${label.measuredHeight}, layout=${label.layout?.height}, textSize=${label.textSize}, font=${label.paint.fontMetrics}, parent=${(label.parent as? View)?.let {"${it.width}x${it.height}"}}"})
+                    instrumentation.uiAutomation.takeScreenshot()?.let {bitmap->
+                        diagnostic.resolve("widget-clipping.png").outputStream().use {bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
+                    }
+                }
                 assertTrue("Clipped text: ${view.text}; layout=${layout.height}, height=${view.height}, padding=${view.paddingTop+view.paddingBottom}",layout.height<=view.height-view.paddingTop-view.paddingBottom+2)
                 for(line in 0 until layout.lineCount) assertEquals("Ellipsis: ${view.text}",0,layout.getEllipsisCount(line))
                 val rect=android.graphics.Rect();assertTrue("Hidden text: ${view.text}",view.getGlobalVisibleRect(rect))
@@ -125,7 +135,12 @@ class WidgetFlowTest {
                     val view=requireNotNull(widgetView)
                     val density=ui.activity.resources.displayMetrics.density
                     view.layoutParams=view.layoutParams.apply {this.width=(width*density).toInt();this.height=(height*density).toInt()}
-                    view.updateAppWidgetSize(Bundle(),listOf(SizeF(width.toFloat(),height.toFloat())))
+                    if(Build.VERSION.SDK_INT>=31)
+                        view.updateAppWidgetSize(Bundle(),listOf(SizeF(width.toFloat(),height.toFloat())))
+                    else {
+                        @Suppress("DEPRECATION")
+                        view.updateAppWidgetSize(Bundle(),width,height,width,height)
+                    }
                 }
                 val narrow=width<260
                 instrumentation.sendStatus(0,Bundle().apply {putString("resize_case","${provider.simpleName} ${width}x$height")})

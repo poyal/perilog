@@ -15,6 +15,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.ViewModelProvider
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -45,7 +46,7 @@ class AppFlowTest {
             preferences=Preferences(darkMode="LIGHT",celebrate=false),
             templates=listOf(UsageTemplate(id="night",name="밤 구성",items=listOf(Item(p.id,p.name,2)))),
             receipts=listOf(Receipt(date=LocalDate.now().minusDays(10).toString(),createdAt=1,lines=listOf(ReceiptLine(productId=p.id,quantity=10))))))}
-        await("Home after fixture restore"){compose.onAllNodesWithText("오늘 기록 시작").fetchSemanticsNodes().isNotEmpty()}
+        await("Home after fixture restore"){compose.onAllNodesWithText("오늘 기록 시작").fetchSemanticsNodes(atLeastOneRootRequired=false).isNotEmpty()}
     }
     private fun await(description:String="Expected application state",timeoutMs:Long=10000,condition:()->Boolean) {
         try {compose.waitUntil(timeoutMs,condition)}
@@ -57,7 +58,9 @@ class AppFlowTest {
         }
     }
     private fun node(text:String)=compose.onNodeWithText(text)
-    private fun show(n:SemanticsNodeInteraction):SemanticsNodeInteraction {val parents=n.onAncestors().filter(hasScrollAction())
+    private fun show(n:SemanticsNodeInteraction):SemanticsNodeInteraction {
+        await("UI node before scrolling"){runCatching{n.fetchSemanticsNode()}.isSuccess}
+        val parents=n.onAncestors().filter(hasScrollAction())
         for(index in parents.fetchSemanticsNodes().indices.reversed())runCatching{parents[index].performScrollTo()}
         runCatching{n.performScrollTo()}
         return n}
@@ -360,7 +363,13 @@ class AppFlowTest {
         compose.activityRule.scenario.recreate()
         await{compose.onAllNodes(hasSetTextAction() and hasText("1.5")).fetchSemanticsNodes().isNotEmpty()}
         node("함께 저장").assertIsNotEnabled();stock(10)
-        input("입고 수량","5");click("함께 저장");await{snapshot().receipts.size==2};stock(15)
+        input("입고 수량","5")
+        // OS keyboard movement is not a Compose animation. Let its layout
+        // settle before injecting a physical tap into the now-enabled button.
+        hideKeyboard()
+        InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(500,5000)
+        node("함께 저장").assertIsEnabled()
+        click("함께 저장");await{snapshot().receipts.size==2};stock(15)
     }
     @Test fun statisticsSelectionSurvivesOpeningARecord() {
         runBlocking { app.repository.save(Treatment(weightGrams=62300,systolic=120,diastolic=80,initialDrain=2300,machineUf=600),true) }
@@ -634,6 +643,12 @@ class AppFlowTest {
     }
     @Test fun typedDraftSurvivesActivityRecreationRotationAndDoesNotConsumeStock() {
         click("오늘 기록 시작");input("몸무게","61.5")
+        // Establish the input before tearing down the activity. Otherwise an
+        // uncommitted test edit is indistinguishable from failed restoration.
+        field("몸무게").assertTextContains("61.5")
+        compose.runOnIdle {
+            assertEquals(61500,ViewModelProvider(compose.activity)[com.poyal.perilog.ui.JournalViewModel::class.java].editor.value?.weightGrams)
+        }
         compose.activityRule.scenario.recreate()
         await("Draft text after activity recreation",30000){compose.onAllNodes(hasSetTextAction() and hasText("61.5")).fetchSemanticsNodes().isNotEmpty()}
         stock(10)

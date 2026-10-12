@@ -11,7 +11,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk=[31,35],application=android.app.Application::class)
+@Config(sdk=[30,31,35],application=android.app.Application::class)
 class WidgetHostOptionsTest {
     private fun options(size:SizeF)=Bundle().apply {
         putInt(OPTION_APPWIDGET_MIN_WIDTH,146);putInt(OPTION_APPWIDGET_MAX_WIDTH,146)

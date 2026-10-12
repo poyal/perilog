@@ -13,7 +13,7 @@ if not re.fullmatch(r'emulator-\d+', SERIAL):
     raise SystemExit('Use a development emulator.')
 ADB = str(pathlib.Path(os.environ.get('ANDROID_HOME', ROOT / '.tools/android-sdk')) / 'platform-tools/adb')
 PACKAGE = 'com.poyal.perilog.debug'
-OUTPUT = ROOT / '.tools/e2e-results/process'
+OUTPUT = pathlib.Path(os.environ.get('PERILOG_PROCESS_RESULTS_DIR', ROOT / '.tools/e2e-results/process'))
 OUTPUT.mkdir(parents=True, exist_ok=True)
 for name in ('failure.xml', 'failure.png', 'result.txt', 'restored-form.png'):
     (OUTPUT / name).unlink(missing_ok=True)
@@ -63,11 +63,20 @@ def tree():
 
 
 def find(text=None, kind=None):
-    for node in tree().iter('node'):
+    root = tree()
+    parents = {child: parent for parent in root.iter() for child in parent}
+    for node in root.iter('node'):
         if (text is None or node.get('text') == text) and (kind is None or node.get('class') == kind):
-            x1, y1, x2, y2 = map(int, re.findall(r'\d+', node.get('bounds', '')))
-            if x2 > x1 and y2 > y1:
-                return (x1 + x2) // 2, (y1 + y2) // 2
+            # Older accessibility dumps can clip a label to zero bounds while
+            # its actual clickable navigation item remains visible.
+            candidate = node
+            while candidate is not None:
+                bounds = list(map(int, re.findall(r'-?\d+', candidate.get('bounds', ''))))
+                if len(bounds) == 4:
+                    x1, y1, x2, y2 = bounds
+                    if x2 > x1 and y2 > y1 and (candidate is node or candidate.get('clickable') == 'true'):
+                        return (x1 + x2) // 2, (y1 + y2) // 2
+                candidate = parents.get(candidate)
     return None
 
 
@@ -108,7 +117,11 @@ try:
     point = find(kind='android.widget.EditText')
     assert point, 'Product name field missing'
     adb('shell', 'input', 'tap', *map(str, point))
-    adb('shell', 'input', 'text', 'ProcessRestoreExample')
+    # Avoid racing the IME's initial selection update with a text-event burst.
+    time.sleep(.7)
+    for character in 'ProcessRestoreExample':
+        adb('shell', 'input', 'text', character)
+        time.sleep(.08)
     assert find('ProcessRestoreExample', 'android.widget.EditText'), 'Typed input missing'
     before = process_id()
     assert before, 'Main app process missing before backgrounding'
@@ -119,7 +132,20 @@ try:
     # am kill may retain a recently visible process. Kill only this debug app's
     # verified PID under its own UID, after Android has saved the stopped task.
     assert process_id() == before, 'App process changed before the deliberate kill'
-    adb('shell', 'run-as', PACKAGE, 'kill', '-9', before)
+    if int(adb('shell', 'getprop', 'ro.build.version.sdk')) <= 30:
+        # API 30 SELinux denies runas_app -> untrusted_app sigkill even for
+        # the same UID. Root is limited to our explicitly disposable AVDs.
+        assert adb('emu', 'avd', 'name').splitlines()[0].startswith('perilog_compat_'), \
+            'API 30 process checks require a disposable compatibility AVD'
+        if adb('shell', 'id', '-u') != '0':
+            adb('root'); adb('wait-for-device')
+        assert adb('shell', 'id', '-u') == '0', 'A root-capable test image is required'
+        assert process_id() == before and background_state_saved(), 'Process or saved task changed'
+        adb('shell', 'kill', '-9', before)
+        (OUTPUT / 'termination-method.txt').write_text('Verified debug PID; root shell on dedicated API 30 compatibility AVD.\n')
+    else:
+        adb('shell', 'run-as', PACKAGE, 'kill', '-9', before)
+        (OUTPUT / 'termination-method.txt').write_text('Verified debug PID; run-as app UID.\n')
     wait_until(lambda: process_id() != before, 'Original app process did not exit')
     stage = 'restore_input'
     adb('shell', 'am', 'start', '-W', '-n', PACKAGE + '/com.poyal.perilog.MainActivity')

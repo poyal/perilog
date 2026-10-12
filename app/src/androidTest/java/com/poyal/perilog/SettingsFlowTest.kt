@@ -3,7 +3,6 @@ package com.poyal.perilog
 import android.content.Context
 import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
-import android.view.KeyEvent
 import android.view.inputmethod.InputMethodManager
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -32,7 +31,14 @@ class SettingsFlowTest {
     private fun click(text:String)=show(ui.onNode(hasText(text) and hasClickAction())).performClick()
     // Top feedback temporarily covers the header; system back remains available.
     private fun back() {ui.runOnIdle{ui.activity.onBackPressedDispatcher.onBackPressed()};ui.waitForIdle()}
-    private fun systemBack(){InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);ui.waitForIdle()}
+    private fun systemBack(){
+        // Android 11 does not grant Instrumentation permission to inject into
+        // Settings/DocumentsUI. Use the test automation's shell for OS windows.
+        android.os.ParcelFileDescriptor.AutoCloseInputStream(
+            InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("input keyevent KEYCODE_BACK")
+        ).use {it.readBytes()}
+        ui.waitForIdle()
+    }
     private fun leaveExternalScreen() {
         val automation=InstrumentationRegistry.getInstrumentation().uiAutomation
         waitFor { !ui.activity.hasWindowFocus() }

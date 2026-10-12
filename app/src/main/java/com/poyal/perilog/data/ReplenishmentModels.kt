@@ -12,9 +12,15 @@ import java.time.LocalDate
 @Serializable
 data class SupplyAmount(val numerator: Long = 0, val denominator: Long = 1) : Comparable<SupplyAmount> {
     init { require(denominator > 0) }
+    private fun BigInteger.checkedLong(): Long {
+        // BigInteger.longValueExact is only available on Android 12+.
+        // bitLength excludes the sign bit, including Long.MIN_VALUE.
+        if (bitLength() > 63) throw ArithmeticException("BigInteger out of long range")
+        return toLong()
+    }
     private fun reduced(n: BigInteger, d: BigInteger): SupplyAmount {
         val gcd = n.gcd(d)
-        return SupplyAmount((n / gcd).longValueExact(), (d / gcd).longValueExact())
+        return SupplyAmount((n / gcd).checkedLong(), (d / gcd).checkedLong())
     }
     operator fun plus(other: SupplyAmount) = reduced(numerator.toBigInteger()*other.denominator.toBigInteger()+other.numerator.toBigInteger()*denominator.toBigInteger(), denominator.toBigInteger()*other.denominator.toBigInteger())
     operator fun minus(other: SupplyAmount) = this + other.copy(numerator = -other.numerator)

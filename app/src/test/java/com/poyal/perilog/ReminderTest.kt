@@ -14,7 +14,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk=[31,35],application=Application::class)
+@Config(sdk=[30,31,35],application=Application::class)
 class ReminderTest {
     private val context get()=ApplicationProvider.getApplicationContext<Application>()
     @Test fun osPermissionAndChannelAreAuthoritativeAndChannelSettingsArePreserved() {

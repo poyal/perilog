@@ -48,7 +48,7 @@ abstract class PerilogWidget(private val records:Boolean):GlanceAppWidget() {
             val shortHeader=records && size.height<110.dp
             val recordPlan=recordWidgetLayout(size.width.value,size.height.value)
             Column(GlanceModifier.fillMaxSize().appWidgetBackground().background(ImageProvider(colors.surface))
-                .cornerRadius(android.R.dimen.system_app_widget_background_radius).padding(viewport.padding.dp)) {
+                .cornerRadius(R.dimen.widget_background_radius).padding(viewport.padding.dp)) {
                 Row(GlanceModifier.fillMaxWidth().height(header.dp),verticalAlignment=Alignment.CenterVertically) {
                     Row(GlanceModifier.defaultWeight().fillMaxHeight().clickable(actionStartActivity(WidgetNavigation.intent(context,WidgetTarget(if(records) "home" else "appointments")))),
                         verticalAlignment=Alignment.CenterVertically) {
@@ -150,7 +150,11 @@ private fun DailyProgress.stages()=listOf("활력 상태" to vitality,"사용 �
     }
     Column(modifier.background(ImageProvider(if(today) colors.accentPanel else colors.panel)).padding(plan.inset.dp)
         .clickable(actionStartActivity(WidgetNavigation.intent(context,WidgetTarget("record",day.date))))) {
-        Row(GlanceModifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+        // API 30's RemoteViews row can reserve extra title height at large font
+        // scales. Bound that row so the fitted stage labels retain their space.
+        val titleRow=if(Build.VERSION.SDK_INT<31) GlanceModifier.fillMaxWidth().height((plan.titleSize*1.7f).dp)
+            else GlanceModifier.fillMaxWidth()
+        Row(titleRow,verticalAlignment=Alignment.CenterVertically) {
             Text(label,style=colors.text(plan.titleSize,true,if(today) colors.primary else colors.foreground))
             Spacer(GlanceModifier.width(7.dp))
             Text(LocalDate.parse(day.date).format(DateTimeFormatter.ofPattern("M.d")),style=colors.text(plan.titleSize-2,color=colors.secondary))

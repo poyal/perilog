@@ -14,7 +14,7 @@ android {
     compileSdk = 36
     defaultConfig {
         applicationId = "com.poyal.perilog"
-        minSdk = 31
+        minSdk = 30
         targetSdk = 36
         versionCode = 15
         versionName = "1.0.14"
@@ -80,6 +80,8 @@ dependencies {
     androidTestImplementation(platform("androidx.compose:compose-bom:2025.12.00"))
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test:runner:1.7.0")
+    // Compose's transitive Espresso 3.5 uses InputManager.getInstance, removed in API 37.
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

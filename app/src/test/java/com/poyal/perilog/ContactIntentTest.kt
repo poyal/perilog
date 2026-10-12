@@ -9,7 +9,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk=[31,35],application=android.app.Application::class)
+@Config(sdk=[30,31,35],application=android.app.Application::class)
 class ContactIntentTest {
     @Test fun phoneAndSmsOpenComposersWithOnlyNormalizedRecipient() {
         val dial=contactIntent("032-000-0000",false)

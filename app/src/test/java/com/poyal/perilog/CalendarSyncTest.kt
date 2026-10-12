@@ -14,7 +14,7 @@ import org.robolectric.annotation.Config
 import java.time.*
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [31, 35], application = android.app.Application::class)
+@Config(sdk = [30, 31, 35], application = android.app.Application::class)
 class CalendarSyncTest {
     private lateinit var db: JournalDb
     private lateinit var repo: Repository

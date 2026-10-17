@@ -17,10 +17,17 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.serialization.Serializable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.poyal.perilog.widget.WidgetOpenRequest
+import com.poyal.perilog.widget.WidgetTarget
+import com.poyal.perilog.data.Snapshot
 import com.poyal.perilog.domain.dailyProgress
+
+@Serializable
+private data class TreatmentExit(val kind:String="",val route:String="",val widget:WidgetTarget?=null)
 
 @Composable fun JournalApp(vm:JournalViewModel=viewModel(), unlocked:Boolean=true,
     widgetRequest:WidgetOpenRequest?=null,onWidgetHandled:()->Unit={}) {
@@ -38,6 +45,8 @@ import com.poyal.perilog.domain.dailyProgress
     var stack by rememberSaveable{mutableStateOf(listOf("home"))}
     var tab by rememberSaveable{mutableStateOf("home")}
     var editingId by rememberSaveable{mutableStateOf<String?>(null)}
+    var pendingExit by rememberJsonState("treatment-exit"){TreatmentExit()}
+    val scope=rememberCoroutineScope()
     LaunchedEffect(ready, unlocked) { if (ready && unlocked) updates.startSession() }
     DisposableEffect(lifecycle) {
         val observer=androidx.lifecycle.LifecycleEventObserver{_,event->
@@ -61,7 +70,7 @@ import com.poyal.perilog.domain.dailyProgress
     val snackbar=remember{SnackbarHostState()}
     LaunchedEffect(Unit){vm.message.collectLatest{snackbar.showSnackbar(it)}}
     FirstNotificationPermission(ready && unlocked && route=="home" && !updateState.prompt,vm)
-    fun navigate(to:String){
+    fun rawNavigate(to:String){
         snackbar.currentSnackbarData?.dismiss()
         focus.clearFocus();keyboard?.hide()
         // Each new contact owns its saved state, including across activity recreation.
@@ -73,45 +82,79 @@ import com.poyal.perilog.domain.dailyProgress
         if(destination in rootTabs){stack.filter{it!=destination}.forEach{screenState.removeState(it)};stack=listOf(destination);tab=destination}
         else if(destination!=route)stack=stack+destination
     }
-    fun back(){if(stack.size>1){snackbar.currentSnackbarData?.dismiss();focus.clearFocus();keyboard?.hide();screenState.removeState(stack.last());stack=stack.dropLast(1)}}
-    fun editor(id:String?=null,kind:String="MACHINE",day:String=com.poyal.perilog.data.today()){
-        vm.edit(id,kind,day);editingId=vm.editor.value?.id;navigate("edit")
-    }
-    LaunchedEffect(widgetRequest?.id,ready,unlocked,busy) {
-        val request=widgetRequest ?: return@LaunchedEffect
-        if(!ready || !unlocked || busy)return@LaunchedEffect
-        if(vm.inputErrors.isNotEmpty()) {
-            onWidgetHandled()
-            vm.message.emit("입력 중인 숫자 형식을 먼저 확인해 주세요. 작성한 내용은 유지했어요.")
-            return@LaunchedEffect
-        }
-        val fresh=try {vm.flushDraft();vm.repository.snapshot()} catch(e:Exception) {
-            if(e is kotlinx.coroutines.CancellationException)throw e
-            onWidgetHandled();vm.message.emit("작성 중인 기록을 보관하지 못했어요. 다시 시도해 주세요.")
-            return@LaunchedEffect
-        }
-        val target=request.target
-        // Consume once before changing routes; activity recreation must not repeat an old tap.
-        snackbar.currentSnackbarData?.dismiss()
-        onWidgetHandled()
+    fun rawBack(){if(stack.size>1){snackbar.currentSnackbarData?.dismiss();focus.clearFocus();keyboard?.hide();screenState.removeState(stack.last());stack=stack.dropLast(1)}}
+    fun openWidget(target:WidgetTarget,fresh:Snapshot) {
         when(target.screen) {
             "record" -> {
                 if(target.valid()) {
                     val day=fresh.dailyProgress(target.value)
-                    // Treatment input owns one ViewModel editor. Persist the previous draft and
-                    // remove old editor entries while retaining other forms' SaveableStateProvider.
                     focus.clearFocus();keyboard?.hide()
                     if("edit" in stack)screenState.removeState("edit")
                     vm.edit(day.resume?.id,day.resume?.kind ?: "MACHINE",target.value,fresh)
                     editingId=vm.editor.value?.id
                     stack=stack.filterNot {it=="edit"}.ifEmpty {listOf("home")}+"edit"
-                } else navigate("home")
+                } else rawNavigate("home")
             }
-            "appointment" -> navigate(if(fresh.appointments.any {it.id==target.value})"appointment/${target.value}"else"appointments")
-            "appointments" -> navigate("appointments")
-            "newAppointment" -> navigate("appointment/new")
-            else -> navigate("home")
+            "appointment" -> rawNavigate(if(fresh.appointments.any {it.id==target.value})"appointment/${target.value}"else"appointments")
+            "appointments" -> rawNavigate("appointments")
+            "newAppointment" -> rawNavigate("appointment/new")
+            else -> rawNavigate("home")
         }
+    }
+    fun finishExit(destination:TreatmentExit) {
+        val index=stack.indexOf("edit")
+        if(index>=0) {
+            vm.endEditing()
+            stack.drop(index).forEach{screenState.removeState(it)}
+            stack=stack.take(index).ifEmpty{listOf("home")}
+            editingId=null
+        }
+        pendingExit=TreatmentExit()
+        when(destination.kind) {
+            "back" -> if(index<0)rawBack()
+            "route" -> rawNavigate(destination.route)
+            "widget" -> destination.widget?.let {target->scope.launch {
+                try {openWidget(target,vm.repository.snapshot())}
+                catch(e:Exception) {
+                    if(e is kotlinx.coroutines.CancellationException)throw e
+                    vm.message.emit("화면을 열지 못했어요. 다시 시도해 주세요.")
+                }
+            }}
+        }
+    }
+    fun requestExit(destination:TreatmentExit) {
+        if(vm.busy.value)return
+        val hasEditor="edit" in stack && vm.editor.value!=null
+        val invalid=vm.inputErrors.isNotEmpty() || (route!="edit" && vm.editorHiddenErrors)
+        if(hasEditor && (vm.editorChanged || invalid)) {
+            focus.clearFocus();keyboard?.hide();pendingExit=destination
+        } else finishExit(destination)
+    }
+    fun navigate(to:String) {
+        if("edit" in stack && to.startsWith("guide")) {
+            if(route=="edit")vm.editorHiddenErrors=vm.inputErrors.isNotEmpty()
+            rawNavigate(to)
+        } else if("edit" in stack)requestExit(TreatmentExit("route",to))
+        else rawNavigate(to)
+    }
+    fun back(){if(route=="edit")requestExit(TreatmentExit("back"))else rawBack()}
+    fun editor(id:String?=null,kind:String="MACHINE",day:String=com.poyal.perilog.data.today()){
+        vm.edit(id,kind,day);editingId=vm.editor.value?.id;rawNavigate("edit")
+    }
+    LaunchedEffect(widgetRequest?.id,ready,unlocked,busy) {
+        val request=widgetRequest ?: return@LaunchedEffect
+        if(!ready || !unlocked || busy)return@LaunchedEffect
+        // Consume once; a saved pending destination survives activity recreation.
+        onWidgetHandled()
+        val current=vm.editor.value
+        if("edit" in stack && current!=null && request.target.screen=="record" && request.target.value==current.date) {
+            pendingExit=TreatmentExit()
+            val index=stack.indexOf("edit")
+            stack.drop(index+1).forEach{screenState.removeState(it)}
+            stack=stack.take(index+1)
+        } else if("edit" !in stack && vm.inputErrors.isNotEmpty()) {
+            vm.message.emit("입력 중인 숫자 형식을 먼저 확인해 주세요. 작성한 내용은 유지했어요.")
+        } else requestExit(TreatmentExit("widget",widget=request.target))
     }
     LaunchedEffect(ready,route){if(ready && route=="edit" && vm.editor.value==null){if(editingId!=null && (s.treatments.any{it.id==editingId} || s.drafts.any{it.id==editingId}))vm.edit(editingId)else back()}}
     val readOnly=route in listOf("settings/transfer","settings/protection","settings/reset","settings/palette","settings/calendar") || route.startsWith("stock/") || route.startsWith("stockHistory/") || route.startsWith("guide/") || route.startsWith("requestDetail/") || route.startsWith("appointmentStock/") || route.startsWith("appointmentDetail/")
@@ -157,7 +200,7 @@ import com.poyal.perilog.domain.dailyProgress
                     route in listOf("settings/transfer","settings/protection","settings/reset")->DataSettingsScreen(s,vm,route.substringAfter('/'),::back)
                     route=="settings/palette"->PaletteSettingsScreen(s,vm,::back)
                     route=="widgets"->WidgetSettingsScreen(::back)
-                    route=="edit"->key(editingId){TreatmentScreen(s,vm,::back)}
+                    route=="edit"->key(editingId){TreatmentScreen(s,vm,::back){finishExit(TreatmentExit("back"))}}
                     route=="appointments"->AppointmentsScreen(s,vm,now,::navigate,::back)
                     route=="departments"->DepartmentsScreen(s,vm,::navigate,::back)
                     route=="careTemplates"->CareTemplatesScreen(s,vm,::navigate,::back)
@@ -182,6 +225,15 @@ import com.poyal.perilog.domain.dailyProgress
         TopSnackbarHost(snackbar,Modifier.align(Alignment.TopCenter)
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
             .padding(top=8.dp,start=16.dp,end=16.dp))
+        if(pendingExit.kind.isNotEmpty())AlertDialog(
+            onDismissRequest={if(!busy)pendingExit=TreatmentExit()},
+            title={Text("저장하지 않은 변경사항이 있어요")},
+            text={Text("변경사항을 버리고 나갈까요? 기존 기록과 재고는 그대로 유지돼요.")},
+            containerColor=colors.surface,
+            confirmButton={ButtonRow {
+                SmallButton(onClick={pendingExit=TreatmentExit()},enabled=!busy){Text("계속 입력")}
+                SmallButton(onClick={finishExit(pendingExit)},enabled=!busy,contentColor=colors.error){Text("변경사항 버리고 나가기")}
+            }})
         }
     }}
 }

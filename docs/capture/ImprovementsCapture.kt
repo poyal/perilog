@@ -35,7 +35,7 @@ class ImprovementsCapture {
         val product=Product(id="fluid",name="투석액 1.5%")
         val template=UsageTemplate(id="base",name="기본 구성",items=listOf(Item(product.id,product.name,2)))
         val record=Treatment(id="vital-example",date=today(),weightGrams=62300,systolic=120,diastolic=80,
-            initialDrain=2200,machineUf=800,saved=true,usageConfirmed=true,items=template.items,
+            initialDrain=2200,machineUf=800,dwellMinutes=95,memo="기록 수첩을 함께 확인했어요.",saved=true,usageConfirmed=true,items=template.items,
             usageTemplateId=template.id,usageTemplateName=template.name)
         runBlocking {app.repository.restore(Snapshot(products=listOf(product),templates=listOf(template),treatments=listOf(record),
             usages=listOf(Usage(record.id,record.date,record.items,record.kind,record.createdAt)),
@@ -44,9 +44,16 @@ class ImprovementsCapture {
         click("오늘 기록 확인")
         show(ui.onNodeWithContentDescription("활력 상태 수정"));shot("92-vital-summary")
         ui.onNodeWithContentDescription("활력 상태 수정").performClick();shot("02-before-treatment")
-        ui.onNodeWithContentDescription("활력 상태 저장").performClick()
+        ui.onNodeWithContentDescription("활력 상태 접기").performClick()
         ui.onNodeWithText("62.3 kg").assertExists()
         show(ui.onNodeWithText("이번 기록만 수량 조정"));shot("03-usage-template")
+        click("평균저류시간 · 메모 추가")
+        show(ui.onNode(hasSetTextAction() and hasText("메모")));shot("41-treatment-memo")
+        click("시간 변경");shot("93-dwell-time-picker");click("취소")
+        show(ui.onNode(hasSetTextAction() and hasText("메모"))).performTextReplacement("오늘 기록할 메모")
+        ui.runOnIdle{ui.activity.onBackPressedDispatcher.onBackPressed()}
+        ui.onNodeWithText("변경사항 버리고 나가기").assertExists();shot("94-treatment-unsaved")
+        click("계속 입력")
     }
     @Test fun captureForecastExtraAndTable() {
         val now=LocalDate.now()

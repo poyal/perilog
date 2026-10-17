@@ -3,6 +3,8 @@ package com.poyal.perilog.domain
 import com.poyal.perilog.data.*
 import java.time.LocalDate
 
+fun Treatment.validDwellTime(): Boolean = kind!="MACHINE" || dwellMinutes==null || dwellMinutes in 0..1439
+
 fun Treatment.totalUf(): Int? = if (kind == "MACHINE") {
     if (initialDrain != null && machineUf != null && basisMl != null) initialDrain - basisMl + machineUf else null
 } else if (drainUnit == "mL" && manualDrain != null && previousFill != null) manualDrain - previousFill else null

@@ -25,14 +25,17 @@ class JournalViewModel(application: Application,private val savedState:SavedStat
     val busy=MutableStateFlow(false)
     val message=MutableSharedFlow<String>(extraBufferCapacity=8)
     val editor=MutableStateFlow(savedState.get<String>("editor")?.let{codec.decodeFromString<Treatment>(it)})
+    private var editorOriginal=savedState.get<String>("editorOriginal")?.let{codec.decodeFromString<Treatment>(it)} ?: editor.value
+    val editorChanged get()=editor.value!=null && editor.value!=editorOriginal
+    var editorHiddenErrors: Boolean
+        get()=savedState["editorHiddenErrors"] ?: false
+        set(value){savedState["editorHiddenErrors"]=value}
     val calendarDay=MutableStateFlow(today())
     val localNow=MutableStateFlow(java.time.LocalDateTime.now())
     val inputErrors=mutableStateMapOf<String,String>()
     val recordFilters=RecordFilters(savedState["recordFilters"])
     val statsFilters=StatsFilters(savedState["statsFilters"])
     private val serial=Mutex()
-    private var draftJob: Job?=null
-    private var pendingDraft: Treatment?=null
     init {
         savedState.setSavedStateProvider("recordFilters"){recordFilters.save()}
         savedState.setSavedStateProvider("statsFilters"){statsFilters.save()}
@@ -40,13 +43,13 @@ class JournalViewModel(application: Application,private val savedState:SavedStat
         viewModelScope.launch { while(isActive) { refreshClock();delay(30000) } }
     }
     fun refreshClock() { localNow.value=java.time.LocalDateTime.now();calendarDay.value=localNow.value.toLocalDate().toString() }
-    fun act(success: String?=null, block: suspend () -> Unit) {
+    fun act(success: String?=null, checkInputs:Boolean=true, block: suspend () -> Unit) {
         // Claim the operation synchronously so double taps cannot queue duplicate writes.
         if(busy.value)return
         busy.value=true
         viewModelScope.launch {
             try { serial.withLock {
-                if(inputErrors.isNotEmpty()) { message.emit("입력 형식을 확인해 주세요: ${inputErrors.values.joinToString()}");return@withLock }
+                if(checkInputs && inputErrors.isNotEmpty()) { message.emit("입력 형식을 확인해 주세요: ${inputErrors.values.joinToString()}");return@withLock }
                 block(); if(success!=null) message.emit(success)
             } }
             catch(e: Exception) { if(e is CancellationException) throw e; message.emit(e.message ?: "저장하지 못했습니다. 다시 시도해 주세요.") }
@@ -54,34 +57,37 @@ class JournalViewModel(application: Application,private val savedState:SavedStat
         }
     }
     fun edit(id: String?=null,kind: String="MACHINE",date: String=today(),source:Snapshot=state.value) {
-        draftJob?.cancel()
         val s=source
         editor.value=(s.drafts.find{it.id==id}?.treatment ?: s.treatments.find{it.id==id} ?: newTreatment(s,kind,date)).withUsageTemplate(s)
+        editorOriginal=editor.value
+        editorHiddenErrors=false
         savedState["editor"]=codec.encodeToString(editor.value!!)
+        savedState["editorOriginal"]=codec.encodeToString(editorOriginal!!)
     }
     fun change(t: Treatment) {
+        if(busy.value)return
         editor.value=t
         savedState["editor"]=codec.encodeToString(t)
-        draftJob?.cancel()
-        pendingDraft=t
-        draftJob=viewModelScope.launch { delay(350); serial.withLock { repository.draft(t);if(pendingDraft==t)pendingDraft=null } }
     }
-    suspend fun flushDraft() {
-        draftJob?.cancelAndJoin()
-        serial.withLock { pendingDraft?.let { repository.draft(it);pendingDraft=null } }
+    // Only transient UI state is cleared. Existing records, usage and legacy drafts stay intact.
+    fun endEditing() {
+        editor.value=null
+        editorOriginal=null
+        editorHiddenErrors=false
+        inputErrors.clear()
+        savedState.remove<String>("editor")
+        savedState.remove<String>("editorOriginal")
     }
     fun changeDate(date: String) {
         val t=editor.value ?: return
         if(t.saved) { change(t.copy(date=date)); return }
         change(t.copy(date=date,basisMl=if(t.kind=="MACHINE")state.value.preferences.basisOn(date)else null))
     }
-    fun discard(id: String,done: ()->Unit) { draftJob?.cancel();pendingDraft=null; act { repository.discardDraft(id);editor.value=null;savedState.remove<String>("editor");done() } }
+    fun discard(id: String,done: ()->Unit) = act(checkInputs=false) { repository.discardDraft(id);endEditing();done() }
     fun save(confirm: Boolean,onSaved: () -> Unit) {
         if(busy.value)return
         val t=editor.value ?: return
-        draftJob?.cancel()
-        pendingDraft=null
-        act("기록을 저장했어요") { repository.save(t,confirm); editor.value=null;savedState.remove<String>("editor"); onSaved() }
+        act("기록을 저장했어요") { repository.save(t,confirm); endEditing(); onSaved() }
     }
     fun preferences(success:String="설정을 저장했어요",onSaved:()->Unit={},change:(Preferences)->Preferences) = act(success) {
         val next=change(repository.snapshot().preferences)

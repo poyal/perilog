@@ -351,7 +351,7 @@ class WidgetFlowTest {
             night(when(initial) {android.app.UiModeManager.MODE_NIGHT_YES->"yes";android.app.UiModeManager.MODE_NIGHT_NO->"no";else->"auto"})
         }
     }
-    @Test fun widgetNavigationFlushesImmediateDraftAndResumesItAcrossWarmTapsAndRecreation() {
+    @Test fun widgetNavigationConfirmsDiscardAndKeepsSameRecordAcrossWarmTapsAndRecreation() {
         val yesterday=LocalDate.now().minusDays(1).toString()
         val draft=Treatment(id="yesterday-draft",date=yesterday,memo="어제의 초안")
         runBlocking {app.repository.draft(draft)}
@@ -363,14 +363,37 @@ class WidgetFlowTest {
             vm.change(vm.editor.value!!.copy(weightGrams=61000,memo="방금 입력한 오늘 초안"))
             ui.activity.startActivity(WidgetNavigation.intent(app,WidgetTarget("record",yesterday)))
         }
-        await {snapshot().drafts.any {it.id==todayId && it.treatment.memo=="방금 입력한 오늘 초안"}}
-        await {var okay=false;ui.runOnUiThread {okay=ViewModelProvider(ui.activity)[JournalViewModel::class.java].editor.value?.id==draft.id};okay}
+        await {ui.onAllNodesWithText("저장하지 않은 변경사항이 있어요").fetchSemanticsNodes().isNotEmpty()}
+        assertEquals(listOf(draft),snapshot().drafts.map{it.treatment})
         ui.activityRule.scenario.recreate()
+        click("계속 입력")
         ui.onNodeWithText("기록 저장").assertExists()
         ui.runOnUiThread {ui.activity.startActivity(WidgetNavigation.intent(app,WidgetTarget("record",today())))}
         await {var okay=false;ui.runOnUiThread {okay=ViewModelProvider(ui.activity)[JournalViewModel::class.java].editor.value?.id==todayId};okay}
         ui.runOnIdle {assertEquals("방금 입력한 오늘 초안",ViewModelProvider(ui.activity)[JournalViewModel::class.java].editor.value?.memo)}
+        ui.onNodeWithText("저장하지 않은 변경사항이 있어요").assertDoesNotExist()
+        ui.runOnUiThread {ui.activity.startActivity(WidgetNavigation.intent(app,WidgetTarget("record",yesterday)))}
+        await {ui.onAllNodesWithText("변경사항 버리고 나가기").fetchSemanticsNodes().isNotEmpty()}
+        ui.runOnUiThread {ui.activity.startActivity(WidgetNavigation.intent(app,WidgetTarget("record",today())))}
+        await {ui.onAllNodesWithText("변경사항 버리고 나가기").fetchSemanticsNodes().isEmpty()}
+        ui.runOnIdle {assertEquals(todayId,ViewModelProvider(ui.activity)[JournalViewModel::class.java].editor.value?.id)}
+        ui.runOnUiThread {ui.activity.startActivity(WidgetNavigation.intent(app,WidgetTarget("record",yesterday)))}
+        await {ui.onAllNodesWithText("변경사항 버리고 나가기").fetchSemanticsNodes().isNotEmpty()}
+        click("변경사항 버리고 나가기")
+        await {var okay=false;ui.runOnUiThread {okay=ViewModelProvider(ui.activity)[JournalViewModel::class.java].editor.value?.id==draft.id};okay}
+        assertEquals(listOf(draft),snapshot().drafts.map{it.treatment})
         assertTrue(snapshot().treatments.isEmpty());assertTrue(snapshot().usages.isEmpty())
+    }
+    @Test fun widgetExitFromHelpStillConfirmsInvalidTreatmentInput() {
+        click("오늘 기록 시작")
+        show(ui.onNode(hasSetTextAction() and hasContentDescription("수축기 혈압"))).performTextReplacement("1.5")
+        ui.onNodeWithContentDescription("이 화면 사용 안내").performClick()
+        ui.activityRule.scenario.recreate()
+        ui.runOnUiThread {ui.activity.startActivity(WidgetNavigation.intent(app,WidgetTarget("home")))}
+        await {ui.onAllNodesWithText("변경사항 버리고 나가기").fetchSemanticsNodes().isNotEmpty()}
+        click("변경사항 버리고 나가기")
+        await {ui.onAllNodesWithText("오늘 기록 시작").fetchSemanticsNodes().isNotEmpty()}
+        assertTrue(snapshot().drafts.isEmpty());assertTrue(snapshot().treatments.isEmpty())
     }
     @Test fun contactOrderPersistsOnlyOnSaveAndSurvivesHelpAndRecreation() {
         val names=listOf("투석실","간호사","고객센터")

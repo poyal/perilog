@@ -17,14 +17,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.poyal.perilog.data.*
 import com.poyal.perilog.domain.*
 
-@Composable fun TreatmentScreen(s:Snapshot,vm:JournalViewModel,back:()->Unit) {
+@Composable fun TreatmentScreen(s:Snapshot,vm:JournalViewModel,back:()->Unit,onSaved:()->Unit) {
     val t by vm.editor.collectAsStateWithLifecycle()
     val current=t ?: return
     val focus=LocalFocusManager.current
     val inputErrors=LocalInputErrors.current
     var quantities by rememberSaveable(current.id){mutableStateOf(false)}
     var beforeExpanded by rememberSaveable(current.id){mutableStateOf(!current.saved || current.weightGrams==null || current.systolic==null || current.diastolic==null)}
-    var options by rememberSaveable(current.id){mutableStateOf(false)}
+    var options by rememberSaveable(current.id){mutableStateOf(!current.validDwellTime())}
     var calculation by rememberSaveable(current.id){mutableStateOf(false)}
     var discard by rememberSaveable{mutableStateOf(false)}
     var error by rememberSaveable{mutableStateOf("")}
@@ -33,7 +33,8 @@ import com.poyal.perilog.domain.*
     val compositionComplete=current.items.isNotEmpty() || current.usageConfirmed
     val recordComplete=current.initialDrain!=null && current.machineUf!=null
     Page(if(current.kind=="MACHINE")"치료 기록"else"추가투석",back=back,
-        footer={Action("기록 저장",{vm.save(current.items.isNotEmpty() || current.usageConfirmed,back)},!vm.busy.collectAsState().value)}) {
+        footer={Action("기록 저장",{vm.save(current.items.isNotEmpty() || current.usageConfirmed,onSaved)},
+            !vm.busy.collectAsState().value && inputErrors.isEmpty() && current.validDwellTime())}) {
         DateControl(current.date,{if(it<=today()){vm.changeDate(it);error=""}else error="미래 날짜에는 치료 기록을 등록할 수 없어요."},showQuickDates=true)
         if(error.isNotEmpty())Text(error,color=MaterialTheme.colorScheme.error)
         if(current.kind=="MACHINE") {
@@ -42,8 +43,8 @@ import com.poyal.perilog.domain.*
                     CompletionBadge(beforeComplete);Section("활력 상태");Spacer(Modifier.weight(1f))
                     IconButton(onClick={focus.clearFocus();beforeExpanded=!beforeExpanded},
                         enabled=!beforeExpanded || inputErrors.values.none{it in setOf("몸무게","수축기 혈압","이완기 혈압")}) {
-                        Icon(if(beforeExpanded)Icons.Outlined.Save else Icons.Outlined.Edit,
-                            if(beforeExpanded)"활력 상태 저장"else"활력 상태 수정")
+                        Icon(if(beforeExpanded)Icons.Outlined.ExpandLess else Icons.Outlined.Edit,
+                            if(beforeExpanded)"활력 상태 접기"else"활력 상태 수정")
                     }
                 }
                 if(!beforeExpanded)AdaptivePair(first={MeasurementSummary(current.weightGrams?.let{"${it/1000.0} kg"} ?: "—","몸무게")},second={MeasurementSummary("${current.systolic ?: "—"} / ${current.diastolic ?: "—"}","혈압 · mmHg")})
@@ -118,13 +119,13 @@ import com.poyal.perilog.domain.*
         Paper {
             SmallButton(onClick={options=!options}){Icon(Icons.Outlined.Notes,null);Spacer(Modifier.width(8.dp));Text(if(current.kind=="MACHINE")"평균저류시간 · 메모 ${if(options)"접기"else"추가"}"else"메모 ${if(options)"접기"else"추가"}")}
             if(options) {
-                if(current.kind=="MACHINE")AdaptivePair(first={NumberInput("평균저류 시간",current.dwellMinutes?.div(60),{update(current.copy(dwellMinutes=it?.let{h->h*60+(current.dwellMinutes?.rem(60)?:0)}))},"시")},second={NumberInput("분",current.dwellMinutes?.rem(60),{if(it==null || it<60)update(current.copy(dwellMinutes=it?.let{m->(current.dwellMinutes?.div(60)?:0)*60+m}))},"분")})
+                if(current.kind=="MACHINE")DwellTimeInput(current.dwellMinutes){update(current.copy(dwellMinutes=it))}
                 Row(verticalAlignment=Alignment.CenterVertically){Checkbox(current.interrupted,{update(current.copy(interrupted=it))});Text("중단·재시작 등 특이사항이 있었어요",Modifier.weight(1f))}
                 OutlinedTextField(current.memo,{update(current.copy(memo=it))},label={Text("메모")},modifier=Modifier.fillMaxWidth(),minLines=2)
             }
         }
-        Hint("입력한 내용은 초안으로 보관해요. 사용 물품은 기록 저장 시 재고에 반영해요.")
-        SmallButton(onClick={discard=true},contentColor=MaterialTheme.colorScheme.error){Text("이 초안 버리기")}
+        Hint("기록 저장을 눌러야 입력한 내용이 저장돼요. 사용 물품도 기록 저장 시 재고에 반영해요.")
+        if(s.drafts.any{it.id==current.id})SmallButton(onClick={discard=true},contentColor=MaterialTheme.colorScheme.error){Text("이 초안 버리기")}
     }
     if(calculation && current.kind=="MACHINE")AlertDialog(onDismissRequest={calculation=false},title={Text("제수량 도움말")},
         text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -133,7 +134,7 @@ import com.poyal.perilog.domain.*
             NumberInput("이 기록의 이전 주입 기준",current.basisMl,{update(current.copy(basisMl=it))},"mL")
             Hint("초기배액량, 기계 제수량, 이전 주입 기준이 모두 있어야 제수량을 계산해요.")
         }},containerColor=MaterialTheme.colorScheme.surface,confirmButton={SmallButton(onClick={calculation=false}){Text("닫기")}})
-    if(discard)Confirm("초안을 버릴까요?","기존에 저장한 기록과 사용 내역은 유지됩니다.",{discard=false}){vm.discard(current.id){discard=false;back()}}
+    if(discard)Confirm("초안을 버릴까요?","기존에 저장한 기록과 사용 내역은 유지됩니다.",{discard=false}){vm.discard(current.id){discard=false;onSaved()}}
 }
 @Composable private fun MeasurementSummary(value:String,label:String) {
     Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)){

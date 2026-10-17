@@ -21,6 +21,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.poyal.perilog.data.*
 import com.poyal.perilog.domain.*
+import com.poyal.perilog.ui.JournalViewModel
 import kotlinx.coroutines.runBlocking
 import org.junit.*
 import org.junit.Assert.*
@@ -345,12 +346,12 @@ class AppFlowTest {
         field("몸무게").performTextInput("5");field("몸무게").assertTextContains("61.5")
         show(compose.onNodeWithContentDescription("몸무게 전체 지우기")).performClick()
         input("몸무게","62.1234")
-        show(compose.onNodeWithContentDescription("활력 상태 저장")).assertIsNotEnabled()
+        show(compose.onNodeWithContentDescription("활력 상태 접기")).assertIsNotEnabled()
         input("몸무게","62.25")
-        show(compose.onNodeWithContentDescription("활력 상태 저장")).performClick()
+        show(compose.onNodeWithContentDescription("활력 상태 접기")).performClick()
         field("몸무게").assertDoesNotExist()
         node("62.25 kg").assertExists()
-        await{snapshot().drafts.singleOrNull()?.treatment?.weightGrams==62250}
+        assertTrue(snapshot().drafts.isEmpty())
         compose.activityRule.scenario.recreate()
         show(compose.onNodeWithContentDescription("활력 상태 수정")).performClick()
         field("몸무게").assertTextContains("62.25")
@@ -400,16 +401,17 @@ class AppFlowTest {
         field("몸무게").assertTextContains("62.3");field("수축기 혈압").assertTextContains("120")
         field("이완기 혈압").assertTextContains("80");field("초기배액량").assertTextContains("2300")
         field("기계 제수량").assertTextContains("600")
-        await {snapshot().drafts.singleOrNull()?.treatment?.let{it.date==yesterday && it.basisMl==2100 && it.items.singleOrNull()?.quantity==2}==true}
-        val draft=snapshot().drafts.single().treatment
+        val draft=ViewModelProvider(compose.activity)[JournalViewModel::class.java].editor.value!!
+        assertEquals(yesterday,draft.date);assertEquals(2100,draft.basisMl);assertEquals(2,draft.items.single().quantity)
+        assertTrue(snapshot().drafts.isEmpty())
         assertEquals("night",draft.usageTemplateId);assertEquals("밤 구성",draft.usageTemplateName)
         assertNull(draft.sourceDate);stock(6)
         compose.activityRule.scenario.recreate()
         await {compose.onAllNodes(hasSetTextAction() and hasText("62.3")).fetchSemanticsNodes().isNotEmpty()}
-        back();click("어제 기록하기")
+        back();click("계속 입력")
         field("몸무게").assertTextContains("62.3");field("초기배액량").assertTextContains("2300")
         field("기계 제수량").assertTextContains("600");node("밤 구성").assertExists()
-        click("이 초안 버리기");click("확인");await {snapshot().drafts.isEmpty()}
+        back();click("변경사항 버리고 나가기");assertTrue(snapshot().drafts.isEmpty())
         tab("기록");compose.onNodeWithContentDescription("기록 추가").performClick();click("추가투석 기록 추가")
         await("New additional treatment editor"){compose.onAllNodesWithText("이번 기록만 수량 조정").fetchSemanticsNodes().isNotEmpty()}
         node("사용한 품목을 선택해 주세요.").assertExists()
@@ -464,7 +466,7 @@ class AppFlowTest {
         node("오늘").assertExists();node("어제").assertExists()
         click("평균저류시간 · 메모 추가")
         node("시작 시각 · 예: 22:00").assertDoesNotExist();node("종료 시각 · 예: 07:00").assertDoesNotExist()
-        field("평균저류 시간").assertTextContains("1");field("분").assertTextContains("35")
+        node("1시간 35분").assertExists();field("평균저류 시간").assertDoesNotExist();field("분").assertDoesNotExist()
         input("메모","수정한 투석 메모");hideKeyboard();screenshot("updated-treatment-options.png");click("기록 저장")
         await{snapshot().treatments.single().memo=="수정한 투석 메모"}
         val saved=snapshot().treatments.single()
@@ -680,6 +682,174 @@ class AppFlowTest {
         show(node("어둡게")).assertIsSelected()
         click("화면 설정 저장");await{snapshot().preferences.darkMode=="DARK"}
         back();back();node("페리로그").assertExists();screenshot("dark-home.png")
+    }
+    @Test fun treatmentChangesAreTransientAndBackConfirmationSurvivesRecreation() {
+        click("오늘 기록 시작");beforeAndTemplate()
+        InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(600,3000)
+        assertTrue(snapshot().drafts.isEmpty());assertTrue(snapshot().treatments.isEmpty());stock(10)
+        hideKeyboard();compose.onNodeWithContentDescription("뒤로").performClick()
+        node("저장하지 않은 변경사항이 있어요").assertExists()
+        compose.activityRule.scenario.recreate()
+        click("계속 입력")
+        field("수축기 혈압").assertTextContains("120")
+        back();click("변경사항 버리고 나가기")
+        assertTrue(snapshot().drafts.isEmpty());assertTrue(snapshot().treatments.isEmpty());stock(10)
+        click("오늘 기록 시작")
+        field("수축기 혈압").assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
+        back();node("저장하지 않은 변경사항이 있어요").assertDoesNotExist()
+    }
+    @Test fun treatmentTabExitDiscardsOnlyEditsAndRevertedValuesNeedNoConfirmation() {
+        runBlocking{app.repository.save(Treatment(systolic=120,diastolic=80,items=listOf(Item(p.id,p.name,2))),true)}
+        val original=snapshot().treatments.single()
+        await{compose.onAllNodesWithText("이어서 입력하기").fetchSemanticsNodes().isNotEmpty()}
+        click("이어서 입력하기");input("수축기 혈압","135");tab("재고")
+        click("변경사항 버리고 나가기")
+        assertEquals(original,snapshot().treatments.single());stock(8);assertTrue(snapshot().drafts.isEmpty())
+        tab("홈");click("이어서 입력하기")
+        input("수축기 혈압","135");input("수축기 혈압","120");hideKeyboard();back()
+        node("저장하지 않은 변경사항이 있어요").assertDoesNotExist()
+        assertEquals(original,snapshot().treatments.single())
+    }
+    @Test fun invalidTreatmentInputSurvivesHelpAndCanBeDiscarded() {
+        click("오늘 기록 시작");input("수축기 혈압","1.5");node("기록 저장").assertIsNotEnabled()
+        hideKeyboard();compose.onNodeWithContentDescription("이 화면 사용 안내").performClick();back()
+        field("수축기 혈압").assertTextContains("1.5")
+        compose.activityRule.scenario.recreate()
+        node("기록 저장").assertIsNotEnabled()
+        back();click("변경사항 버리고 나가기")
+        assertTrue(snapshot().treatments.isEmpty());assertTrue(snapshot().drafts.isEmpty());stock(10)
+        click("오늘 기록 시작");node("기록 저장").assertIsEnabled()
+    }
+    @Test fun legacyDraftIsPreservedOnExitAndRemovedOnlyOnExplicitSave() {
+        val legacy=Treatment(id="legacy",systolic=120,items=listOf(Item(p.id,p.name,2)))
+        runBlocking{app.repository.draft(legacy)}
+        await{compose.onAllNodesWithText("이어서 입력하기").fetchSemanticsNodes().isNotEmpty()}
+        click("이어서 입력하기");input("수축기 혈압","130");back();click("변경사항 버리고 나가기")
+        assertEquals(legacy,snapshot().drafts.single().treatment);assertTrue(snapshot().treatments.isEmpty());stock(10)
+        click("이어서 입력하기");field("수축기 혈압").assertTextContains("120")
+        input("이완기 혈압","80");click("기록 저장");await{snapshot().treatments.isNotEmpty()}
+        assertTrue(snapshot().drafts.isEmpty());assertEquals(80,snapshot().treatments.single().diastolic);stock(8)
+    }
+    @Test fun invalidLegacyDraftCanBeDeletedWithoutSaving() {
+        runBlocking{app.repository.draft(Treatment(id="legacy",systolic=120))}
+        await{compose.onAllNodesWithText("이어서 입력하기").fetchSemanticsNodes().isNotEmpty()}
+        click("이어서 입력하기");input("수축기 혈압","1.5")
+        click("이 초안 버리기");click("확인");await{snapshot().drafts.isEmpty()}
+        assertTrue(snapshot().treatments.isEmpty());stock(10)
+    }
+    @Test fun manualTreatmentAlsoRequiresExplicitSave() {
+        tab("기록");compose.onNodeWithContentDescription("기록 추가").performClick();click("추가투석 기록 추가")
+        input("배액무게","2000");back();click("계속 입력");field("배액무게").assertTextContains("2000")
+        back();click("변경사항 버리고 나가기")
+        assertTrue(snapshot().treatments.isEmpty());assertTrue(snapshot().drafts.isEmpty());stock(10)
+    }
+    @Test fun treatmentSaveFailureKeepsInputAndCanBeDiscarded() {
+        click("오늘 기록 시작");input("수축기 혈압","125")
+        compose.runOnIdle {
+            val vm=ViewModelProvider(compose.activity)[JournalViewModel::class.java]
+            vm.change(vm.editor.value!!.copy(items=listOf(Item("missing","삭제된 물품",1))))
+        }
+        click("기록 저장")
+        await{compose.onAllNodesWithText("품목 또는 수량이 올바르지 않습니다.").fetchSemanticsNodes().isNotEmpty()}
+        field("수축기 혈압").assertTextContains("125")
+        assertTrue(snapshot().treatments.isEmpty());assertTrue(snapshot().drafts.isEmpty())
+        back();click("변경사항 버리고 나가기")
+    }
+    @Test fun legacyOutOfRangeDwellTimeMustBeCorrectedBeforeSave() {
+        val legacy=Treatment(id="too-long",dwellMinutes=348000,saved=true)
+        runBlocking {app.repository.restore(snapshot().copy(treatments=listOf(legacy)))}
+        await{compose.onAllNodesWithText("이어서 입력하기").fetchSemanticsNodes().isNotEmpty()}
+        click("이어서 입력하기");node("기록 저장").assertIsNotEnabled()
+        show(node("5800시간 00분")).assertExists();click("시간 변경");click("취소")
+        node("5800시간 00분").assertExists();node("기록 저장").assertIsNotEnabled()
+        click("시간 지우기");click("기록 저장");await{snapshot().treatments.single().dwellMinutes==null}
+    }
+    @Test fun dwellPickerApplyIsTransientUntilSaveAndDialogSurvivesRecreation() {
+        click("오늘 기록 시작");click("평균저류시간 · 메모 추가");click("시간 선택")
+        fun choose() {
+            val hour=app.getString(app.resources.getIdentifier("m3c_time_picker_hour_24h_suffix","string",app.packageName),1)
+            val minute=app.getString(app.resources.getIdentifier("m3c_time_picker_minute_suffix","string",app.packageName),35)
+            show(compose.onNodeWithContentDescription(hour)).performClick()
+            val minuteSelector=app.getString(app.resources.getIdentifier("m3c_time_picker_minute_selection","string",app.packageName))
+            show(compose.onNodeWithContentDescription(minuteSelector)).performClick()
+            show(compose.onNodeWithContentDescription(minute)).performClick()
+        }
+        choose();compose.activityRule.scenario.recreate()
+        compose.onNodeWithTag("dwell-time-selection").assertTextEquals("1시간 35분")
+        click("취소");node("미입력").assertExists()
+        click("시간 선택");choose();click("적용")
+        assertTrue(snapshot().treatments.isEmpty());assertTrue(snapshot().drafts.isEmpty())
+        compose.activityRule.scenario.recreate();node("1시간 35분").assertExists()
+        click("기록 저장");await{snapshot().treatments.isNotEmpty()}
+        assertEquals(95,snapshot().treatments.single().dwellMinutes)
+    }
+    @Test fun dwellPickerAndUnsavedDialogRemainUsableInLandscapeAndBothThemes() {
+        click("오늘 기록 시작");click("평균저류시간 · 메모 추가")
+        click("시간 선택");click("적용")
+        node("0시간 00분").assertExists()
+        val originalOrientation=compose.activity.requestedOrientation
+        try {
+            compose.activityRule.scenario.onActivity{it.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE}
+            await("Landscape",30000){compose.activity.resources.configuration.orientation==Configuration.ORIENTATION_LANDSCAPE}
+            for(theme in listOf("LIGHT","DARK")) {
+                runBlocking{app.repository.preferences(snapshot().preferences.copy(darkMode=theme))}
+                click("시간 변경")
+                node("평균저류시간 선택").assertIsDisplayed();node("취소").assertIsDisplayed();node("적용").assertIsDisplayed()
+                val label=app.getString(app.resources.getIdentifier("m3c_time_picker_hour_24h_suffix","string",app.packageName),23)
+                show(compose.onNodeWithContentDescription(label)).assertIsDisplayed()
+                for(hour in listOf(0,6,12,18)) {
+                    val clockLabel=app.getString(app.resources.getIdentifier("m3c_time_picker_hour_24h_suffix","string",app.packageName),hour)
+                    val clockNode=compose.onNode(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription,listOf(clockLabel)))
+                    clockNode.assertIsDisplayed()
+                    val visible=clockNode.getBoundsInRoot().let{it.bottom-it.top}
+                    val full=clockNode.getUnclippedBoundsInRoot().let{it.bottom-it.top}
+                    assertTrue("Clock hour $hour clipped",visible>=full*.95f)
+                }
+                InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(400,3000)
+                screenshot("dwell-landscape-$theme.png");click("취소")
+                back();node("계속 입력").assertIsDisplayed();node("변경사항 버리고 나가기").assertIsDisplayed()
+                InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(400,3000)
+                screenshot("treatment-unsaved-landscape-$theme.png");click("계속 입력")
+            }
+        } catch(error:Throwable) {
+            screenshot("failure-dwell-landscape.png")
+            File(app.filesDir,"e2e-artifacts/dwell-landscape-tree.txt").writeText(compose.onRoot(useUnmergedTree=true).printToString())
+            throw error
+        } finally {compose.activityRule.scenario.onActivity{it.requestedOrientation=originalOrientation}}
+    }
+    @Test fun bloodPressureFieldsStayIndependentForNewRecords() {
+        click("오늘 기록 시작")
+        checkIndependentBloodPressure()
+    }
+    @Test fun bloodPressureFieldsStayIndependentForSavedRecords() {
+        runBlocking {app.repository.save(Treatment(systolic=120),false)}
+        await{compose.onAllNodesWithText("이어서 입력하기").fetchSemanticsNodes().isNotEmpty()}
+        click("이어서 입력하기")
+        checkIndependentBloodPressure()
+    }
+    @Test fun bloodPressureFieldsStayIndependentForLegacyDrafts() {
+        runBlocking {app.repository.draft(Treatment(systolic=120))}
+        await{compose.onAllNodesWithText("이어서 입력하기").fetchSemanticsNodes().isNotEmpty()}
+        click("이어서 입력하기")
+        checkIndependentBloodPressure()
+    }
+    private fun checkIndependentBloodPressure() {
+        input("수축기 혈압","125")
+        show(field("이완기 혈압")).performClick()
+        field("이완기 혈압").assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
+        compose.runOnIdle{assertNull(ViewModelProvider(compose.activity)[JournalViewModel::class.java].editor.value!!.diastolic)}
+        input("이완기 혈압","80");input("수축기 혈압","")
+        field("이완기 혈압").assertTextContains("80")
+        input("이완기 혈압","85")
+        field("수축기 혈압").assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
+        compose.activityRule.scenario.recreate()
+        field("수축기 혈압").assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
+        field("이완기 혈압").assertTextContains("85")
+        input("수축기 혈압","0");input("이완기 혈압","90")
+        field("수축기 혈압").assertTextContains("0")
+        click("기록 저장");await{snapshot().treatments.size==1}
+        assertEquals(0,snapshot().treatments.single().systolic)
+        assertEquals(90,snapshot().treatments.single().diastolic)
     }
     private fun screenshot(name:String) {
         if(InstrumentationRegistry.getArguments().getString("skipScreenshots")=="true")return

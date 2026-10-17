@@ -94,6 +94,27 @@ class RepositoryTest {
         assertTrue(runCatching{repo.createContact(Contact(name="빈 번호"))}.isFailure)
         assertEquals(listOf(first),repo.snapshot().contacts)
     }
+    @Test fun dwellBoundsApplyToEditedRecordWithoutBreakingLegacyBackupOrOtherWrites()=runBlocking {
+        val legacy=Treatment(id="legacy-dwell",dwellMinutes=348000,saved=true)
+        repo.restore(Snapshot(treatments=listOf(legacy)))
+        for(minutes in listOf(null,0,61,95,1439)) {
+            repo.save(Treatment(id="new-dwell",dwellMinutes=minutes),false)
+            assertEquals(minutes,repo.snapshot().treatments.single{it.id=="new-dwell"}.dwellMinutes)
+        }
+        val before=repo.snapshot()
+        for(minutes in listOf(-1,1440,348000,Int.MAX_VALUE)) {
+            assertTrue(runCatching{repo.save(Treatment(id="new-dwell",dwellMinutes=minutes),false)}.isFailure)
+            assertEquals(before.treatments,repo.snapshot().treatments)
+            assertEquals(before.usages,repo.snapshot().usages)
+        }
+        repo.product(p)
+        val backup=codec.decodeFromString<Snapshot>(codec.encodeToString(Snapshot.serializer(),repo.snapshot()))
+        repo.restore(backup)
+        assertEquals(legacy,repo.snapshot().treatments.single{it.id==legacy.id})
+        assertTrue(runCatching{repo.save(legacy.copy(memo="수정"),false)}.isFailure)
+        repo.save(legacy.copy(dwellMinutes=null),false)
+        assertNull(repo.snapshot().treatments.single{it.id==legacy.id}.dwellMinutes)
+    }
     @Test fun editingAndBackupRoundTripPreserveLegacyTreatmentTimes()=runBlocking {
         val original=Treatment(id="legacy-times",startTime="22:00",endTime="07:00",dwellMinutes=95,memo="이전 메모")
         repo.save(original,false)

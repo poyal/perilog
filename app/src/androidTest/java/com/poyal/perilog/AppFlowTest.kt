@@ -466,7 +466,7 @@ class AppFlowTest {
         node("오늘").assertExists();node("어제").assertExists()
         click("평균저류시간 · 메모 추가")
         node("시작 시각 · 예: 22:00").assertDoesNotExist();node("종료 시각 · 예: 07:00").assertDoesNotExist()
-        node("1시간 35분").assertExists();field("평균저류 시간").assertDoesNotExist();field("분").assertDoesNotExist()
+        field("평균저류 시간").assertTextContains("1");field("평균저류 분").assertTextContains("35")
         input("메모","수정한 투석 메모");hideKeyboard();screenshot("updated-treatment-options.png");click("기록 저장")
         await{snapshot().treatments.single().memo=="수정한 투석 메모"}
         val saved=snapshot().treatments.single()

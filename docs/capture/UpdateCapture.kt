@@ -29,7 +29,7 @@ import java.io.File
 class UpdateCapture {
     @get:Rule val ui = createAndroidComposeRule<ComponentActivity>()
     @Test fun availableVersionIgnoresPreviousDownload() {
-        val latest = ReleaseInfo("1.0.15", "fixture", "perilog-1.0.15.apk", 100, "a".repeat(64), "fixture")
+        val latest = ReleaseInfo("1.0.17", "fixture", "perilog-1.0.17.apk", 100, "a".repeat(64), "fixture")
         val previous = DownloadRecord(42, latest.copy(version = "1.0.10"), "perilog-1.0.10-old.apk")
         val persistence = object: UpdatePersistence {
             override suspend fun read() = UpdateRecord(latest, System.currentTimeMillis(), System.currentTimeMillis(), previous)
@@ -59,7 +59,7 @@ class UpdateCapture {
                     }
                 }
             } }
-            ui.onNodeWithText("1.0.15 APK 다운로드").assertIsDisplayed()
+            ui.onNodeWithText("1.0.17 APK 다운로드").assertIsDisplayed()
             ui.onNodeWithText("perilog-1.0.10-old.apk", substring = true).assertDoesNotExist()
             ui.waitForIdle(); SystemClock.sleep(650)
             val app = ApplicationProvider.getApplicationContext<PerilogApplication>()

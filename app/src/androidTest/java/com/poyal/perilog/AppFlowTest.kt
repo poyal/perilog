@@ -760,61 +760,64 @@ class AppFlowTest {
         runBlocking {app.repository.restore(snapshot().copy(treatments=listOf(legacy)))}
         await{compose.onAllNodesWithText("이어서 입력하기").fetchSemanticsNodes().isNotEmpty()}
         click("이어서 입력하기");node("기록 저장").assertIsNotEnabled()
-        show(node("5800시간 00분")).assertExists();click("시간 변경");click("취소")
-        node("5800시간 00분").assertExists();node("기록 저장").assertIsNotEnabled()
-        click("시간 지우기");click("기록 저장");await{snapshot().treatments.single().dwellMinutes==null}
+        show(field("평균저류 시간")).assertTextContains("5800")
+        input("평균저류 시간","24");field("평균저류 시간").assertTextContains("5800")
+        node("기록 저장").assertIsNotEnabled()
+        assertEquals(348000,snapshot().treatments.single().dwellMinutes)
+        input("평균저류 시간","23");input("평균저류 분","59")
+        click("기록 저장");await{snapshot().treatments.single().dwellMinutes==1439}
     }
-    @Test fun dwellPickerApplyIsTransientUntilSaveAndDialogSurvivesRecreation() {
-        click("오늘 기록 시작");click("평균저류시간 · 메모 추가");click("시간 선택")
-        fun choose() {
-            val hour=app.getString(app.resources.getIdentifier("m3c_time_picker_hour_24h_suffix","string",app.packageName),1)
-            val minute=app.getString(app.resources.getIdentifier("m3c_time_picker_minute_suffix","string",app.packageName),35)
-            show(compose.onNodeWithContentDescription(hour)).performClick()
-            val minuteSelector=app.getString(app.resources.getIdentifier("m3c_time_picker_minute_selection","string",app.packageName))
-            show(compose.onNodeWithContentDescription(minuteSelector)).performClick()
-            show(compose.onNodeWithContentDescription(minute)).performClick()
-        }
-        choose();compose.activityRule.scenario.recreate()
-        compose.onNodeWithTag("dwell-time-selection").assertTextEquals("1시간 35분")
-        click("취소");node("미입력").assertExists()
-        click("시간 선택");choose();click("적용")
-        assertTrue(snapshot().treatments.isEmpty());assertTrue(snapshot().drafts.isEmpty())
-        compose.activityRule.scenario.recreate();node("1시간 35분").assertExists()
-        click("기록 저장");await{snapshot().treatments.isNotEmpty()}
-        assertEquals(95,snapshot().treatments.single().dwellMinutes)
-    }
-    @Test fun dwellPickerAndUnsavedDialogRemainUsableInLandscapeAndBothThemes() {
+    @Test fun dwellInputIsTransientUntilSaveAndSurvivesRecreation() {
         click("오늘 기록 시작");click("평균저류시간 · 메모 추가")
-        click("시간 선택");click("적용")
-        node("0시간 00분").assertExists()
+        input("평균저류 분","05")
+        compose.activityRule.scenario.recreate()
+        show(field("평균저류 시간")).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
+        field("평균저류 분").assertTextContains("05")
+        input("평균저류 시간","1");input("평균저류 분","35")
+        input("평균저류 시간","24");input("평균저류 분","60")
+        field("평균저류 시간").assertTextContains("1");field("평균저류 분").assertTextContains("35")
+        assertTrue(snapshot().treatments.isEmpty());assertTrue(snapshot().drafts.isEmpty())
+        hideKeyboard();compose.onNodeWithContentDescription("이 화면 사용 안내").performClick();back()
+        show(field("평균저류 시간")).assertTextContains("1");field("평균저류 분").assertTextContains("35")
+        click("평균저류시간 · 메모 접기");click("평균저류시간 · 메모 추가")
+        show(field("평균저류 시간")).assertTextContains("1");field("평균저류 분").assertTextContains("35")
+        back();click("계속 입력");click("기록 저장");await{snapshot().treatments.isNotEmpty()}
+        assertEquals(95,snapshot().treatments.single().dwellMinutes)
+        click("이어서 입력하기");click("평균저류시간 · 메모 추가")
+        input("평균저류 시간","");input("평균저류 분","");input("평균저류 분","0")
+        click("기록 저장");await{snapshot().treatments.single().dwellMinutes==0}
+        click("이어서 입력하기");click("평균저류시간 · 메모 추가")
+        input("평균저류 시간","");input("평균저류 분","")
+        click("기록 저장");await{snapshot().treatments.single().dwellMinutes==null}
+    }
+    @Test fun dwellInputAndUnsavedDialogRemainUsableInLandscapeAndBothThemes() {
+        click("오늘 기록 시작");click("평균저류시간 · 메모 추가")
+        input("평균저류 시간","23");input("평균저류 분","59")
         val originalOrientation=compose.activity.requestedOrientation
         try {
             compose.activityRule.scenario.onActivity{it.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE}
             await("Landscape",30000){compose.activity.resources.configuration.orientation==Configuration.ORIENTATION_LANDSCAPE}
             for(theme in listOf("LIGHT","DARK")) {
                 runBlocking{app.repository.preferences(snapshot().preferences.copy(darkMode=theme))}
-                click("시간 변경")
-                node("평균저류시간 선택").assertIsDisplayed();node("취소").assertIsDisplayed();node("적용").assertIsDisplayed()
-                val label=app.getString(app.resources.getIdentifier("m3c_time_picker_hour_24h_suffix","string",app.packageName),23)
-                show(compose.onNodeWithContentDescription(label)).assertIsDisplayed()
-                for(hour in listOf(0,6,12,18)) {
-                    val clockLabel=app.getString(app.resources.getIdentifier("m3c_time_picker_hour_24h_suffix","string",app.packageName),hour)
-                    val clockNode=compose.onNode(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription,listOf(clockLabel)))
-                    clockNode.assertIsDisplayed()
-                    val visible=clockNode.getBoundsInRoot().let{it.bottom-it.top}
-                    val full=clockNode.getUnclippedBoundsInRoot().let{it.bottom-it.top}
-                    assertTrue("Clock hour $hour clipped",visible>=full*.95f)
+                showKeyboard("평균저류 시간","Dwell hour $theme")
+                await("Dwell hour fully visible",30000) {
+                    val visible=field("평균저류 시간").getBoundsInRoot().let{it.bottom-it.top}
+                    val full=field("평균저류 시간").getUnclippedBoundsInRoot().let{it.bottom-it.top}
+                    full.value>0f && visible>=full*.95f
                 }
-                InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(400,3000)
-                screenshot("dwell-landscape-$theme.png");click("취소")
+                field("평균저류 시간").assertTextContains("23")
+                showKeyboard("평균저류 분","Dwell minute $theme")
+                await("Dwell minute fully visible",30000) {
+                    val visible=field("평균저류 분").getBoundsInRoot().let{it.bottom-it.top}
+                    val full=field("평균저류 분").getUnclippedBoundsInRoot().let{it.bottom-it.top}
+                    full.value>0f && visible>=full*.95f
+                }
+                field("평균저류 분").assertTextContains("59")
+                node("기록 저장").assertIsDisplayed()
+                screenshot("dwell-input-landscape-$theme.png");hideKeyboard()
                 back();node("계속 입력").assertIsDisplayed();node("변경사항 버리고 나가기").assertIsDisplayed()
-                InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(400,3000)
                 screenshot("treatment-unsaved-landscape-$theme.png");click("계속 입력")
             }
-        } catch(error:Throwable) {
-            screenshot("failure-dwell-landscape.png")
-            File(app.filesDir,"e2e-artifacts/dwell-landscape-tree.txt").writeText(compose.onRoot(useUnmergedTree=true).printToString())
-            throw error
         } finally {compose.activityRule.scenario.onActivity{it.requestedOrientation=originalOrientation}}
     }
     @Test fun bloodPressureFieldsStayIndependentForNewRecords() {

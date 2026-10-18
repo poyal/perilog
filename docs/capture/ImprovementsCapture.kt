@@ -49,7 +49,6 @@ class ImprovementsCapture {
         show(ui.onNodeWithText("이번 기록만 수량 조정"));shot("03-usage-template")
         click("평균저류시간 · 메모 추가")
         show(ui.onNode(hasSetTextAction() and hasText("메모")));shot("41-treatment-memo")
-        click("시간 변경");shot("93-dwell-time-picker");click("취소")
         show(ui.onNode(hasSetTextAction() and hasText("메모"))).performTextReplacement("오늘 기록할 메모")
         ui.runOnIdle{ui.activity.onBackPressedDispatcher.onBackPressed()}
         ui.onNodeWithText("변경사항 버리고 나가기").assertExists();shot("94-treatment-unsaved")

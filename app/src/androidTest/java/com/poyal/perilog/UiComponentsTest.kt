@@ -6,7 +6,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -40,61 +39,93 @@ class UiComponentsTest {
         }
     }
 
-    @Test fun dwellTimeClockAppliesExactMinutesCancelsAndDistinguishesZeroFromMissing() {
+    @Test fun dwellTimeInputRejectsInvalidNumbersAndKeepsFieldsIndependent() {
         var value by mutableStateOf<Int?>(null)
         ui.setContent {PerilogTheme("LIGHT"){Column {DwellTimeInput(value){value=it}}}}
-        val context=InstrumentationRegistry.getInstrumentation().targetContext
-        fun clockLabel(name:String,value:Int):String=context.getString(context.resources.getIdentifier(name,"string",context.packageName),value)
-        fun open()=ui.onNodeWithText(if(value==null)"시간 선택"else"시간 변경").performClick()
-        fun choose(hour:Int,minute:Int) {
-            ui.onNode(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription,listOf(clockLabel("m3c_time_picker_hour_24h_suffix",hour)))).performScrollTo().performClick()
-            ui.onNodeWithContentDescription(context.getString(context.resources.getIdentifier("m3c_time_picker_minute_selection","string",context.packageName))).performScrollTo().performClick()
-            if(minute%5==0)ui.onNode(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription,listOf(clockLabel("m3c_time_picker_minute_suffix",minute)))).performScrollTo().performClick()
-            else {
-                val dial=ui.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.SelectableGroup)).onLast()
-                dial.performScrollTo().performTouchInput {
-                    val angle=Math.toRadians((minute*6-90).toDouble())
-                    val radius=width*.38f
-                    // Drag along the minute's radius so touch slop cannot shift the angle.
-                    val direction=Offset(kotlin.math.cos(angle).toFloat(),kotlin.math.sin(angle).toFloat())
-                    swipe(center+direction*(radius*.5f),center+direction*radius,300)
-                }
-            }
-            ui.onNodeWithTag("dwell-time-selection").assertTextEquals("${hour}시간 ${minute.toString().padStart(2,'0')}분")
+        val hours=ui.onNodeWithContentDescription("평균저류 시간")
+        val minutes=ui.onNodeWithContentDescription("평균저류 분")
+        fun text(field:SemanticsNodeInteraction,expected:String)=field.assert(
+            SemanticsMatcher.expectValue(SemanticsProperties.EditableText,androidx.compose.ui.text.AnnotatedString(expected)))
+        text(hours,"");text(minutes,"")
+        ui.onNodeWithText("시간 선택").assertDoesNotExist()
+        hours.performTextInput("2");hours.performTextInput("4");text(hours,"2")
+        hours.performTextInput("3");text(hours,"23")
+        minutes.performTextInput("5");minutes.performTextInput("9");text(minutes,"59")
+        ui.runOnIdle{assertEquals(1439,value)}
+        for(bad in listOf("24","99","100","-1","1.5","1,5"," 1","1 ","1:30","abc","１２","2147483647")) {
+            hours.performTextReplacement(bad);text(hours,"23")
         }
-        open();ui.onAllNodes(hasSetTextAction()).assertCountEquals(0)
-        ui.onNodeWithText("오전").assertDoesNotExist();ui.onNodeWithText("오후").assertDoesNotExist()
-        choose(1,35);ui.onNodeWithText("취소").performClick();ui.runOnIdle{assertNull(value)}
-        for(minutes in listOf(0,61,95,1439)) {
-            open();choose(minutes/60,minutes%60)
-            ui.onNodeWithText("적용").performClick();ui.runOnIdle{assertEquals(minutes,value)}
-            open();ui.onNodeWithTag("dwell-time-selection").assertTextEquals("${minutes/60}시간 ${(minutes%60).toString().padStart(2,'0')}분")
-            ui.onNodeWithText("취소").performClick()
+        for(bad in listOf("60","99","100","-1","1.5","1,5"," 1","1 ","1:30","abc","１２","2147483647")) {
+            minutes.performTextReplacement(bad);text(minutes,"59")
         }
-        ui.onNodeWithText("시간 지우기").performClick();ui.runOnIdle{assertNull(value)}
-        ui.onNodeWithText("미입력").assertExists()
+        ui.runOnIdle{assertEquals(1439,value)}
+        ui.onNodeWithContentDescription("평균저류 시간 전체 지우기").performClick()
+        text(hours,"");text(minutes,"59");ui.runOnIdle{assertEquals(59,value)}
+        minutes.performTextReplacement("01");text(hours,"");text(minutes,"01")
+        hours.performTextReplacement("01");text(hours,"01");ui.runOnIdle{assertEquals(61,value)}
+        ui.onNodeWithContentDescription("평균저류 분 전체 지우기").performClick()
+        text(hours,"01");text(minutes,"");ui.runOnIdle{assertEquals(60,value)}
+        hours.performTextReplacement("");ui.runOnIdle{assertNull(value)}
+        minutes.performTextReplacement("0");text(hours,"");ui.runOnIdle{assertEquals(0,value)}
+        minutes.performTextReplacement("");ui.runOnIdle{assertNull(value)}
     }
-    @Test fun dwellTimeClockFitsBothThemesAndFontScales() {
+    @Test fun dwellTimeInputPreservesPartialTextOnRestoreAndAcceptsExternalChanges() {
+        var value by mutableStateOf<Int?>(95)
+        val restoration=androidx.compose.ui.test.junit4.StateRestorationTester(ui)
+        restoration.setContent {PerilogTheme("LIGHT"){Column {DwellTimeInput(value){value=it}}}}
+        val hours=ui.onNodeWithContentDescription("평균저류 시간")
+        val minutes=ui.onNodeWithContentDescription("평균저류 분")
+        hours.performTextReplacement("");minutes.performTextReplacement("05")
+        restoration.emulateSavedInstanceStateRestore()
+        hours.assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,androidx.compose.ui.text.AnnotatedString("")))
+        minutes.assertTextContains("05");ui.runOnIdle{assertEquals(5,value)}
+        ui.runOnIdle{value=1439};hours.assertTextContains("23");minutes.assertTextContains("59")
+        ui.runOnIdle{value=348000};hours.assertTextContains("5800")
+        ui.onNodeWithText("0~23의 숫자로 수정하거나 지워 주세요.").assertExists()
+        minutes.performTextReplacement("30");ui.runOnIdle{assertEquals(348000,value)}
+        hours.performTextReplacement("1");ui.runOnIdle{assertEquals(90,value)}
+        ui.runOnIdle{value=-1};minutes.assertTextContains("-1")
+        minutes.performTextReplacement("1");ui.runOnIdle{assertEquals(1,value)}
+        ui.runOnIdle{value=null};minutes.assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,androidx.compose.ui.text.AnnotatedString("")))
+    }
+    @Test fun dwellTimeInputFitsBothThemesAndFontScales() {
         var dark by mutableStateOf(false)
-        val font=InstrumentationRegistry.getInstrumentation().targetContext.resources.configuration.fontScale
+        var scale by mutableStateOf(1f)
         ui.setContent {
-            PerilogTheme(if(dark)"DARK"else"LIGHT"){androidx.compose.material3.Surface{Column {DwellTimeInput(95){}}}}
-        }
-        for(theme in listOf(false,true)) {
-            ui.runOnIdle{dark=theme}
-            ui.onNodeWithText("시간 변경").performClick()
-            ui.onNodeWithTag("dwell-time-dialog").assertIsDisplayed()
-            for(text in listOf("평균저류시간 선택","취소","적용")) {
-                ui.onNodeWithText(text).assertIsDisplayed()
-                val layouts=mutableListOf<TextLayoutResult>()
-                ui.onNodeWithText(text).performSemanticsAction(SemanticsActions.GetTextLayoutResult){it(layouts)}
-                layouts.forEach{layout->
-                    assertTrue("Clipped $text at $font: ${layout.size}, height=${layout.multiParagraph.height}",layout.multiParagraph.height<=layout.size.height+1f)
-                    for(line in 0 until layout.lineCount)assertTrue("Clipped $text at $font",layout.getLineRight(line)-layout.getLineLeft(line)<=layout.size.width+1f)
+            val density=LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density,scale)) {
+                PerilogTheme(if(dark)"DARK"else"LIGHT") {
+                    androidx.compose.material3.Surface {
+                        Column(Modifier.width(320.dp).verticalScroll(rememberScrollState()).padding(16.dp)) {
+                            Paper {
+                                SmallButton(onClick={}){androidx.compose.material3.Text("평균저류시간 · 메모 접기")}
+                                DwellTimeInput(1439){}
+                            }
+                        }
+                    }
                 }
             }
-            screenshot("dwell-clock-${if(theme)"dark"else"light"}-$font.png")
-            ui.onNodeWithText("취소").performClick()
+        }
+        for(font in listOf(1f,1.5f))for(theme in listOf(false,true)) {
+            ui.runOnIdle{dark=theme;scale=font}
+            for(text in listOf("평균저류시간 · 메모 접기","평균저류 시간","분","시간은 0~23, 분은 0~59로 입력해 주세요.")) {
+                // The minute suffix and label share text; inspect both layouts.
+                val nodes=ui.onAllNodes(hasText(text) and !hasSetTextAction(),useUnmergedTree=true)
+                for(index in nodes.fetchSemanticsNodes().indices) {
+                    val node=nodes[index]
+                    node.performScrollTo().assertIsDisplayed()
+                    val layouts=mutableListOf<TextLayoutResult>()
+                    node.performSemanticsAction(SemanticsActions.GetTextLayoutResult){it(layouts)}
+                    layouts.forEach{layout->
+                        assertTrue("Clipped $text at $font",layout.multiParagraph.height<=layout.size.height+1f)
+                        for(line in 0 until layout.lineCount)assertTrue("Clipped $text at $font",layout.getLineRight(line)-layout.getLineLeft(line)<=layout.size.width+1f)
+                    }
+                }
+            }
+            val hours=ui.onNodeWithContentDescription("평균저류 시간").fetchSemanticsNode().boundsInRoot
+            val minutes=ui.onNodeWithContentDescription("평균저류 분").fetchSemanticsNode().boundsInRoot
+            assertFalse("Overlapping duration fields",hours.overlaps(minutes))
+            screenshot("dwell-input-${if(theme)"dark"else"light"}-$font.png")
         }
     }
     @Test fun calendarFitsSevenColumnsAndSelectsEdgeDatesWithLargeText() {

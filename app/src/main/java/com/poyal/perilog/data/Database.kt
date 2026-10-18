@@ -179,7 +179,7 @@ class Repository(val db: JournalDb) {
     suspend fun discardDraft(id: String) = d.deleteDraft(id)
     suspend fun save(t: Treatment, confirmUsage: Boolean) = db.withTransaction {
         // Validate the edited record only; old backups and unrelated legacy records remain readable.
-        require(t.validDwellTime()) { "평균저류시간은 0시간 00분부터 23시간 59분까지 선택해 주세요." }
+        require(t.validDwellTime()) { "평균저류시간은 0시간 00분부터 23시간 59분까지 입력해 주세요." }
         val s=read()
         val previous=s.treatments.find{it.id==t.id}
         val existing=s.usages.find{it.id==t.id}

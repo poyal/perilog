@@ -35,10 +35,7 @@ def packaged(root, tag):
     for name in names:
         if checksums[name] != sha256(files[name]):
             raise ValueError(f"Local checksum mismatch: {name}")
-    notes = (root / "docs" / "releases" / f"{tag}.md").read_text()
-    if not notes.strip():
-        raise ValueError("Missing release notes")
-    return files, notes
+    return files
 
 
 def verify_asset(client, asset, expected):
@@ -58,7 +55,7 @@ def asset_map(assets, names):
     return result
 
 
-def publish(client, tag, commit, files, notes):
+def publish(client, tag, commit, files):
     if client.tag_commit(tag) != commit:
         raise ValueError("Remote tag differs from the checked-out commit")
     release = client.release(tag)
@@ -71,7 +68,7 @@ def publish(client, tag, commit, files, notes):
             verify_asset(client, asset, files[name])
     else:
         existing = {}
-        release = client.create(tag, notes)
+        release = client.create(tag)
     for name, data in files.items():
         if name not in existing:
             client.upload(tag, name, data)
@@ -134,8 +131,8 @@ class GitHub:
     def download(self, asset):
         return self.api(f"releases/assets/{asset['id']}", binary=True)
 
-    def create(self, tag, notes):
-        return self.api("releases", "POST", {"tag_name": tag, "name": f"페리로그 {tag}", "body": notes, "draft": True, "prerelease": False})
+    def create(self, tag):
+        return self.api("releases", "POST", {"tag_name": tag, "name": f"페리로그 {tag}", "generate_release_notes": True, "draft": True, "prerelease": False})
 
     def upload(self, tag, name, data):
         with tempfile.TemporaryDirectory(prefix="perilog-publish-") as directory:
@@ -150,6 +147,6 @@ class GitHub:
 if __name__ == "__main__":
     root = Path(__file__).resolve().parent.parent
     tag = os.environ["RELEASE_TAG"]
-    files, notes = packaged(root, tag)
+    files = packaged(root, tag)
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
-    publish(GitHub(os.environ["GH_REPO"]), tag, commit, files, notes)
+    publish(GitHub(os.environ["GH_REPO"]), tag, commit, files)

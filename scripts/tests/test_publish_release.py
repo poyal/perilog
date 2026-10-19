@@ -2,6 +2,7 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import Mock
 
 spec = importlib.util.spec_from_file_location("publisher", Path(__file__).parents[1] / "publish-release.py")
 publisher = importlib.util.module_from_spec(spec)
@@ -20,7 +21,7 @@ class FakeGitHub:
 
     def tag_commit(self, tag): return self.commit
     def release(self, tag): return self.current
-    def create(self, tag, notes):
+    def create(self, tag):
         self.current = {"id": 1, "tag_name": tag, "draft": True, "prerelease": False}
         return self.current
     def assets(self, release):
@@ -40,7 +41,7 @@ class PublishTest(unittest.TestCase):
     def setUp(self):
         self.files = {"perilog-2.0.0.apk": b"apk", "perilog-2.0.0-screenshots.zip": b"zip", "perilog-2.0.0.sha256": b"checksums"}
     def run_publish(self, client):
-        publisher.publish(client, "v2.0.0", "source", self.files, "notes")
+        publisher.publish(client, "v2.0.0", "source", self.files)
     def test_publish_and_idempotent_retry(self):
         client = FakeGitHub()
         self.run_publish(client)
@@ -61,7 +62,7 @@ class PublishTest(unittest.TestCase):
         self.assertTrue(client.current["draft"])
     def test_existing_conflict_preserved_before_any_new_upload(self):
         client = FakeGitHub()
-        client.create("v2.0.0", "notes")
+        client.create("v2.0.0")
         client.files["perilog-2.0.0.apk"] = b"different"
         with self.assertRaises(ValueError): self.run_publish(client)
         self.assertEqual(client.files, {"perilog-2.0.0.apk": b"different"})
@@ -81,14 +82,32 @@ class PublishTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / ".release").mkdir()
-            (root / "docs/releases").mkdir(parents=True)
-            (root / "docs/releases/v2.0.0.md").write_text("notes")
             names = list(self.files)[:2]
             for name in names: (root / ".release" / name).write_bytes(self.files[name])
             sums = "".join(f"{publisher.sha256(self.files[n])}  {n}\n" for n in names)
             (root / ".release/perilog-2.0.0.sha256").write_text(sums)
-            self.assertEqual(len(publisher.packaged(root, "v2.0.0")[0]), 3)
+            self.assertEqual(len(publisher.packaged(root, "v2.0.0")), 3)
             (root / ".release/password").write_text("not-a-real-secret")
             with self.assertRaises(ValueError): publisher.packaged(root, "v2.0.0")
+
+    def test_new_draft_generates_notes_on_github(self):
+        client = publisher.GitHub("poyal/perilog")
+        client.api = Mock(return_value={"id": 1})
+        client.create("v2.0.0")
+        payload = client.api.call_args.args[2]
+        self.assertTrue(payload["generate_release_notes"])
+        self.assertTrue(payload["draft"])
+        self.assertNotIn("body", payload)
+
+    def test_resume_preserves_edited_github_body(self):
+        client = FakeGitHub()
+        client.create("v2.0.0")
+        client.current["body"] = "Maintainer's reviewed patch notes"
+        self.run_publish(client)
+        self.assertEqual(client.current["body"], "Maintainer's reviewed patch notes")
+        api = publisher.GitHub("poyal/perilog")
+        api.api = Mock()
+        api.make_public(client.current)
+        self.assertNotIn("body", api.api.call_args.args[2])
 
 if __name__ == "__main__": unittest.main()

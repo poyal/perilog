@@ -1,0 +1,542 @@
+> v1.0.11 공개 소스의 사용자 매뉴얼입니다. [최신 매뉴얼](../../../README.md) · [패치노트](https://github.com/poyal/perilog/releases/tag/v1.0.11) · [검증 결과](AGENTS.md)
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/design/icon-concepts/02-daily-journal-bow.png" alt="페리로그 아이콘" width="100">
+</p>
+
+# 페리로그 사용자 매뉴얼
+
+**나의 하루, 나의 투석 기록.**
+
+페리로그는 매일의 복막투석 기록과 사용 물품을 휴대폰에서 관리하는 앱입니다. 시작 전 몸무게·혈압과 종료 후 투석 결과를 나누어 저장하고, 사용한 물품과 남은 재고를 함께 확인할 수 있습니다. 병원 일정과 자주 쓰는 연락처도 홈에서 확인합니다.
+
+Android 12 이상 · 로그인 없음 · 기록은 기기 내부 저장
+
+**[앱 다운로드](https://github.com/poyal/perilog/releases/latest)** · [전체 화면 보기](https://github.com/poyal/perilog/blob/v1.0.11/docs/%ED%99%94%EB%A9%B4-%EC%95%88%EB%82%B4.md) · [문의·오류 신고](https://github.com/poyal/perilog/issues)
+
+처음 사용하신다면 **설치 → 물품·재고·사용 구성 준비 → 오늘 기록 시작 → 백업** 순서로 따라 하세요. 아래 화면의 수치와 제품 구성은 사용법을 설명하기 위한 예시입니다. 이미지를 누르면 크게 볼 수 있습니다.
+
+## 목차
+
+1. [설치하기](#install)
+2. [화면과 메뉴 익히기](#navigation)
+3. [처음 한 번 준비하기](#setup)
+4. [매일 기계투석 기록하기](#daily)
+5. [추가투석 기록하기](#manual-treatment)
+6. [기록 조회·수정·삭제하기](#records)
+7. [입고와 재고 관리하기](#inventory)
+8. [화면·알림·앱 잠금 설정하기](#preferences)
+9. [병원 일정과 연락처 관리하기](#appointments)
+10. [휴대폰 홈에 위젯 추가하기](#widgets)
+11. [백업·복원·기기 변경하기](#backup)
+12. [업데이트와 앱 정보 확인하기](#updates)
+13. [자주 확인하는 내용](#faq)
+
+<a id="install"></a>
+
+## 설치하기
+
+1. 휴대폰에서 [앱 다운로드](https://github.com/poyal/perilog/releases/latest)를 엽니다.
+2. 릴리즈의 첨부 파일에서 이름이 **`.apk`로 끝나는 설치 파일**을 내려받습니다.
+3. 다운로드한 파일을 엽니다. Android가 요청하면 파일을 연 앱의 **이 출처 허용**을 켜고 설치합니다.
+4. **페리로그**를 실행합니다. 계정이나 회원 가입은 필요하지 않습니다.
+
+이미 사용 중이라면 기존 앱 위에 설치하세요. **앱을 삭제하면 내부 기록도 지워지므로, 삭제하거나 기기를 바꾸기 전에는 먼저 백업 파일을 내보내 주세요.**
+
+<a id="navigation"></a>
+
+## 화면과 메뉴 익히기
+
+| 메뉴 | 하는 일 |
+| --- | --- |
+| **홈** | 오늘·어제 남은 항목 확인, 기록 시작·이어쓰기, 병원 일정·연락처 확인 |
+| **기록** | 기계·추가투석 기록 추가, 리스트·캘린더·표 조회, 수정·삭제, 사용 내역 확인 |
+| **통계** | 기간별 몸무게·혈압·투석 결과를 라인차트와 항목별 도표로 조회 |
+| **재고** | 남은 수량 확인, 입고 요청 계산·분할 입고, 품목·사용 구성 관리 |
+| **설정** | 홈 오른쪽 위 톱니바퀴. 일반, 투석 기록·물품, 병원·연락처, 백업·데이터, 도움말·앱 정보 |
+
+홈의 오늘 기록은 **활력 상태 → 사용 구성 → 투석 기록**으로 나뉩니다. 완료한 항목은 체크, 미완료 항목은 빈 원으로 표시합니다. 남은 항목이나 카드 아래 버튼을 누르면 해당 기록을 이어 쓸 수 있습니다. 모두 입력하고 저장하면 완료 안내가 표시됩니다.
+
+각 화면 오른쪽 위 **?**를 누르면 해당 화면의 사용법을 볼 수 있습니다. **설정 → 사용 안내**에서는 전체 목차와 검색을 이용하세요. 안내와 실제 화면 이미지는 인터넷 없이 열리며, 이미지를 누르면 두 손가락으로 확대할 수 있습니다. 뒤로 돌아오면 작성 중인 값을 이어서 입력할 수 있습니다. 제수량 옆 **?**는 해당 기록의 계산식 안내입니다.
+
+<table>
+  <tr><th>오늘 남은 항목</th><th>기록을 마친 날</th></tr>
+  <tr>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/01-home.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/01-home.png" alt="홈에서 오늘 남은 기록 확인" width="260"></a></td>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/06-completed.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/06-completed.png" alt="오늘 기록 완료와 체크 표시" width="260"></a></td>
+  </tr>
+</table>
+
+<a id="setup"></a>
+
+## 처음 한 번 준비하기
+
+### 물품과 보유 수량 등록
+
+1. **재고 → 품목 관리 · 색상 → + 품목 추가**를 엽니다.
+2. 사용하는 투석액·카세트·손투석 라인 등의 이름과 종류를 입력하고 색상을 고른 뒤 저장합니다. 이름에 농도나 용량을 적으면 구별하기 쉽습니다.
+3. **재고 → 입고 등록**에서 보유 물품의 입고 날짜와 품목별 수량을 **EA**로 입력하고 저장합니다.
+
+현재 총수량만 맞추려면 **재고 → 품목의 ⋮ → 수량 맞추기**에서 직접 센 수량을 저장해도 됩니다. 이 수량이 새 재고 기준이 됩니다.
+
+### 자주 쓰는 사용 구성 만들기
+
+1. **설정 → 사용 구성** 또는 **재고 → 사용 구성 관리**를 엽니다.
+2. 구성을 추가하고 알아보기 쉬운 이름을 붙입니다.
+3. 사용할 품목과 각각의 EA 수량을 정하고 저장합니다. 구성의 대표 색상도 고를 수 있습니다.
+
+기록에서 구성을 선택하면 저장한 품목과 수량이 함께 적용됩니다. 품목 색상은 물품을 구별하고, 구성 대표 색상은 기록의 구성 이름을 구별하는 데 사용합니다.
+
+<table>
+  <tr><th>품목과 색상</th><th>사용 구성 편집</th></tr>
+  <tr>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/15-product-settings.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/15-product-settings.png" alt="품목 이름·종류·색상 설정" width="260"></a></td>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/22-template-editor.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/22-template-editor.png" alt="사용할 품목과 EA 수량을 정하는 구성 편집" width="260"></a></td>
+  </tr>
+</table>
+
+### 계산 기준과 백업 준비
+
+**설정 → 투석 계산 기준**에서 이전 최종 주입 설정값과 적용일을 확인하고 **이 날짜부터 기준 저장**을 누릅니다. 앱 기본값은 2000mL이며, 이미 저장한 과거 기록의 계산 기준은 바뀌지 않습니다.
+
+기록을 시작하기 전에 **설정 → 자동 백업 → 백업 폴더 선택**에서 보관할 폴더도 연결해 두세요. 자세한 방법은 아래 [백업 안내](#backup)에 있습니다.
+
+<a id="daily"></a>
+
+## 매일 기계투석 기록하기
+
+### 시작 전: 활력 상태와 사용 구성
+
+1. 홈의 **오늘 기록 시작**을 누릅니다. 작성 중인 기록은 **이어서 입력하기**로 열립니다.
+2. 기록할 **날짜**를 확인합니다. 오늘·어제 또는 원하는 과거 날짜를 선택할 수 있습니다.
+3. **활력 상태**에 몸무게와 수축기·이완기 혈압을 입력합니다. 새 기록은 빈칸으로 시작하며 이전 기록의 측정값을 가져오지 않습니다. 숫자 옆 **×**로 지우고 다시 입력할 수 있습니다.
+4. **사용 구성**에 표시된 구성 버튼을 눌러 이번에 사용한 구성을 선택하고 품목과 수량을 확인합니다. 새 기록에는 이전 사용 구성이 자동으로 선택되지 않습니다. 기존 기록이나 초안을 이어 쓰면 입력했던 내용이 유지됩니다.
+5. 이번에만 수량을 바꾸려면 **이번 기록만 수량 조정**을 사용합니다. 저장해 둔 구성 자체는 바뀌지 않습니다.
+6. **기록 저장**을 누릅니다. 시작 전 항목만 먼저 저장해도 됩니다.
+
+### 종료 후: 같은 기록에 결과 추가
+
+1. 홈의 남은 **투석 기록** 항목 또는 **기록하기**를 누릅니다.
+2. 기계에서 확인한 **초기배액량**과 **기계 제수량**을 입력합니다.
+3. 계산된 **제수량**을 확인합니다. 필요한 경우 **평균저류시간 · 메모 추가**를 눌러 입력합니다. 시작·종료 시각은 입력하지 않습니다.
+4. **기록 저장**을 누릅니다. 같은 기록에 결과를 추가하거나 다시 저장해도 사용 물품이 중복 차감되지 않습니다.
+
+<table>
+  <tr><th>활력 상태 입력</th><th>사용 구성 선택</th><th>투석 결과 입력</th></tr>
+  <tr>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/02-before-treatment.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/02-before-treatment.png" alt="몸무게와 혈압 입력" width="230"></a></td>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/03-usage-template.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/03-usage-template.png" alt="저장한 사용 구성 선택" width="230"></a></td>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/04-after-treatment.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/04-after-treatment.png" alt="초기배액량·기계 제수량 입력과 계산 결과" width="230"></a></td>
+  </tr>
+</table>
+
+### 아침에 어제 기록을 마칠 때
+
+홈의 **어제의 기록 → 어제 기록하기**로 들어가면 어제 날짜를 유지하며 이어 쓸 수 있습니다. 아침에 새 기록을 시작하면 날짜의 기본값은 오늘이므로, 전날 기록으로 남기려면 **어제**를 선택하세요. 자정을 지났다는 이유로 기록 날짜가 자동으로 바뀌지는 않습니다.
+
+### 제수량 계산과 입력 단위
+
+```text
+총 제수량 = 초기배액량 − 이전 최종 주입 설정값 + 기계 제수량
+예시: 2300 − 2000 + 600 = 900mL
+```
+
+앱은 저장한 설정값을 기준으로 계산합니다. **제수량 옆 ?**를 누르면 이 기록의 계산식과 기준을 확인·수정할 수 있습니다. 실제 최종 주입량을 자동으로 읽지는 않습니다.
+
+음수는 **제수량 + / − 바꾸기**, 측정값이 0이면 `0`을 입력합니다. 빈칸은 미입력으로 남습니다. 입력 중 나간 내용은 초안으로 보관되며, 초안이나 구성 미리보기만으로 재고를 차감하지 않습니다.
+
+<a id="manual-treatment"></a>
+
+## 추가투석 기록하기
+
+1. **기록** 화면 제목 오른쪽의 **+ → 추가투석 기록 추가**를 누르고 날짜를 확인합니다.
+2. 사용한 물품 구성을 선택하고 수량을 확인합니다.
+3. 필요한 경우 배액 기록을 입력합니다. **배액량 mL** 또는 **배액무게 g/kg** 중 실제 기록할 단위를 고릅니다.
+4. **기록 저장**을 누릅니다. 하루 여러 건을 등록할 수 있고, 물품 사용만 저장해도 완료됩니다.
+
+무게는 입력한 단위로 보관합니다. 무게를 부피로 자동 환산하거나 용기 무게를 자동으로 빼지 않으며, 기계투석 제수량에 합산하지 않습니다.
+
+<a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/07-manual-treatment.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/07-manual-treatment.png" alt="추가투석의 사용 물품과 선택 입력인 배액 기록" width="280"></a>
+
+<a id="records"></a>
+
+## 기록 조회·수정·삭제하기
+
+| 원하는 작업 | 방법 |
+| --- | --- |
+| 날짜별 기록 찾기 | **기록 → 리스트** 또는 **캘린더**에서 날짜 선택. 캘린더는 일요일부터 시작하며 토요일은 파란색, 일요일은 빨간색으로 표시 |
+| 여러 날의 수치 비교 | **기록 → 표**에서 전체화면 표 열기. **필터**로 기간·투석 종류·완료 상태를 선택하고, 두 손가락이나 **− / +**로 확대·축소. **전체 열**은 모든 열을 화면 너비에 맞추고 **100%로**는 기본 크기로 표시 |
+| 그래프 보기 | **통계**에서 7D·30D·90D·기간 지정으로 조회. **라인차트** 또는 **항목별 도표** 선택. 항목별 도표는 총 제수량 막대, 수축기·이완기를 연결한 혈압 도표, 체중 점그래프로 표시 |
+| 사용 물품 확인 | 기록 카드의 **사용 구성 이름**을 눌러 품목과 수량 확인 |
+| 기록 수정·삭제 | 기록 카드의 **⋮** 메뉴 사용. 표에서는 셀을 선택한 뒤 **기록 열기** 사용 |
+| 잘못 입력한 물품 사용 되돌리기 | 사용 구성 상세의 **사용 취소** 사용 |
+
+**저장한 투석 기록을 삭제하면 연결된 물품 사용도 함께 취소해 재고에 반영합니다.** 삭제 직후 **되돌리기**를 누르면 기록과 삭제 전의 사용 상태를 함께 복구합니다. 이미 취소한 사용이나 초안 삭제로 수량이 중복 복원되지는 않습니다. 기록을 유지하면서 물품 사용만 취소하려면 사용 구성 상세의 **사용 취소**를 누릅니다.
+
+미입력 값은 `—`로 표시하고 그래프에서 0으로 채우지 않습니다. 같은 날의 추가투석은 각각 한 행이며, 배액 기록은 원래 단위를 유지합니다.
+
+필터·축소·확대·전체 열·100%로 버튼은 표 바로 위에 모여 있습니다. 표를 스크롤해도 조작 영역과 제목 행, 날짜·유형 열은 고정됩니다. 셀을 누르면 아래에 항목과 전체 값을 큰 글씨로 표시하며, 기록을 열었다 돌아와도 배율과 조회 위치를 유지합니다. **전체 열**은 모든 열의 너비를 맞추는 기능이며, 많은 날짜는 위아래로 이동해 확인합니다.
+
+통계에서 도표를 누르거나 **날짜별 값 확인**을 누르면 해당 날짜의 값과 **기록 열기**가 나타납니다. 같은 날짜에 여러 기록이 있으면 각각 표시합니다.
+
+통계·기록·재고 이력의 **기간 지정**은 공통 기간 선택기를 사용합니다. 달력에서 시작일과 종료일을 고르고 **적용**을 누르세요. 선택한 구간은 양 끝 날짜를 포함합니다. 닫기나 뒤로 가기로 취소하면 기존 조회 기간을 유지합니다. **기간 지정** 상태에서만 날짜가 표시된 기간 버튼으로 다시 변경할 수 있습니다. **7D·30D·90D**에서는 날짜 범위만 표시하며 눌러도 달력이 열리지 않습니다.
+
+<table>
+  <tr><th>기록 표 확대·상세</th><th>조회 기간 선택</th></tr>
+  <tr>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/44-record-table-zoomed.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/44-record-table-zoomed.png" alt="확대한 기록 표와 선택한 셀의 전체 값" width="260"></a></td>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/43-date-range-picker.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/43-date-range-picker.png" alt="시작일과 종료일을 함께 선택하는 달력" width="260"></a></td>
+  </tr>
+</table>
+
+저장한 내용의 메모는 **메모** 제목이 있는 별도 블록에 표시합니다. 긴 메모는 처음 세 줄을 보여 주며, **더 보기**로 전체 내용을 펼치고 **접기**로 줄일 수 있습니다. 투석 기록·병원 일정·품목·재고 이력에서 같은 방법으로 확인합니다.
+
+<table>
+  <tr><th>평균저류시간과 메모 입력</th><th>저장한 메모 확인</th></tr>
+  <tr>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/41-treatment-memo.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/41-treatment-memo.png" alt="평균저류시간·메모 선택 입력" width="260"></a></td>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/42-record-memo-expanded.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/42-record-memo-expanded.png" alt="메모 전체 내용과 접기 버튼" width="260"></a></td>
+  </tr>
+</table>
+
+<table>
+  <tr><th>기록 목록</th><th>기간별 기록 표</th><th>통계 그래프</th></tr>
+  <tr>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/08-record-list.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/08-record-list.png" alt="날짜별 기록과 사용 구성 이름" width="230"></a></td>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/23-record-table.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/23-record-table.png" alt="기간별 수치를 비교하는 기록 표" width="230"></a></td>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/10-statistics.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/10-statistics.png" alt="조회 기간과 총 제수량 그래프" width="230"></a></td>
+  </tr>
+</table>
+
+<a id="inventory"></a>
+
+## 입고와 재고 관리하기
+
+### 다음 병원 방문의 입고 요청 계산
+
+1. **재고** 아래쪽 관리 메뉴에서 **입고 요청 계산기 → 새 입고 요청 계산**을 엽니다. 계산기는 **품목 관리 · 색상** 바로 위에 있습니다.
+2. 위쪽 **이번 방문일**과 아래쪽 **다음 방문일**을 차례로 정합니다. **날짜 선택**을 누르면 해당 항목 아래에 달력이 펼쳐집니다. 등록한 예약은 **병원 예약에서 선택**으로 가져올 수 있습니다. 이번 방문일부터 다음 방문일 전날까지 필요한 양을 계산합니다.
+3. **방문일 예상 재고**와 **계산한 요청량**을 확인합니다. 기본적으로 어제까지 최근 28일의 확정된 사용 기록을 참고하며, 기록 없는 날짜는 평균에서 제외합니다. 화면에서 실제 참고한 일수를 확인하세요.
+4. 필요하면 **방문일 잔량 직접 입력**이나 **실제 요청할 수량**을 고칩니다. **잔량 보정 해제**와 **자동 계산값 적용**으로 각각 원래 계산을 다시 사용할 수 있습니다.
+5. **요청안 저장**을 누릅니다. 저장한 요청에서 **요청 내용 복사·공유·요청 수정**을 사용할 수 있습니다. 요청 저장만으로 실제 재고가 늘지는 않습니다.
+
+현재 재고에서 방문 전 예상 사용을 빼고, 남을 양을 다음 방문까지의 필요량에서 차감합니다. **미등록** 재고는 0으로 확정하지 않고, 보유량을 빼지 않은 필요량을 보여 줍니다. 방문 전 부족분은 따로 표시합니다. 예상치에는 **약**을 붙이며 최종 요청량만 EA 단위로 올림합니다.
+
+<table>
+  <tr><th>방문 날짜와 계산 기준</th><th>예상 재고와 요청량</th></tr>
+  <tr>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/49-request-dates.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/49-request-dates.png" alt="이번 방문일과 다음 방문일 선택" width="260"></a></td>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/50-request-calculation.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/50-request-calculation.png" alt="방문일 예상 재고와 직접 수정할 수 있는 요청량" width="260"></a></td>
+  </tr>
+</table>
+
+### 계산한 양보다 여유 있게 받기
+
+1. 계산 결과 위의 **여유분 더 받기**에서 없음·3일·7일을 선택하거나 일수를 직접 입력합니다. 기본값은 0일입니다.
+2. 특정 품목만 더 필요하면 **이 품목만 더 받기**에서 +1·+5·+10 또는 개별 추가분을 입력합니다.
+3. 기본 필요량·여유 일수분·개별 추가분·최종 요청량을 확인한 뒤 **요청안 저장**을 누릅니다. 기본 요청이 0EA여도 3일분 6EA와 추가 5EA를 선택하면 11EA를 요청합니다.
+4. **실제 요청할 수량**을 직접 지정한 품목은 여유 일수를 바꿔도 그 수량을 유지합니다. **자동 계산값 적용**을 누르면 다시 여유분을 포함한 계산을 따릅니다.
+
+이전 요청은 기존 계산과 수량을 유지합니다. **계산 결과에 여유분 더하기**를 선택하면 변경 전후를 확인하고 새 방식으로 저장할 수 있습니다. 다음 요청으로 복사하면 공통 여유 일수만 유지하고 개별 추가분·잔량 보정·최종 직접 지정은 비웁니다.
+
+<a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/74-request-extra-days.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/74-request-extra-days.png" alt="공통 여유 일수를 선택하는 여유분 더 받기" width="280"></a>
+
+### 기록이 없거나 사용 구성이 달라질 때
+
+1. 계산기의 **평소 사용 바꾸기**를 누릅니다.
+2. **사용 구성**에서 기본 구성을 선택합니다. **+ 다른 구성도 사용해요**로 구성과 주당 일수를 더하면 기본 구성의 나머지 일수가 자동으로 맞춰집니다. 예를 들어 다른 구성 2일·3일을 정하면 기본 구성은 2일입니다.
+3. 같은 날 더 사용하는 구성은 **+ 추가로 사용하는 구성**에서 주당 횟수로 정합니다. 저장한 구성이 없다면 **품목별 직접 입력**에서 하루 또는 일주일 사용량을 적습니다.
+4. **이 사용으로 계산**을 누릅니다. **참고 기간 · 사용 변경**에서 참고 기간을 바꾸거나, 방문일 또는 중간 날짜부터 달라질 사용을 추가할 수 있습니다.
+
+주간 일수는 특정 요일을 고정하지 않고 같은 비율로 계산합니다. 계산기에서 구성의 품목·수량을 수정해도 원래 저장한 사용 구성은 유지됩니다. 저장한 요청은 기준을 보존하며, 방문일까지 최신 기록으로 달라진 계산을 비교해 **새 계산 적용**으로 갱신할 수 있습니다. 직접 수정한 요청량은 유지되고, 이미 입고한 내역이 있으면 저장한 계산 기준을 유지합니다.
+
+<a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/51-request-patterns.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/51-request-patterns.png" alt="기본 구성의 나머지 일수와 다른 구성의 주당 일수 설정" width="280"></a>
+
+### 요청한 물품을 나누어 받을 때
+
+1. **입고 요청 계산기 → 저장한 요청 → 물품 받았어요**를 엽니다.
+2. 실제 입고일과 **이번에 받은 품목만** 체크합니다. 남은 요청량이 채워지므로 **이번에 받은 수량**으로 고칩니다.
+3. **받은 수량 저장**을 누릅니다. 체크한 물품의 실제 입고만 재고에 더합니다.
+4. 다음 배송도 같은 요청에서 다시 기록합니다. 요청 30EA 중 15EA를 받았다면 남은 양은 15EA입니다. 요청·받은 양·남은 양과 초과분을 함께 확인할 수 있습니다.
+
+**이전에 받은 내역**에서 입고를 수정하거나 재고 이력에서 취소하면 남은 양에도 반영됩니다. 요청량만 수정해도 실제 입고 내역은 유지됩니다. **다음 요청으로 복사**하면 새 날짜로 다시 계산할 수 있습니다.
+
+<a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/52-request-receive.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/52-request-receive.png" alt="이번에 받은 품목과 실제 입고 수량 확인" width="280"></a>
+
+### 물품을 받은 날
+
+1. **재고 → 입고 등록**을 엽니다.
+2. 입고일과 받은 품목별 EA 수량을 입력합니다. 빈칸이나 0EA인 품목은 제외됩니다.
+3. 필요한 품목이 없으면 **다른 품목 추가**를 눌러 선택하고, 필요한 경우 입고 메모를 적습니다.
+4. **함께 저장**을 누릅니다. 저장한 내용은 **재고 → 이력**에서 종류를 **입고**로 선택해 확인·수정할 수 있습니다. 사용기한은 관리하지 않습니다.
+
+### 모든 재고 이력 찾기
+
+1. **재고 → 이력**을 엽니다. 입고·투석 물품 사용·추가·손실·수량 맞추기를 날짜순으로 함께 표시합니다.
+2. 첫 줄의 **이력 종류·이력 상태**, 둘째 줄의 **이력 품목·이력 기간**으로 범위를 좁힙니다. 기간은 전체·7D·30D·직접 지정, 상태는 전체·유효한 내역·취소된 내역으로 선택합니다.
+3. 날짜·품목별 수량·메모 또는 사유를 확인합니다. 입고·추가는 `+`, 사용·손실은 `−`, 수량 맞추기는 **기준 수량**으로 표시합니다.
+4. 입고는 **수정·입고 취소**, 사용은 **기록 보기·사용 취소**, 추가·손실은 **조정 취소**를 사용할 수 있습니다. 입고 취소는 해당 입고의 모든 품목에 적용되며 확인 창에서 전체 수량을 보여줍니다. 취소한 내역도 이력에 남습니다.
+
+품목을 눌러 **재고 상세 → 이 품목 이력**으로 열면 해당 품목이 미리 선택됩니다. 이력에서 수정·조회 화면에 다녀오거나 화면이 재생성되어도 선택한 필터를 유지합니다.
+
+<a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/38-stock-history.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/38-stock-history.png" alt="종류·상태·품목·기간 필터와 재고 사용·손실 이력" width="280"></a>
+
+### 실제 수량과 다를 때
+
+재고에서 품목을 누르면 날짜별 남은 수량을 보고 **수량 추가·차감**, **수량 맞추기**, **이 품목 이력**을 사용할 수 있습니다. 누락한 입고가 있으면 실제 받은 날짜로 추가하고, 잘못 입력한 사용은 사용 취소로 되돌립니다.
+
+전체 수량을 새로 맞추려면 **품목의 ⋮ → 수량 맞추기**에서 기준 날짜와 직접 센 수량을 적고 **현재 수량 저장 → 확인**을 누릅니다. 기준 이전의 사용은 다시 차감하지 않으며, 이전 사용을 취소해도 직접 센 기준 수량에 다시 더하지 않습니다.
+
+일부 수량만 바꾸려면 다음 순서로 조정합니다.
+
+1. **품목의 ⋮ → 수량 추가·차감**을 엽니다. 재고 상세에서도 같은 버튼을 사용할 수 있습니다.
+2. **차감 · 손실** 또는 **추가**를 선택하고 변경일, EA 수량, **변경 사유 · 필수**를 입력합니다. 수량은 1~100,000EA입니다.
+3. **적용 후 현재 재고**를 확인하고 **조정 저장 → 확인**을 누릅니다. 입력한 개수만 반영하며 입고·사용 기록은 유지합니다.
+4. 저장한 사유와 수량은 **재고 → 이력** 또는 **재고 상세 → 이 품목 이력**에 남습니다. 잘못 입력했다면 **조정 취소 → 확인**을 누릅니다. 취소한 내역도 이력에 남습니다.
+
+재고가 부족해도 치료 기록은 저장할 수 있으며 부족한 수량은 음수로 표시됩니다. 물품은 입고 순서대로 차감합니다. 과거 날짜로 조정할 때 그 뒤에 수량을 맞춘 이력이 있으면 현재 재고는 그 기준 수량을 따릅니다.
+
+<table>
+  <tr><th>품목별 재고 상세</th><th>사유를 적어 일부 수량 변경</th></tr>
+  <tr>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/37-stock-detail.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/37-stock-detail.png" alt="재고 수량과 수량 맞추기·추가·차감 버튼" width="260"></a></td>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/36-stock-adjustment.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/36-stock-adjustment.png" alt="변경 수량·사유와 적용 후 재고 확인" width="260"></a></td>
+  </tr>
+</table>
+
+<table>
+  <tr><th>남은 재고</th><th>품목별 일괄 입고</th></tr>
+  <tr>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/12-inventory.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/12-inventory.png" alt="품목별 EA 수량" width="260"></a></td>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/14-bulk-receipt.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/14-bulk-receipt.png" alt="품목별 입고 수량 입력" width="260"></a></td>
+  </tr>
+</table>
+
+<a id="preferences"></a>
+
+## 화면·알림·앱 잠금 설정하기
+
+홈 오른쪽 위 **설정**을 열면 모든 설정 항목이 한 목록에 표시됩니다. 아래 순서로 구분되어 있으며, 스크롤해 원하는 항목을 누르면 바로 상세 화면이 열립니다.
+
+| 순서 | 구역 | 바로 열 수 있는 항목 |
+| --- | --- | --- |
+| 1 | 일반 | 화면·표시, 알림, 앱 잠금, 홈 화면 위젯 |
+| 2 | 투석 기록·물품 | 사용 구성, 품목 관리, 투석 계산 기준, 사용자 색상 |
+| 3 | 병원·연락처 | 병원 일정, 진료과, 검사·치료 항목, 연락처 |
+| 4 | 백업·데이터 | 자동 백업, 데이터 내보내기·가져오기, 보호 백업, 데이터 초기화 |
+| 5 | 도움말·앱 정보 | 사용 안내, 업데이트, 앱 정보·문의 |
+
+<p><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/18-settings.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/18-settings.png" alt="설정 첫 화면의 일반 설정 항목" width="260"></a></p>
+
+**설정 → 화면·표시**에서 테마를 정하고 **화면 설정 저장**을 누릅니다. 잠금은 **설정 → 앱 잠금**에서 변경한 뒤 **앱 잠금 설정 저장**을 누릅니다. 토글은 항목 전체를 눌러도 바뀝니다.
+
+| 설정 | 사용 방법 |
+| --- | --- |
+| 테마 | **시스템·밝게·어둡게** 중 선택 |
+| 미작성 기록 알림 | OS에서 허용·소리·진동 관리. 앱에서 시각·분을 정하고 **알림 시각 저장**. 완료한 날에는 알리지 않음 |
+| 앱 잠금 | 생체 인증 또는 기기 잠금 사용. 휴대폰에 잠금 방식이 먼저 설정되어 있어야 함 |
+
+Android 13 이상에서는 알림 권한이 없으면 첫 실행에 OS 권한 창이 표시됩니다. Android 12에서는 시스템 알림 설정을 바로 사용합니다. **설정 → 알림 → 시스템 알림 설정 열기**에서 알림 허용·소리·진동을 변경하세요. 앱에서는 시각을 정하고 **알림 시각 저장**을 누릅니다. 기존 앱 내부 알림 스위치 대신 OS 설정을 따르므로 OS에서 허용한 경우 알림이 활성화됩니다.
+
+저장 버튼은 편집 화면 아래에 고정되어 있습니다. 저장하면 상태 표시줄 아래에 완료 안내가 잠시 내려왔다가 사라집니다. 안내가 떠도 본문과 저장 버튼 위치는 바뀌지 않습니다. 기록 삭제 후 **되돌리기**도 상단 안내에서 누릅니다. 저장하지 않고 나갈 때는 변경 내용을 버릴지 확인합니다. 자동 초안 보관에는 반복 안내가 없습니다. 홈의 미작성 안내는 기기 알림을 꺼도 표시됩니다. 휴대폰 절전 상태에 따라 알림이 늦어질 수 있습니다.
+
+<p><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/87-top-save-feedback.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/87-top-save-feedback.png" alt="저장 버튼 위치를 유지하는 상단 저장 완료 안내" width="260"></a></p>
+
+<p><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/78-notification-settings.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/78-notification-settings.png" alt="OS 알림 설정 열기와 앱의 알림 시각 저장" width="260"></a></p>
+
+휴대폰의 글자 크기를 크게 쓰거나 화면을 가로로 돌려 입력할 수 있습니다. 키보드가 열리면 하단 탭을 숨기고, 높이가 부족한 가로 화면에서는 제목도 잠시 접혀 입력칸과 저장 버튼을 보여 줍니다.
+
+<table>
+  <tr><th>어두운 화면</th><th>화면·표시 설정</th></tr>
+  <tr>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/20-dark-mode.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/20-dark-mode.png" alt="다크모드의 홈 화면" width="260"></a></td>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/30-settings-toggles.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/30-settings-toggles.png" alt="화면 테마 설정" width="260"></a></td>
+  </tr>
+</table>
+
+<a id="appointments"></a>
+
+## 병원 일정과 연락처 관리하기
+
+### 자주 사용하는 진료과와 치료 항목 준비
+
+1. **설정 → 진료과 → + 진료과 등록**에서 진료과 이름과 색상을 고르고 **저장**합니다. 병원명은 입력하지 않습니다.
+2. **설정 → 검사·치료 항목 → + 치료 항목 등록**에서 피검사·주사·투석실 방문 등의 항목 이름을 입력합니다.
+3. **아이콘**을 눌러 표시를 고르고 **저장**합니다. 다른 검사·치료도 항목 하나씩 등록해 두면 예약에서 여러 개 선택할 수 있습니다.
+
+진료과와 치료 항목은 각각 관리합니다. 색상과 아이콘 옆에 이름도 함께 표시됩니다. 설정 목록의 **병원·연락처** 구역에서 예약과 관련 항목을 바로 엽니다. 물품과 사용 구성은 **투석 기록·물품** 구역에 있습니다.
+
+<a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/33-treatment-items.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/33-treatment-items.png" alt="자주 사용하는 검사·치료 항목과 아이콘 등록" width="280"></a>
+
+### 예약 등록과 다음 예약 재사용
+
+1. 홈에서 **병원 일정 등록**을 눌러 새 예약을 등록합니다. 예정 일정이 있으면 제목 옆 **+**를 사용합니다. 저장한 일정은 홈 카드의 상세에서 수정할 수 있으며, 전체 일정의 수정·삭제는 **설정 → 병원 일정**에서 합니다.
+2. **날짜 선택**을 눌러 달력에서 **예약일**을 지정하고 진료과를 여러 개 선택합니다. 선택한 진료과마다 나타나는 **예약시간**을 `09:30`처럼 입력하거나 해당 진료과의 **시간 선택**을 이용합니다. 선택한 모든 진료과의 시간이 필요합니다. 진료과를 선택하지 않으면 공통 **예약시간**만 입력합니다.
+3. 필요한 치료 항목을 여러 개 선택합니다. 시간이 필요한 항목만 **시간 지정**을 눌러 시각을 정하고, 메모를 적은 뒤 **저장**합니다. 지정한 시간은 수정하거나 해제할 수 있습니다. 진료과·치료 항목·메모는 비워 둘 수 있습니다.
+4. 홈에서 가장 가까운 예정 예약을 확인합니다. D-N 옆에 날짜와 다음 일정 시각을 작은 글씨로 표시하며 당일에는 **D-day**로 표시합니다. 진료과는 **색상 · 이름 · 예약시간**을 한 태그 안에 표시하고 시간순으로 정렬합니다. 치료 아이콘도 이어 표시하며 공간이 부족하면 다음 줄로 내려갑니다.
+
+먼저 예약한 진료의 시간이 지나도 뒤에 남은 진료가 있으면 일정은 계속 표시됩니다. 마지막 진료·치료 시간이 지나면 다음 예약을 표시하고 이전 예약은 **설정 → 병원 일정 → 지난 일정**에 남습니다. **같은 구성으로 다음 예약**을 누르면 진료과·치료 항목을 재사용하며 날짜·진료과별 시간·치료 시간·메모는 새로 입력합니다. 예약 작성 중 **진료과 등록·관리**나 **검사·치료 항목 등록·관리**에 다녀와도 입력은 유지됩니다. 예전에 공통 시간으로 저장한 예약은 각 진료과에 그 시간을 표시하며 편집에서 개별 변경할 수 있습니다.
+
+등록한 진료과·치료 항목을 수정하거나 삭제해도 이미 저장한 예약 내용은 유지됩니다. 수정된 내용을 적용하려면 예약 편집에서 해당 항목을 해제 후 다시 선택하세요. 이전에 여러 치료를 묶어 등록한 구성은 항목별로 나뉘며 예약에 저장한 이름·아이콘은 유지됩니다. 병원 예약 알림은 제공하지 않습니다.
+
+<table>
+  <tr><th>홈의 병원 일정과 연락처</th><th>진료과별 예약시간 입력</th></tr>
+  <tr>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/31-home-hospital-contacts.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/31-home-hospital-contacts.png" alt="병원 일정 D-day·진료과별 시간과 연락처 아바타" width="260"></a></td>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/32-appointment-editor.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/32-appointment-editor.png" alt="진료과 여러 개 선택과 각 진료과의 예약시간" width="260"></a></td>
+  </tr>
+</table>
+
+### 지금과 같은 사용 추세라면 남을 재고
+
+홈의 **병원 일정 카드**를 누르면 해당 예약의 상세가 열립니다. 날짜·진료과별 시간·치료 항목·메모와 **예약일 기준 재고**를 함께 확인하고, **일정 수정** 또는 **같은 구성으로 다음 예약**으로 이어갈 수 있습니다.
+
+홈에서는 부족이 예상될 때만 다음 일정 시각 옆에 **경고 아이콘**이 나타납니다. 아이콘을 누르면 예상 잔량 상세가 열립니다. **설정 → 병원 일정**의 **예약일 기준 재고**에서는 부족 예상은 빨강, 잔량 있음은 초록, 잔량 0은 주황, 미확인은 회색 칩으로 구분합니다. 품목별 예상 수량도 같은 색으로 표시하며 부족 품목을 먼저 보여 줍니다. **예상 잔량 계산 보기**를 누르면 현재 재고·하루 평균 사용량·방문 전 계산 기간·예상 사용량과 잔량을 품목별로 볼 수 있습니다.
+
+기본은 어제까지 최근 28일 중 확정 사용 기록이 있는 날의 평균입니다. 같은 날 추가로 사용한 물품도 합산하고, 기록 없는 날을 사용량 0으로 넣지 않습니다. **지금과 같은 사용 추세라면** 남을 양을 예상하는 것으로 실제 사용이나 입고가 달라지면 다시 계산합니다. 오늘 이미 기록한 사용은 다시 빼지 않고 방문 전날까지 예상하며, 오늘 방문은 현재 재고를 표시합니다.
+
+기록이 없거나 사용이 달라지면 **평소 사용 바꾸기**에서 사용 구성·주간 비율·직접 사용량을 정합니다. **지정한 사용 구성대로라면**으로 표시가 바뀌며 병원 일정 전체에 공통으로 적용됩니다. 저장한 입고 요청과 실제 재고는 바뀌지 않습니다.
+
+재고 미등록·사용량 미확인은 0으로 처리하지 않습니다. 정확히 0이 남는 경우와 부족할 경우도 구분하며, 아직 받지 않은 요청 물품은 재고에 더하지 않습니다. 이 예상 잔량은 앱에서 확인하며 병원 일정 위젯은 일정 정보만 표시합니다.
+
+<table>
+  <tr><th>홈의 병원 일정 카드</th><th>병원 일정 상세</th><th>품목별 예상 잔량 계산</th></tr>
+  <tr>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/71-appointment-forecast.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/71-appointment-forecast.png" alt="다음 일정 시각 옆의 재고 부족 예상 아이콘" width="240"></a></td>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/75-appointment-detail.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/75-appointment-detail.png" alt="홈에서 연 병원 일정 상세와 예약일 기준 재고" width="240"></a></td>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/73-stock-forecast-detail.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/73-stock-forecast-detail.png" alt="현재 재고와 예상 사용량으로 계산한 방문일 잔량" width="240"></a></td>
+  </tr>
+</table>
+
+### 이모지 연락처와 전화·문자 연결
+
+1. **설정 → 연락처 → + 연락처 등록**을 엽니다. 연락처가 없을 때는 홈의 **연락처 등록** 버튼에서도 입력 화면을 바로 열 수 있습니다.
+2. **이모지 선택**으로 아바타를 고르고 이름·전화번호를 입력합니다. **전화 허용·문자 허용**을 각각 켜거나 끈 뒤 **저장**합니다. 처음에는 등록된 번호가 없습니다.
+3. 홈의 **연락처**에서 아바타를 누릅니다. 한 줄에 최대 3개씩 표시되며 추가 연락처는 다음 줄에 표시됩니다.
+4. **연결 방법 선택** 모달에서 허용된 **전화** 또는 **문자**를 고릅니다. 번호가 입력된 전화 앱이나 문자 작성 화면이 열리며, 통화·전송은 해당 앱에서 직접 실행합니다.
+
+등록한 연락처의 이름·번호·아바타·연결 허용은 **설정 → 연락처 → 연락처 오른쪽 ⋮ → 수정**에서 바꿉니다. 같은 메뉴의 **삭제**를 누르고 확인하면 홈에서도 사라집니다. 두 연결 방법을 모두 끄면 모달에는 연결이 꺼져 있다는 안내를 표시합니다.
+
+<p><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/62-contact-menu.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/62-contact-menu.png" alt="연락처 오른쪽 더보기의 수정·삭제 메뉴" width="260"></a></p>
+
+전화번호는 숫자만 입력하면 하이픈이 자동으로 표시됩니다. `15771111`, `1577 1111`, `1577-1111`은 모두 `1577-1111`로 표시·저장되고, 휴대폰 번호 `01012345678`은 `010-1234-5678`로 표시됩니다. `114`처럼 짧은 번호도 그대로 저장할 수 있습니다. 공백이나 하이픈이 포함된 번호를 붙여넣어도 됩니다.
+
+다른 연락처를 추가하려면 목록에서 **+ 연락처 등록**을 다시 누릅니다. 새 연락처의 이름과 번호는 빈칸으로 시작하며 앞서 저장한 연락처는 유지됩니다.
+
+연락처가 두 개 이상이면 **설정 → 연락처 → 순서 변경**에서 위·아래 화살표로 옮긴 뒤 **순서 저장**을 누릅니다. 관리 목록과 홈 아바타에 같은 순서가 적용됩니다. **취소**하면 기존 순서를 유지하며, 새 연락처는 마지막에 추가됩니다. 저장한 순서도 백업·복원에 포함됩니다.
+
+<p><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/60-contact-order.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/60-contact-order.png" alt="연락처를 위·아래로 옮겨 순서 저장" width="260"></a></p>
+
+<table>
+  <tr><th>연락처 등록·수정</th><th>전화 또는 문자 선택</th></tr>
+  <tr>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/34-contact-editor.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/34-contact-editor.png" alt="연락처 이모지·이름·번호와 전화·문자 허용" width="260"></a></td>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/35-contact-actions.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/35-contact-actions.png" alt="홈 연락처에서 허용된 연결 방법 선택" width="260"></a></td>
+  </tr>
+</table>
+
+<a id="widgets"></a>
+
+## 휴대폰 홈에 위젯 추가하기
+
+1. **설정 → 홈 화면 위젯**을 엽니다.
+2. **기록 위젯 2×2 추가·4×2 추가** 또는 **일정 위젯 추가**를 누르고 휴대폰의 추가 확인 창에서 배치합니다. 휴대폰 홈의 빈 곳을 길게 눌러 **위젯 → 페리로그**에서도 추가할 수 있습니다.
+3. 위젯을 길게 눌러 크기를 조절하거나 삭제합니다. 기록 위젯은 **2×2·4×2를 각각 선택**해 추가하며 배치한 뒤에도 크기를 바꿀 수 있습니다. 아래쪽 손잡이를 올리면 높이 한 칸인 **4×1**로 줄일 수 있습니다. 병원 일정은 기본 **2×2**입니다. 스크롤 없이 공간에 맞춰 배치·글씨·간격을 조절하며, 항목이 많아 작게 보이면 위젯을 늘려 주세요. 추가 메뉴와 표시 크기는 홈 앱마다 다릅니다.
+
+**어제·오늘 기록**은 4×1·4×2에서 좌우 카드, 2×2에서 위아래로 표시합니다. 높이가 넉넉하면 카드 안의 세 단계를 세로로 펼치고, 4×1처럼 낮으면 가로로 나란히 표시합니다. **활력 상태·사용 구성·투석 기록**의 완료는 파란 체크, 미완료는 빈 원으로 표시하며 앱 홈과 같은 기준입니다. 개별 측정값과 남은 입력 항목은 표시하지 않습니다. 날짜 영역은 해당 날짜의 기록·초안, 제목은 앱 홈을 엽니다. 추가투석만 미완료라면 추가투석으로 연결하며, 열기만으로 기록이나 사용량을 확정하지 않습니다.
+
+**병원 일정**은 가장 가까운 방문 하나의 **D-day·날짜·진료과별 시간·처치**를 표시합니다. 길쭉하면 처치를 한 열로, 낮거나 항목이 많으면 두 열로 배치하며 모든 처치를 생략 없이 보여 줍니다. 메모는 제외하며 오늘 예약은 **D-day**로 표시합니다. 마지막 진료·치료 시간이 지나면 다음 방문으로 바뀝니다. 일정 영역은 해당 예약 수정, 제목은 전체 일정, 예약이 없다는 안내는 새 예약을 엽니다.
+
+<table>
+  <tr><th>라이트 · 기록 두 크기와 병원 일정</th><th>다크 · 같은 구성</th></tr>
+  <tr>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/63-widgets-light.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/63-widgets-light.png" alt="실제 위젯의 4×2·2×2 기록과 진료·처치 표시" width="260"></a></td>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/64-widgets-dark.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/64-widgets-dark.png" alt="다크 모드의 기록·병원 일정 위젯" width="260"></a></td>
+  </tr>
+  <tr><th>기록 4×1 · 라이트</th><th>기록 4×1 · 다크</th></tr>
+  <tr>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/69-widgets-one-row-light.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/69-widgets-one-row-light.png" alt="한 칸 높이에서 날짜별 세 단계를 가로 표시" width="260"></a></td>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/70-widgets-one-row-dark.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/70-widgets-one-row-dark.png" alt="4×1 기록 위젯 다크 모드" width="260"></a></td>
+  </tr>
+  <tr><th>높이가 넉넉한 홈 화면 · 라이트</th><th>높이가 넉넉한 홈 화면 · 다크</th></tr>
+  <tr>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/67-widgets-launcher-light.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/67-widgets-launcher-light.png" alt="세로로 펼친 세 단계와 한 열 처치" width="260"></a></td>
+    <td><a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/68-widgets-launcher-dark.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/68-widgets-launcher-dark.png" alt="긴 위젯의 다크 모드" width="260"></a></td>
+  </tr>
+</table>
+
+위젯에서 보이는 이름이 짧아도 **활력·구성·투석**은 앱 홈의 같은 세 단계를 뜻합니다. 설정의 **사용 안내 → 홈 화면 위젯**에서도 실제 화면과 크기 조절 방법을 인터넷 없이 확인할 수 있습니다.
+
+위젯 글씨는 휴대폰 글씨 배율보다 위젯 공간에 맞춥니다. 더 크게 보려면 위젯 크기를 늘려 주세요.
+
+앱에서 기록·예약을 바꾸면 위젯도 갱신됩니다. 위젯 오른쪽 위 **새로고침**으로 내용을 갱신할 수 있습니다. 절전 상태에서는 자동 갱신이 늦어질 수 있습니다. 테마는 앱의 표시 설정을 따릅니다. **앱 잠금과 관계없이 위젯 내용은 표시**되고, 눌러 앱으로 이동할 때 인증합니다.
+
+<a id="backup"></a>
+
+## 백업·복원·기기 변경하기
+
+### 파일로 내보내기
+
+**설정 → 데이터 내보내기·가져오기 → 전체 데이터 내보내기**를 누르고 저장 위치를 선택합니다. 기록·초안·계산 기준·품목·구성·재고·설정과 진료과·검사·치료 항목·병원 일정·연락처를 JSON 파일 하나로 보관합니다.
+
+### 주기적 백업 연결
+
+1. **설정 → 자동 백업 → 백업 폴더 선택**을 누릅니다.
+2. 사용할 폴더를 고르고 Android의 접근 허용을 확인합니다.
+3. 매일·매주와 보관 개수를 정한 뒤 **백업 설정 저장**을 누릅니다. 기본은 매일·최근 30개입니다.
+4. **지금 백업**을 눌러 최근 성공 시각과 폴더의 파일을 확인합니다.
+
+자동 백업은 새 파일을 확인한 뒤 오래된 자동 백업만 정리합니다. 직접 내보낸 파일은 자동으로 삭제하지 않습니다. 절전 상태에서는 자동 실행이 늦어질 수 있습니다.
+
+### 복원하거나 새 기기로 옮기기
+
+1. 기존 기기에서 전체 데이터를 내보내고, 새 기기에서도 열 수 있는 위치로 파일을 옮깁니다.
+2. 새 기기에 페리로그를 설치한 뒤 **설정 → 데이터 내보내기·가져오기 → 백업 파일 가져오기**를 누릅니다.
+3. JSON 파일을 고르고 기록·품목 수 등 요약을 확인한 뒤 복원합니다.
+4. 새 기기에서 자동 백업에 사용할 폴더를 다시 연결합니다.
+
+**가져오기는 현재 데이터를 전체 교체합니다.** 복원 직전 데이터는 앱 내부 보호 백업에 남으며 **설정 → 보호 백업**에서 외부로 내보낼 수 있습니다. 앱을 삭제하면 내부 기록과 보호 백업도 삭제됩니다. 백업 JSON은 암호화하지 않으며, 앱 잠금도 외부 백업 파일에는 적용되지 않습니다.
+
+<a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/19-backup.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/19-backup.png" alt="자동 백업 폴더·주기·보관 개수 설정" width="280"></a>
+
+<a id="updates"></a>
+
+## 업데이트와 앱 정보 확인하기
+
+제작자·문의·버그 신고·변경 내역은 **설정 → 앱 정보·문의**에서 확인합니다.
+
+1. **설정 → 업데이트**를 엽니다. 현재 버전과 업데이트 상태를 확인합니다.
+2. **업데이트 확인**을 누릅니다. 새 버전이 있으면 **APK 다운로드**를 누릅니다.
+3. 다운로드와 파일 체크섬 검증이 끝나면 **업데이트 설치**를 누릅니다.
+4. 출처 허용이 필요하면 Android 설정에서 허용한 뒤 돌아와 설치 버튼을 다시 누릅니다. 최종 설치는 Android 확인 화면에서 진행합니다.
+
+자동 조회는 하루 한 번입니다. 확인된 새 버전은 앱을 완전히 종료한 뒤 새로 시작할 때 안내하며, 다른 앱에서 돌아오거나 화면을 회전할 때는 반복하지 않습니다.
+
+설치를 취소하거나 보안 설정으로 차단돼도 APK는 **Download 폴더**에 남습니다. **다운로드 폴더 열기** 또는 휴대폰의 파일 앱에서 직접 열 수 있고, 설치 성공 후에도 자동 삭제하지 않습니다. 체크섬 검증에 실패한 파일은 다시 다운로드하세요.
+
+정보 페이지나 업데이트 기능이 없는 예전 앱은 [최신 릴리즈](https://github.com/poyal/perilog/releases/latest)에서 APK를 내려받아 기존 앱 위에 설치합니다. 업데이트 전에 전체 데이터를 내보내 두고, **기존 앱을 삭제하거나 데이터를 초기화하지 마세요.**
+
+<a href="https://github.com/poyal/perilog/blob/v1.0.11/docs/screenshots/25-about.png"><img src="https://raw.githubusercontent.com/poyal/perilog/v1.0.11/docs/screenshots/25-about.png" alt="페리로그 버전·제작자·문의와 업데이트 확인" width="280"></a>
+
+<a id="faq"></a>
+
+## 자주 확인하는 내용
+
+| 상황 | 확인할 내용 |
+| --- | --- |
+| 기록을 저장했는데 미완료로 보여요 | 홈 카드에 남은 활력 상태·사용 구성·투석 기록 항목을 확인하세요. 일부만 저장할 수 있습니다. |
+| 아침에 적었는데 날짜가 달라요 | 새 기록의 기본값은 오늘입니다. 어제 시작한 기록은 **어제 기록하기**로 이어 쓰세요. |
+| 기록을 지우면 재고도 돌아오나요? | 연결된 사용도 취소됩니다. 이미 취소했거나 사용 내역이 없으면 수량을 다시 더하지 않습니다. 이후 직접 센 수량을 저장했다면 그 기준은 유지합니다. 삭제 직후 **되돌리기**로 함께 복구할 수 있습니다. |
+| 백업이 실패해요 | 설정의 실패 안내와 저장 공간을 확인하고 필요하면 **백업 폴더 변경**으로 접근 권한을 다시 연결하세요. |
+| 인터넷이 없어요 | 기록·재고·통계는 계속 사용할 수 있습니다. 업데이트 조회·다운로드에는 인터넷이 필요합니다. |
+
+기록과 백업은 GitHub로 전송하지 않습니다. 기기 내부에 저장하고, 업데이트 조회·다운로드에만 GitHub에 접속합니다.
+
+## 문의와 참고 자료
+
+위젯 구현과 검사 방법은 [위젯 개발 가이드](https://github.com/poyal/perilog/blob/v1.0.11/docs/%EC%9C%84%EC%A0%AF-%EA%B0%9C%EB%B0%9C-%EA%B0%80%EC%9D%B4%EB%93%9C.md)에 정리했습니다.
+
+- [오류 신고·기능 제안](https://github.com/poyal/perilog/issues) · [이메일 문의](mailto:poyal.work@gmail.com)
+- [전체 화면 안내](https://github.com/poyal/perilog/blob/v1.0.11/docs/%ED%99%94%EB%A9%B4-%EC%95%88%EB%82%B4.md) · [텍스트 사용 안내](https://github.com/poyal/perilog/blob/v1.0.11/docs/%EC%82%AC%EC%9A%A9-%EC%95%88%EB%82%B4.md)
+- [버전별 변경 내역](https://github.com/poyal/perilog/releases) · [검증 기록](https://github.com/poyal/perilog/blob/v1.0.11/docs/%EA%B2%80%EC%A6%9D-%EA%B8%B0%EB%A1%9D.md)
+- [개발·빌드 안내](https://github.com/poyal/perilog/blob/v1.0.11/docs/%EA%B0%9C%EB%B0%9C-%EC%95%88%EB%82%B4.md) · [릴리즈 운영 가이드](https://github.com/poyal/perilog/blob/v1.0.11/docs/%EB%A1%9C%EC%BB%AC-%EA%B2%80%EC%A6%9D-%ED%9B%84-%EB%B0%B0%ED%8F%AC-%EC%9A%B4%EC%98%81-%EA%B0%80%EC%9D%B4%EB%93%9C.md)

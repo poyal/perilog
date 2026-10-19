@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="design/icon-concepts/02-daily-journal-bow.png" alt="페리로그 아이콘" width="100">
+  <img src="assets/app-icon.png" alt="페리로그 아이콘" width="100">
 </p>
 
 # 페리로그 사용자 매뉴얼
@@ -584,6 +584,6 @@ Android 13 이상에서는 알림 권한이 없으면 첫 실행에 OS 권한 �
 위젯 구현과 검사 방법은 [위젯 개발 가이드](docs/위젯-개발-가이드.md)에 정리했습니다.
 
 - [오류 신고·기능 제안](https://github.com/poyal/perilog/issues) · [이메일 문의](mailto:poyal.work@gmail.com)
-- [전체 화면 안내](docs/화면-안내.md) · [텍스트 사용 안내](docs/사용-안내.md)
-- [버전별 변경 내역](https://github.com/poyal/perilog/releases) · [검증 기록](docs/검증-기록.md)
-- [개발·빌드 안내](docs/개발-안내.md) · [릴리즈 운영 가이드](docs/로컬-검증-후-배포-운영-가이드.md)
+- [전체 화면 안내](docs/화면-안내.md) · [텍스트 사용 안내](README.md)
+- [버전별 변경 내역](https://github.com/poyal/perilog/releases) · [검증 기록](docs/releases/v1.0.16/AGENTS.md)
+- [개발·빌드 안내](docs/development.md) · [릴리즈 운영 가이드](docs/release.md)

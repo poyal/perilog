@@ -1,27 +1,34 @@
-# 문서 모음
+# 문서 안내
 
-- [이미지로 보는 사용자 매뉴얼](../README.md)
-- [설치·사용 상세 안내](사용-안내.md)
-- [README 작성 가이드](README-작성-가이드.md) — 사용자 매뉴얼 구성·화면 배치·수정 시 필수 참조
-- [개발·빌드·촬영·릴리즈 안내](개발-안내.md)
-- [위젯 개발 가이드](위젯-개발-가이드.md) — 크기별 배치·갱신·호스트 검사·앱 안내 갱신
-- [구글 캘린더 연결 준비](구글-캘린더-연결-준비.md) — Cloud 프로젝트·OAuth 설정과 실제 계정 검사
-- [캘린더 연동 검증](캘린더-연동-검증.md) — 로컬 검사 결과와 실제 서비스 검증의 남은 항목
-- [페리로그 로컬 검증 후 배포 운영 가이드](로컬-검증-후-배포-운영-가이드.md) — 릴리즈 준비·게시·재개 시 필수 참조
-- [릴리즈 검증 기록 템플릿](releases/릴리즈-검증-템플릿.md)
-- [계획 및 결정 이력](plan.md)
-- [구현 검증 기록](검증-기록.md)
-- [Android 호환성 검증](Android-호환성.md) — 최소 지원 버전·OS별 검사·16KB·검증 전용 에뮬레이터
-- [v1.0.0 릴리즈 노트](releases/v1.0.0.md)
-- [v1.0.3 변경 내용](releases/v1.0.3.md)
-- [v1.0.4 변경 내용](releases/v1.0.4.md)
-- [v1.0.5 변경 내용](releases/v1.0.5.md)
-- [v1.0.6 변경 내용](releases/v1.0.6.md)
-- [v1.0.7 변경 내용](releases/v1.0.7.md)
-- [v1.0.8 변경 내용](releases/v1.0.8.md)
-- [v1.0.9 변경 내용](releases/v1.0.9.md)
-- [v1.0.10 변경 내용](releases/v1.0.10.md)
-- [실제 실행 화면과 촬영 정보](화면-안내.md)
-- [문서 캡처 코드](capture/DocumentationCapture.kt)
+공통 규칙은 버전과 별도로 관리하고, 각 공개 버전에는 사용자 매뉴얼과 실제 최종 결과 두 문서만 남깁니다.
 
-화면과 아이콘의 초기 디자인 시안은 [design 폴더](../design/)에 있습니다.
+- [현재 사용자 매뉴얼](../README.md)
+- [공통 개발·검사 규칙](development.md)
+- [공통 릴리즈 절차](release.md)
+- [페리로그 README 작성 가이드](README-작성-가이드.md)
+- [자동 E2E 테스트](e2e.md)
+- [구글 캘린더 직접 연결 준비](구글-캘린더-연결-준비.md)
+- [페리로그 위젯 개발 가이드](위젯-개발-가이드.md)
+- [화면 안내](화면-안내.md)
+
+## 공개 버전별 결과
+
+| 버전 | 사용자 매뉴얼 | AI용 최종 검증 | 패치노트 |
+| --- | --- | --- | --- |
+| v1.0.16 | [README](releases/v1.0.16/README.md) | [AGENTS](releases/v1.0.16/AGENTS.md) | [GitHub](https://github.com/poyal/perilog/releases/tag/v1.0.16) |
+| v1.0.15 | [README](releases/v1.0.15/README.md) | [AGENTS](releases/v1.0.15/AGENTS.md) | [GitHub](https://github.com/poyal/perilog/releases/tag/v1.0.15) |
+| v1.0.14 | [README](releases/v1.0.14/README.md) | [AGENTS](releases/v1.0.14/AGENTS.md) | [GitHub](https://github.com/poyal/perilog/releases/tag/v1.0.14) |
+| v1.0.13 | [README](releases/v1.0.13/README.md) | [AGENTS](releases/v1.0.13/AGENTS.md) | [GitHub](https://github.com/poyal/perilog/releases/tag/v1.0.13) |
+| v1.0.12 | [README](releases/v1.0.12/README.md) | [AGENTS](releases/v1.0.12/AGENTS.md) | [GitHub](https://github.com/poyal/perilog/releases/tag/v1.0.12) |
+| v1.0.11 | [README](releases/v1.0.11/README.md) | [AGENTS](releases/v1.0.11/AGENTS.md) | [GitHub](https://github.com/poyal/perilog/releases/tag/v1.0.11) |
+| v1.0.10 | [README](releases/v1.0.10/README.md) | [AGENTS](releases/v1.0.10/AGENTS.md) | [GitHub](https://github.com/poyal/perilog/releases/tag/v1.0.10) |
+| v1.0.9 | [README](releases/v1.0.9/README.md) | [AGENTS](releases/v1.0.9/AGENTS.md) | [GitHub](https://github.com/poyal/perilog/releases/tag/v1.0.9) |
+| v1.0.8 | [README](releases/v1.0.8/README.md) | [AGENTS](releases/v1.0.8/AGENTS.md) | [GitHub](https://github.com/poyal/perilog/releases/tag/v1.0.8) |
+| v1.0.7 | [README](releases/v1.0.7/README.md) | [AGENTS](releases/v1.0.7/AGENTS.md) | [GitHub](https://github.com/poyal/perilog/releases/tag/v1.0.7) |
+| v1.0.6 | [README](releases/v1.0.6/README.md) | [AGENTS](releases/v1.0.6/AGENTS.md) | [GitHub](https://github.com/poyal/perilog/releases/tag/v1.0.6) |
+| v1.0.5 | [README](releases/v1.0.5/README.md) | [AGENTS](releases/v1.0.5/AGENTS.md) | [GitHub](https://github.com/poyal/perilog/releases/tag/v1.0.5) |
+| v1.0.4 | [README](releases/v1.0.4/README.md) | [AGENTS](releases/v1.0.4/AGENTS.md) | [GitHub](https://github.com/poyal/perilog/releases/tag/v1.0.4) |
+| v1.0.3 | [README](releases/v1.0.3/README.md) | [AGENTS](releases/v1.0.3/AGENTS.md) | [GitHub](https://github.com/poyal/perilog/releases/tag/v1.0.3) |
+| v1.0.2 | [README](releases/v1.0.2/README.md) | [AGENTS](releases/v1.0.2/AGENTS.md) | [GitHub](https://github.com/poyal/perilog/releases/tag/v1.0.2) |
+| v1.0.1 | [README](releases/v1.0.1/README.md) | [AGENTS](releases/v1.0.1/AGENTS.md) | [GitHub](https://github.com/poyal/perilog/releases/tag/v1.0.1) |
+| v1.0.0 | [README](releases/v1.0.0/README.md) | [AGENTS](releases/v1.0.0/AGENTS.md) | [GitHub](https://github.com/poyal/perilog/releases/tag/v1.0.0) |

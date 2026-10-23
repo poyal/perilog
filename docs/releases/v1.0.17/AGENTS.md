@@ -2,11 +2,17 @@
 
 [사용자 매뉴얼](README.md) · [GitHub Release](https://github.com/poyal/perilog/releases/tag/v1.0.17) · [공통 개발 규칙](../../development.md) · [배포 절차](../../release.md)
 
-상태: **로컬 검증 완료 · 게시 전**. 2026-10-23에 이번 후보로 실행한 결과입니다. 이전 버전의 통과 결과를 대신 사용하지 않았습니다.
+상태: **게시·공개 파일 검증 완료**. 2026-10-23에 이번 후보로 실행한 결과입니다. 이전 버전의 통과 결과를 대신 사용하지 않았습니다.
 
 ## 게시 결과
 
-공개 게시 전입니다. 로컬 필수 검사는 완료했으며, 아래 최종 요약을 커밋한 소스에서 배포 커밋과 annotated 태그를 만들 예정입니다. 공개 완료로 기록하지 않습니다.
+[v1.0.17 공개 릴리즈](https://github.com/poyal/perilog/releases/tag/v1.0.17)와 [게시 Actions](https://github.com/poyal/perilog/actions/runs/39908730239)를 확인했습니다. 공개 시각 `2026-10-23T05:58:46Z`, 공개 파일 확인 완료 `2026-10-23T05:59:42.439824+00:00`이며, 태그 푸시 시작부터 재다운로드 확인까지 87.1초입니다. 게시 워크플로 시작부터 완료 상태 갱신까지 22.0초입니다.
+
+`main`과 annotated `v1.0.17` 태그를 원자적으로 푸시했고 `release/v1.0.17` 브랜치는 원격에 푸시하지 않았습니다. 기존 게시 워크플로가 재빌드 없이 검증한 세 파일을 게시했습니다. 최신 정식 릴리즈가 v1.0.17이며 초안·사전 공개가 아님을 확인했습니다.
+
+공개 APK·화면 ZIP·체크섬을 모두 다시 내려받아 크기·SHA-256·GitHub digest·고정 원본 바이트를 비교했습니다. APK 앱 ID·버전·코드·최소/대상 API·기존 인증서, ZIP의 PNG 92장 전체 바이트·CRC, 체크섬 정확히 두 항목을 재검증했습니다. 원격 annotated 태그 역참조가 배포 커밋과 같고, 원격 Android 검증 워크플로가 수동 전용이며 이번 main·태그 푸시로 자동 Android 검사 실행이 생기지 않았음을 확인했습니다.
+
+공개 API·원격 Git·Actions에서 동일 버전과 동시 게시를 확인했습니다. 공개 API로 볼 수 없는 초안·기존 자산은 인증된 게시 스크립트가 해시와 재다운로드 바이트를 검사합니다. GitHub가 생성한 릴리즈 본문을 확인했습니다. 게시 근거는 `publication-preflight.json`, `publish-push-command.json`, `publication-run.json`, `public-release.json`, `public-verification.json`, 공개 APK 서명·매니페스트 출력입니다. 공개 파일 검증 JSON의 SHA-256은 `e11eaa0d8ad0c5c6466ae49c8ff8ecd848fff6670d279676c133fc6236c66220`입니다.
 
 ## 소스·환경
 
@@ -14,6 +20,9 @@
 
 - `buildCommit`: `ef0785788559873344f30923203e2f1881da7a40`. 빌드 시작 시 깨끗한 작업 트리.
 - 최종 소스의 허용 변경: `docs/releases/v1.0.17/AGENTS.md` 한 파일에 이번 검증 결과만 추가. 앱·Gradle·검사·게시 스크립트·캡처 Kotlin 변경 없음.
+- `sourceCommit`: `e624ba6af8f89e615916a60cee3d2ea2c27d4bc7`.
+- `releaseCommit`: `7c38cacf8260ec7b8c821a473b6e7489f64ef346`. 단일 부모가 위 소스 커밋이며, 차이는 `.release/perilog-1.0.17.apk`, `.release/perilog-1.0.17-screenshots.zip`, `.release/perilog-1.0.17.sha256` 세 파일 추가뿐입니다.
+- annotated `v1.0.17`의 역참조가 위 배포 커밋과 일치합니다. 게시 확인 문서만 main의 후속 커밋으로 남기며 태그·배포 파일은 이동하거나 교체하지 않습니다.
 
 실행 ID `20261023T052521Z-v1.0.17-ef07857`, 작업 폴더 `/Users/poyal/Workspace/personal/perilog`, 게시 담당은 이번 Codex 세션입니다. 최종 후보 검증 시작 `2026-10-23T05:25:21.876500+00:00`, 완료 `2026-10-23T05:56:35.485454+00:00`, 소요 1873.6초입니다. 앞선 실패 후보의 실행 ID는 `20261023T043407Z-v1.0.17-db6ec61`, `20261023T044845Z-v1.0.17-6ebc14b`이며 최종 통과 결과와 구분했습니다. 첫 후보 빌드 시작 `2026-10-23T04:34:10.243563+00:00`부터 최종 검증 완료까지는 4945.2초입니다. 검사 전용 에뮬레이터와 가상 자료만 사용했습니다.
 

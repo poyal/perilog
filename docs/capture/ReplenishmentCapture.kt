@@ -29,7 +29,11 @@ class ReplenishmentCapture {
         val parents=n.onAncestors().filter(hasScrollAction());for(i in parents.fetchSemanticsNodes().indices.reversed())runCatching {parents[i].performScrollTo()}
         runCatching {n.performScrollTo()};return n
     }
-    private fun click(text:String) {show(ui.onNodeWithText(text)).performClick()}
+    private fun click(text:String) {
+        val dialog=ui.onAllNodes(hasText(text) and hasClickAction() and hasAnyAncestor(isDialog()))
+        if(dialog.fetchSemanticsNodes().isNotEmpty())show(dialog[0]).performClick()
+        else show(ui.onNode(hasText(text) and hasClickAction())).performClick()
+    }
     private fun back() {ui.onNodeWithContentDescription("뒤로").performClick()}
     private fun shot(name:String) {
         ui.runOnIdle {(ui.activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(ui.activity.window.decorView.windowToken,0)}
@@ -55,8 +59,8 @@ class ReplenishmentCapture {
         click("입고 요청 계산기");shot("47-request-list")
         click("${input.visitDate} 입고 요청");shot("48-request-detail")
         click("요청 수정");shot("49-request-dates")
-        show(ui.onAllNodesWithText("날짜 선택")[0]).performClick();shot("56-request-calendar")
-        click("날짜 선택 접기")
+        show(ui.onNodeWithContentDescription("이번 방문일 날짜 선택")).performClick();shot("56-request-calendar")
+        click("취소")
         show(ui.onNodeWithTag("request-line-${p.id}"));shot("50-request-calculation")
         click("평소 사용 바꾸기");click("사용 구성");click("기본 구성 선택");click("기본 구성 A")
         click("+ 다른 구성도 사용해요");click("다른 구성 B");show(ui.onNodeWithContentDescription("다른 구성 B 늘리기")).performClick()

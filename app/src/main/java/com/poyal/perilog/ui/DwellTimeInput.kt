@@ -7,7 +7,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -15,38 +14,18 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-@Composable fun DwellTimeInput(value:Int?,onChange:(Int?)->Unit) {
-    var hours by rememberSaveable{mutableStateOf(value?.div(60)?.toString() ?: "")}
-    var minutes by rememberSaveable{mutableStateOf(value?.rem(60)?.toString() ?: "")}
-    var emitted by rememberSaveable{mutableStateOf(value)}
-    LaunchedEffect(value) {
-        if(value!=emitted) {
-            hours=value?.div(60)?.toString() ?: ""
-            minutes=value?.rem(60)?.toString() ?: ""
-            emitted=value
-        }
-    }
-    fun publish() {
-        // Preserve each field's text independently, including blanks and leading zeroes.
-        // Legacy out-of-range values stay visible until explicitly corrected or cleared.
-        if(validDwellPart(hours,23) && validDwellPart(minutes,59)) {
-            val next=if(hours.isEmpty() && minutes.isEmpty())null
-                else (hours.toIntOrNull() ?: 0)*60+(minutes.toIntOrNull() ?: 0)
-            emitted=next
-            onChange(next)
-        }
-    }
+@Composable internal fun DwellTimeFields(hours:String,minutes:String,onHours:(String)->Unit,onMinutes:(String)->Unit) {
     Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
         AdaptivePair(first={
-            DwellTimeField("평균저류 시간","평균저류 시간",hours,23,"시") {hours=it;publish()}
+            DwellTimeField("평균저류 시간","평균저류 시간",hours,23,"시",onHours)
         },second={
-            DwellTimeField("분","평균저류 분",minutes,59,"분") {minutes=it;publish()}
+            DwellTimeField("분","평균저류 분",minutes,59,"분",onMinutes)
         })
         Hint("시간은 0~23, 분은 0~59로 입력해 주세요.")
     }
 }
 
-private fun validDwellPart(text:String,max:Int)=text.isEmpty() ||
+internal fun validDwellPart(text:String,max:Int)=text.isEmpty() ||
     (text.length<=2 && text.all{it in '0'..'9'} && text.toIntOrNull()?.let{it in 0..max}==true)
 
 @Composable private fun DwellTimeField(label:String,description:String,value:String,max:Int,unit:String,onChange:(String)->Unit) {

@@ -148,7 +148,9 @@ private data class SettingsEntry(val title:String,val summary:String,val icon:Im
                 Text(if(allowed)"시스템 알림이 켜져 있어요"else"시스템 알림이 꺼져 있어요")
                 Hint("알림 허용·소리·진동은 휴대폰 설정에서 관리해요.")
                 SecondaryButton(onClick={context.startActivity(Reminders.settingsIntent(context))}){Text("시스템 알림 설정 열기")}
-                AdaptivePair(first={NumberInput("알림 시각",p.reminderHour,{p=p.copy(reminderHour=it?:0)},"시")},second={NumberInput("알림 분",p.reminderMinute,{p=p.copy(reminderMinute=it?:0)},"분")})
+                TimeControl("알림 시각",String.format(Locale.US,"%02d:%02d",p.reminderHour,p.reminderMinute),{value->
+                    val parts=requireNotNull(value).split(':');p=p.copy(reminderHour=parts[0].toInt(),reminderMinute=parts[1].toInt())
+                })
                 if(!valid)Hint("시는 0~23, 분은 0~59 사이로 입력해 주세요.")
                 Hint("완료된 날에는 알리지 않아요. 휴대폰 절전 상태에 따라 알림이 늦어질 수 있어요.")
             }

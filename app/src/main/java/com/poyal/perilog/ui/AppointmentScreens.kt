@@ -25,7 +25,6 @@ import com.poyal.perilog.domain.*
 import kotlinx.serialization.encodeToString
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -216,8 +215,6 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
     val busy by vm.busy.collectAsState()
     val validDate=runCatching{LocalDate.parse(a.date)}.isSuccess
     val validTime=a.validTimes()
-    var timeTarget by rememberSaveable{mutableStateOf<String?>(null)}
-    var careTimeTarget by rememberSaveable{mutableStateOf<String?>(null)}
     EditorPage(if(id=="new" || repeat)"병원 일정 등록"else"병원 일정 수정","진료과는 색상, 치료 항목은 아이콘으로 보여요",
         codec.encodeToString(a)!=original,back,{
             vm.act("병원 일정을 저장했어요"){vm.repository.appointment(a.copy(memo=a.memo.trim(),care=null,careItems=a.selectedCareItems(),
@@ -225,7 +222,7 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
         },validDate && validTime,busy=busy) {
         Paper {
             DateControl(a.date,{a=a.copy(date=it)},"예약일")
-            if(a.departments.isEmpty())AppointmentTimeInput("예약시간 · HH:mm",a.time,{a=a.copy(time=it)},"시간 선택"){timeTarget=""}
+            if(a.departments.isEmpty())TimeControl("예약시간",a.time,{a=a.copy(time=it.orEmpty())})
         }
         Paper {
             Section("진료과 · 여러 개 선택")
@@ -240,10 +237,10 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
                 }
             }
             if(a.departments.isNotEmpty()) {
-                Hint("선택한 진료과마다 예약시간을 입력해 주세요.")
+                Hint("선택한 진료과마다 예약시간을 선택해 주세요.")
                 a.departments.forEach { d ->
-                    AppointmentTimeInput("${d.name} 예약시간 · HH:mm",a.departmentTime(d),
-                        {value->a=a.copy(departmentTimes=a.departmentTimes+(d.id to value))},"${d.name} 시간 선택"){timeTarget=d.id}
+                    key(d.id) {TimeControl("${d.name} 예약시간",a.departmentTime(d),
+                        {value->a=a.copy(departmentTimes=a.departmentTimes+(d.id to value.orEmpty()))})}
                 }
             }
             SmallButton(onClick={navigate("departments")}){Text("진료과 등록·관리")}
@@ -261,13 +258,9 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
                 }
             }
             selectedItems.forEach { item ->
-                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                    Text(item.name,Modifier.weight(1f))
-                    SmallButton(onClick={careTimeTarget=item.id}){Text(item.time ?: "시간 지정")}
-                    if(item.time!=null)IconButton(onClick={a=a.copy(careItems=selectedItems.map{if(it.id==item.id)it.copy(time=null)else it})}) {
-                        Icon(Icons.Outlined.Close,"${item.name} 시간 해제")
-                    }
-                }
+                key(item.id) {TimeControl("${item.name} 시간",item.time,
+                    {value->a=a.copy(careItems=a.selectedCareItems().map{if(it.id==item.id)it.copy(time=value)else it})},
+                    initialTime=a.time,clearable=true)}
             }
             Hint("시간이 필요한 항목만 지정해 주세요. 진료 전후 시각을 자유롭게 정할 수 있어요.")
             SmallButton(onClick={navigate("careTemplates")}){Text("검사·치료 항목 등록·관리")}
@@ -275,36 +268,6 @@ private fun careIcon(key:String)=careIcons.find{it.key==key} ?: careIcons.first(
         }
         Paper {OutlinedTextField(a.memo,{a=a.copy(memo=it)},label={Text("메모")},modifier=Modifier.fillMaxWidth())}
     }
-    timeTarget?.let { target ->
-        val value=if(target.isEmpty())a.time else a.departmentTimes[target] ?: a.time
-        val initial=runCatching{LocalTime.parse(value)}.getOrDefault(LocalTime.of(9,0))
-        val clock=rememberTimePickerState(initialHour=initial.hour,initialMinute=initial.minute,is24Hour=true)
-        AlertDialog(onDismissRequest={timeTarget=null},title={Text(if(target.isEmpty())"예약시간"else"${a.departments.find{it.id==target}?.name} 예약시간")},text={TimeInput(clock)},
-            confirmButton={SmallButton(emphasized=true,onClick={
-                val value=String.format(Locale.US,"%02d:%02d",clock.hour,clock.minute)
-                a=if(target.isEmpty())a.copy(time=value) else a.copy(departmentTimes=a.departmentTimes+(target to value));timeTarget=null
-            }){Text("확인")}},dismissButton={SmallButton(onClick={timeTarget=null}){Text("취소")}})
-    }
-    careTimeTarget?.let { target ->
-        val item=a.selectedCareItems().firstOrNull{it.id==target}
-        if(item!=null)key(target) {
-            val initial=runCatching{LocalTime.parse(item.time ?: a.time)}.getOrDefault(LocalTime.of(9,0))
-            val clock=rememberTimePickerState(initialHour=initial.hour,initialMinute=initial.minute,is24Hour=true)
-            AlertDialog(onDismissRequest={careTimeTarget=null},title={Text("${item.name} 시간")},text={TimeInput(clock)},
-                confirmButton={SmallButton(emphasized=true,onClick={
-                    val value=String.format(Locale.US,"%02d:%02d",clock.hour,clock.minute)
-                    a=a.copy(careItems=a.selectedCareItems().map{if(it.id==target)it.copy(time=value)else it});careTimeTarget=null
-                }){Text("확인")}},dismissButton={SmallButton(onClick={careTimeTarget=null}){Text("취소")}})
-        }
-    }
-}
-
-@Composable private fun AppointmentTimeInput(label:String,value:String,onChange:(String)->Unit,clockLabel:String,openClock:()->Unit) {
-    val valid=validAppointmentTime(value)
-    OutlinedTextField(value,onChange,label={Text(label)},placeholder={Text("예: 09:30")},
-        modifier=Modifier.fillMaxWidth(),singleLine=true,isError=value.isNotBlank() && !valid,
-        supportingText={if(value.isNotBlank() && !valid)Text("00:00~23:59 형식으로 입력해 주세요.")})
-    SmallButton(onClick=openClock){Icon(Icons.Outlined.Schedule,null);Spacer(Modifier.width(8.dp));Text(clockLabel)}
 }
 
 @Composable fun DepartmentsScreen(s:Snapshot,vm:JournalViewModel,navigate:(String)->Unit,back:()->Unit) {

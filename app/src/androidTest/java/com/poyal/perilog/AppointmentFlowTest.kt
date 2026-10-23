@@ -38,12 +38,17 @@ class AppointmentFlowTest {
         for(index in parents.fetchSemanticsNodes().indices.reversed())runCatching{parents[index].performScrollTo()}
         runCatching{n.performScrollTo()};return n
     }
-    private fun click(text:String){show(node(text)).performClick()}
+    private fun click(text:String) {
+        val dialog=ui.onAllNodes(hasText(text) and hasClickAction() and hasAnyAncestor(isDialog()))
+        if(dialog.fetchSemanticsNodes().isNotEmpty())show(dialog[0]).performClick()
+        else show(ui.onNode(hasText(text) and hasClickAction())).performClick()
+    }
     private fun contactMenu(name:String,action:String) {
         show(ui.onNodeWithContentDescription("$name 더보기")).performClick()
         ui.onNodeWithContentDescription("$name $action").performClick()
     }
     private fun input(label:String,value:String) {
+        if(label.endsWith(" · HH:mm")){ui.chooseTime(label.removeSuffix(" · HH:mm"),value);return}
         show(ui.onNode(hasSetTextAction() and hasText(label))).performTextReplacement(value)
         ui.runOnIdle{(ui.activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
             .hideSoftInputFromWindow(ui.activity.window.decorView.windowToken,0)}
@@ -57,7 +62,7 @@ class AppointmentFlowTest {
     private fun avatar(name:String)=ui.onNodeWithContentDescription("$name 연락처")
     private fun closeContact(){click("닫기");await{ui.onAllNodesWithText("연결 방법 선택").fetchSemanticsNodes().isEmpty()}}
     private fun pickDate(date:LocalDate) {
-        click("날짜 선택")
+        show(ui.onNodeWithContentDescription("예약일 날짜 선택")).performClick()
         if(ui.onAllNodesWithContentDescription(date.toString()).fetchSemanticsNodes().isEmpty())ui.onNodeWithContentDescription("다음 달").performClick()
         show(ui.onNodeWithContentDescription(date.toString())).performClick()
     }
@@ -83,9 +88,10 @@ class AppointmentFlowTest {
         click("병원 일정 등록");pickDate(LocalDate.now().plusDays(1))
         click("신장내과");click("내분비내과")
         node("저장").assertIsNotEnabled()
-        input("신장내과 예약시간 · HH:mm","09:30");input("내분비내과 예약시간 · HH:mm","24:00")
+        input("신장내과 예약시간 · HH:mm","09:30")
+        ui.openTime("내분비내과 예약시간");ui.setClock("24","00");click("취소")
         node("저장").assertIsNotEnabled()
-        click("내분비내과 시간 선택");click("확인")
+        ui.openTime("내분비내과 예약시간");click("확인")
         input("내분비내과 예약시간 · HH:mm","11:20")
         show(ui.onNodeWithContentDescription("피검사 치료 항목 선택")).performClick()
         show(ui.onNodeWithContentDescription("투석실 방문 치료 항목 선택")).performClick();input("메모","검사 후 투석실 방문")
@@ -100,8 +106,8 @@ class AppointmentFlowTest {
         ui.onNodeWithContentDescription("신장내과 09:30 진료 예약").assertExists()
         ui.onNodeWithContentDescription("내분비내과 11:20 진료 예약").assertExists()
         show(ui.onNodeWithContentDescription("병원 일정 추가")).performClick()
-        node("예약일 선택해 주세요").assertExists()
-        ui.onNode(hasSetTextAction() and hasText("예약시간 · HH:mm")).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
+        ui.onNodeWithContentDescription("예약일 날짜 선택").assertTextContains("날짜 선택")
+        ui.onNodeWithContentDescription("예약시간 선택").assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription,"시간 선택"))
         back();assertEquals(1,snapshot().appointments.size)
         click("연락처 등록")
         click("이모지 선택");show(ui.onNodeWithContentDescription("병원 이모지")).performClick()
@@ -121,7 +127,7 @@ class AppointmentFlowTest {
         click("병원 일정 등록");pickDate(LocalDate.now());input("예약시간 · HH:mm","16:40");input("메모","작성 중 메모")
         click("진료과 등록·관리");click("+ 진료과 등록");input("진료과 이름","신장내과");click("저장")
         await{snapshot().departments.size==1};back()
-        ui.onNode(hasSetTextAction() and hasText("16:40")).assertExists()
+        ui.onNodeWithContentDescription("예약시간 선택").assertTextContains("16:40")
         ui.onNode(hasSetTextAction() and hasText("작성 중 메모")).assertExists()
         click("신장내과");ui.activityRule.scenario.recreate()
         await{ui.onAllNodes(hasSetTextAction() and hasText("작성 중 메모")).fetchSemanticsNodes().isNotEmpty()}
@@ -149,9 +155,9 @@ class AppointmentFlowTest {
         assertEquals(a,snapshot().appointments.single())
         settings();click("병원 일정")
         show(ui.onNodeWithTag("appointment-menu-${a.id}")).performClick();click("같은 구성으로 다음 예약")
-        ui.onNode(hasSetTextAction() and hasText("신장내과 예약시간 · HH:mm")).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
+        ui.onNodeWithContentDescription("신장내과 예약시간 선택").assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription,"시간 선택"))
         ui.onNode(hasSetTextAction() and hasText("메모")).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
-        node("예약일 선택해 주세요").assertExists()
+        ui.onNodeWithContentDescription("예약일 날짜 선택").assertTextContains("날짜 선택")
         pickDate(LocalDate.now().plusDays(3));input("신장내과 예약시간 · HH:mm","14:20");input("메모","다음 예약 메모")
         click("저장");await{snapshot().appointments.size==2}
         val next=snapshot().appointments.single{it.id!=a.id}
@@ -314,8 +320,8 @@ class AppointmentFlowTest {
     }
     @Test fun timeSelectionDialogAppliesTimeAndCanSaveWithoutCategories() {
         click("병원 일정 등록");pickDate(LocalDate.now().plusDays(1));click("시간 선택")
-        node("예약시간").assertExists();click("확인")
-        ui.onNode(hasSetTextAction() and hasText("예약시간 · HH:mm")).assertTextContains("09:00")
+        ui.onNode(isDialog() and hasAnyDescendant(hasText("예약시간"))).assertExists();click("확인")
+        ui.onNodeWithContentDescription("예약시간 선택").assertTextContains("09:00")
         click("저장");await{snapshot().appointments.size==1}
         val saved=snapshot().appointments.single()
         assertEquals("09:00",saved.time);assertTrue(saved.departments.isEmpty());assertNull(saved.care)

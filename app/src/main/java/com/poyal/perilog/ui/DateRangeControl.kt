@@ -44,13 +44,8 @@ internal fun inputDate(text:String):LocalDate? {
 }
 
 @Composable fun DateRangeControl(from: LocalDate, to: LocalDate, onClick: () -> Unit, enabled: Boolean, modifier: Modifier = Modifier) {
-    SecondaryButton(onClick, modifier.fillMaxWidth().semantics {
-        contentDescription="조회 기간 변경";stateDescription=rangeLabel(from,to)
-    }, enabled=enabled, disabledContentColor=MaterialTheme.colorScheme.onSurfaceVariant) {
-        Icon(Icons.Outlined.CalendarMonth,null,Modifier.size(20.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(rangeLabel(from,to),Modifier.weight(1f))
-    }
+    SelectionFieldRow("조회 기간",rangeLabel(from,to),Icons.Outlined.CalendarMonth,onClick,
+        modifier=modifier,enabled=enabled,description="조회 기간 변경",stacked=true)
 }
 
 /** The draft range lives in the dialog; only Apply commits both endpoints together. */

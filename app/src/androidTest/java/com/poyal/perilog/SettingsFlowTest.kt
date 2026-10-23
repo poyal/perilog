@@ -28,7 +28,11 @@ class SettingsFlowTest {
         for(i in parents.fetchSemanticsNodes().indices.reversed())runCatching{parents[i].performScrollTo()}
         runCatching{n.performScrollTo()};return n
     }
-    private fun click(text:String)=show(ui.onNode(hasText(text) and hasClickAction())).performClick()
+    private fun click(text:String) {
+        val dialog=ui.onAllNodes(hasText(text) and hasClickAction() and hasAnyAncestor(isDialog()))
+        if(dialog.fetchSemanticsNodes().isNotEmpty())show(dialog[0]).performClick()
+        else show(ui.onNode(hasText(text) and hasClickAction())).performClick()
+    }
     // Top feedback temporarily covers the header; system back remains available.
     private fun back() {ui.runOnIdle{ui.activity.onBackPressedDispatcher.onBackPressed()};ui.waitForIdle()}
     private fun systemBack(){
@@ -125,7 +129,7 @@ class SettingsFlowTest {
             ui.onNodeWithText(message).assertDoesNotExist()
         }
     }
-    @Test fun feedbackStaysAboveKeyboardWithoutMovingLandscapeSaveButtons() {
+    @Test fun timeDialogConfirmationAndSaveRemainReachableInBothOrientations() {
         click("알림")
         try {
             for(orientation in listOf(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT,ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)) {
@@ -133,24 +137,16 @@ class SettingsFlowTest {
                 val expected=if(orientation==ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
                     android.content.res.Configuration.ORIENTATION_LANDSCAPE else android.content.res.Configuration.ORIENTATION_PORTRAIT
                 waitFor{ui.activity.resources.configuration.orientation==expected && ui.activity.hasWindowFocus()}
-                show(ui.onNode(hasSetTextAction() and (hasText("알림 시각") or hasContentDescription("알림 시각")))).performClick()
-                ui.runOnIdle {
-                    WindowCompat.getInsetsController(ui.activity.window,ui.activity.window.decorView).show(WindowInsetsCompat.Type.ime())
-                }
-                waitFor{ViewCompat.getRootWindowInsets(ui.activity.window.decorView)?.isVisible(WindowInsetsCompat.Type.ime())==true}
-                InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(500,10000)
-                ui.waitForIdle()
+                ui.openTime("알림 시각");ui.setClock("18","35")
+                ui.onNodeWithText("확인").assertIsDisplayed().performClick()
                 val before=ui.onNodeWithText("알림 시각 저장").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
-                ui.onNodeWithText("알림 시각 저장").performTouchInput{click()}
+                click("알림 시각 저장")
                 waitFor{ui.onAllNodesWithText("알림 시각을 저장했어요").fetchSemanticsNodes().isNotEmpty()}
                 val feedback=ui.onNodeWithText("알림 시각을 저장했어요").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
                 assertTrue(feedback.bottom<=before.top)
                 assertEquals(before,ui.onNodeWithText("알림 시각 저장").fetchSemanticsNode().boundsInRoot)
-                assertTrue(ViewCompat.getRootWindowInsets(ui.activity.window.decorView)!!.isVisible(WindowInsetsCompat.Type.ime()))
                 ui.onNode(SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsActions.Dismiss))
                     .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.Dismiss)
-                ui.runOnIdle{WindowCompat.getInsetsController(ui.activity.window,ui.activity.window.decorView).hide(WindowInsetsCompat.Type.ime())}
-                waitFor{ViewCompat.getRootWindowInsets(ui.activity.window.decorView)?.isVisible(WindowInsetsCompat.Type.ime())!=true}
             }
         } finally {ui.activityRule.scenario.onActivity{it.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_PORTRAIT}}
     }
@@ -187,10 +183,13 @@ class SettingsFlowTest {
     }
     @Test fun settingsSaveIndependentlyAndInvalidInputSurvives() {
         click("알림")
-        input("알림 시각","27");ui.onNodeWithText("알림 시각 저장").assertIsNotEnabled()
+        ui.openTime("알림 시각");ui.setClock("19","45")
         ui.activityRule.scenario.recreate()
-        waitFor{ui.onAllNodes(hasSetTextAction() and hasText("27")).fetchSemanticsNodes().isNotEmpty()}
-        input("알림 시각","19");input("알림 분","45");click("알림 시각 저장")
+        waitFor{ui.onAllNodes(hasSetTextAction() and hasText("19")).fetchSemanticsNodes().isNotEmpty()}
+        assertEquals(21,snapshot().preferences.reminderHour)
+        click("취소")
+        ui.onNodeWithContentDescription("알림 시각 선택").assertTextContains("21:00")
+        ui.chooseTime("알림 시각","19:45");click("알림 시각 저장")
         waitFor{snapshot().preferences.reminderHour==19 && snapshot().preferences.reminderMinute==45}
         back();click("자동 백업")
         click("매주");input("자동 백업 보관 개수","12");click("백업 설정 저장")
@@ -220,11 +219,11 @@ class SettingsFlowTest {
         assertEquals(before,snapshot().copy(exportedAt=before.exportedAt))
     }
     @Test fun saveRemainsReachableInLandscapeAndInputsArePreserved() {
-        click("알림");input("알림 시각","18")
+        click("알림");ui.chooseTime("알림 시각","18:00")
         try {
             ui.activityRule.scenario.onActivity{it.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE}
             waitFor{ui.activity.resources.configuration.orientation==android.content.res.Configuration.ORIENTATION_LANDSCAPE}
-            show(ui.onNode(hasSetTextAction() and hasText("18"))).assertIsDisplayed()
+            show(ui.onNodeWithContentDescription("알림 시각 선택")).assertTextContains("18:00")
             ui.onNodeWithText("알림 시각 저장").assertIsDisplayed();click("알림 시각 저장")
             waitFor{snapshot().preferences.reminderHour==18}
         } finally {ui.activityRule.scenario.onActivity{it.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_PORTRAIT}}

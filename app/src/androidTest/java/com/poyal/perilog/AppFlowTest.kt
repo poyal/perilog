@@ -65,7 +65,11 @@ class AppFlowTest {
         for(index in parents.fetchSemanticsNodes().indices.reversed())runCatching{parents[index].performScrollTo()}
         runCatching{n.performScrollTo()}
         return n}
-    private fun click(text:String) {show(node(text)).performClick()}
+    private fun click(text:String) {
+        val dialog=compose.onAllNodes(hasText(text) and hasClickAction() and hasAnyAncestor(isDialog()))
+        if(dialog.fetchSemanticsNodes().isNotEmpty())show(dialog[0]).performClick()
+        else show(compose.onNode(hasText(text) and hasClickAction())).performClick()
+    }
     private fun select(label:String,value:String) {
         show(compose.onNodeWithContentDescription(label)).performClick()
         show(compose.onNode(hasText(value) and hasClickAction() and hasAnyAncestor(isPopup()))).performClick()
@@ -323,20 +327,20 @@ class AppFlowTest {
     @Test fun yesterdayMorningCompletionKeepsYesterdayAndHidesItsPrompt() {
         runBlocking {app.repository.save(Treatment(date=yesterday,weightGrams=62000,systolic=120,diastolic=80,items=listOf(Item(p.id,p.name,2))),true)}
         await{compose.onAllNodesWithText("어제의 기록").fetchSemanticsNodes().isNotEmpty()}
-        click("어제 기록하기");node("날짜 ${yesterday.replace('-','.')}").assertExists()
+        click("어제 기록하기");compose.onNodeWithContentDescription("날짜 날짜 선택").assertTextContains(yesterday.replace("-", ". "),substring=true)
         input("초기배액량","2200");input("기계 제수량","500");click("기록 저장")
         await{snapshot().treatments.single().complete()}
         assertEquals(yesterday,snapshot().treatments.single().date);stock(8)
         node("어제의 기록").assertDoesNotExist();node("오늘 기록 시작").assertExists()
     }
     @Test fun pastDateCanBeChosenAndFutureDateDoesNotChangeTheRecord() {
-        click("오늘 기록 시작");click("어제");node("날짜 ${yesterday.replace('-','.')}").assertExists()
-        click("날짜 선택")
+        click("오늘 기록 시작");click("어제");compose.onNodeWithContentDescription("날짜 날짜 선택").assertTextContains(yesterday.replace("-", ". "),substring=true)
+        show(compose.onNodeWithContentDescription("날짜 날짜 선택")).performClick()
         val future=LocalDate.now().plusDays(1)
         if(future.monthValue!=LocalDate.parse(yesterday).monthValue)compose.onNodeWithContentDescription("다음 달").performClick()
         show(compose.onNodeWithContentDescription(future.toString())).performClick()
         node("미래 날짜에는 치료 기록을 등록할 수 없어요.").assertExists()
-        node("날짜 ${yesterday.replace('-','.')}").assertExists()
+        compose.onNodeWithContentDescription("날짜 날짜 선택").assertTextContains(yesterday.replace("-", ". "),substring=true)
         click("기록 저장");await{snapshot().treatments.isNotEmpty()}
         assertEquals(yesterday,snapshot().treatments.single().date)
     }
@@ -466,7 +470,7 @@ class AppFlowTest {
         node("오늘").assertExists();node("어제").assertExists()
         click("평균저류시간 · 메모 추가")
         node("시작 시각 · 예: 22:00").assertDoesNotExist();node("종료 시각 · 예: 07:00").assertDoesNotExist()
-        field("평균저류 시간").assertTextContains("1");field("평균저류 분").assertTextContains("35")
+        compose.onNodeWithContentDescription("평균저류시간 선택").assertTextContains("1시간 35분")
         input("메모","수정한 투석 메모");hideKeyboard();screenshot("updated-treatment-options.png");click("기록 저장")
         await{snapshot().treatments.single().memo=="수정한 투석 메모"}
         val saved=snapshot().treatments.single()
@@ -494,7 +498,7 @@ class AppFlowTest {
         show(node("2195 g")).assertIsDisplayed()
         click("필터");select("조회 기간","30D");click("닫기");compose.onNodeWithTag("record-row-older").assertExists()
         show(compose.onNodeWithTag("record-cell-recent-0")).performClick();click("기록 열기")
-        node("날짜 ${yesterday.replace('-','.')}").assertExists();back()
+        compose.onNodeWithContentDescription("날짜 날짜 선택").assertTextContains(yesterday.replace("-", ". "),substring=true);back()
         node("기록 표").assertIsDisplayed();click("필터");selectedValue("조회 기간","30D")
         select("조회 기간","기간 지정")
         compose.onNodeWithTag("date-range-dialog").assertExists()
@@ -755,66 +759,59 @@ class AppFlowTest {
         assertTrue(snapshot().treatments.isEmpty());assertTrue(snapshot().drafts.isEmpty())
         back();click("변경사항 버리고 나가기")
     }
+    private fun openDuration() {show(compose.onNodeWithContentDescription("평균저류시간 선택")).performClick()}
     @Test fun legacyOutOfRangeDwellTimeMustBeCorrectedBeforeSave() {
         val legacy=Treatment(id="too-long",dwellMinutes=348000,saved=true)
         runBlocking {app.repository.restore(snapshot().copy(treatments=listOf(legacy)))}
         await{compose.onAllNodesWithText("이어서 입력하기").fetchSemanticsNodes().isNotEmpty()}
-        click("이어서 입력하기");node("기록 저장").assertIsNotEnabled()
+        click("이어서 입력하기");node("기록 저장").assertIsNotEnabled();openDuration()
         show(field("평균저류 시간")).assertTextContains("5800")
-        input("평균저류 시간","24");field("평균저류 시간").assertTextContains("5800")
-        node("기록 저장").assertIsNotEnabled()
+        field("평균저류 시간").performTextReplacement("24");field("평균저류 시간").assertTextContains("5800")
+        node("확인").assertIsNotEnabled()
         assertEquals(348000,snapshot().treatments.single().dwellMinutes)
-        input("평균저류 시간","23");input("평균저류 분","59")
-        click("기록 저장");await{snapshot().treatments.single().dwellMinutes==1439}
+        field("평균저류 시간").performTextReplacement("23");field("평균저류 분").performTextReplacement("59")
+        click("확인");click("기록 저장");await{snapshot().treatments.single().dwellMinutes==1439}
     }
     @Test fun dwellInputIsTransientUntilSaveAndSurvivesRecreation() {
-        click("오늘 기록 시작");click("평균저류시간 · 메모 추가")
-        input("평균저류 분","05")
+        click("오늘 기록 시작");click("평균저류시간 · 메모 추가");openDuration()
+        field("평균저류 분").performTextReplacement("05")
         compose.activityRule.scenario.recreate()
         show(field("평균저류 시간")).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
         field("평균저류 분").assertTextContains("05")
-        input("평균저류 시간","1");input("평균저류 분","35")
-        input("평균저류 시간","24");input("평균저류 분","60")
+        field("평균저류 시간").performTextReplacement("1");field("평균저류 분").performTextReplacement("35")
+        field("평균저류 시간").performTextReplacement("24");field("평균저류 분").performTextReplacement("60")
         field("평균저류 시간").assertTextContains("1");field("평균저류 분").assertTextContains("35")
         assertTrue(snapshot().treatments.isEmpty());assertTrue(snapshot().drafts.isEmpty())
-        hideKeyboard();compose.onNodeWithContentDescription("이 화면 사용 안내").performClick();back()
-        show(field("평균저류 시간")).assertTextContains("1");field("평균저류 분").assertTextContains("35")
+        click("확인");compose.onNodeWithContentDescription("이 화면 사용 안내").performClick();back()
+        compose.onNodeWithContentDescription("평균저류시간 선택").assertTextContains("1시간 35분")
         click("평균저류시간 · 메모 접기");click("평균저류시간 · 메모 추가")
-        show(field("평균저류 시간")).assertTextContains("1");field("평균저류 분").assertTextContains("35")
+        compose.onNodeWithContentDescription("평균저류시간 선택").assertTextContains("1시간 35분")
+        openDuration();field("평균저류 분").performTextReplacement("10");click("취소")
+        compose.onNodeWithContentDescription("평균저류시간 선택").assertTextContains("1시간 35분")
         back();click("계속 입력");click("기록 저장");await{snapshot().treatments.isNotEmpty()}
         assertEquals(95,snapshot().treatments.single().dwellMinutes)
+        click("이어서 입력하기");click("평균저류시간 · 메모 추가");openDuration()
+        field("평균저류 시간").performTextReplacement("");field("평균저류 분").performTextReplacement("0")
+        click("확인");click("기록 저장");await{snapshot().treatments.single().dwellMinutes==0}
         click("이어서 입력하기");click("평균저류시간 · 메모 추가")
-        input("평균저류 시간","");input("평균저류 분","");input("평균저류 분","0")
-        click("기록 저장");await{snapshot().treatments.single().dwellMinutes==0}
-        click("이어서 입력하기");click("평균저류시간 · 메모 추가")
-        input("평균저류 시간","");input("평균저류 분","")
+        show(compose.onNodeWithContentDescription("평균저류시간 해제")).performClick()
         click("기록 저장");await{snapshot().treatments.single().dwellMinutes==null}
     }
     @Test fun dwellInputAndUnsavedDialogRemainUsableInLandscapeAndBothThemes() {
         click("오늘 기록 시작");click("평균저류시간 · 메모 추가")
-        input("평균저류 시간","23");input("평균저류 분","59")
         val originalOrientation=compose.activity.requestedOrientation
         try {
             compose.activityRule.scenario.onActivity{it.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE}
             await("Landscape",30000){compose.activity.resources.configuration.orientation==Configuration.ORIENTATION_LANDSCAPE}
             for(theme in listOf("LIGHT","DARK")) {
                 runBlocking{app.repository.preferences(snapshot().preferences.copy(darkMode=theme))}
-                showKeyboard("평균저류 시간","Dwell hour $theme")
-                await("Dwell hour fully visible",30000) {
-                    val visible=field("평균저류 시간").getBoundsInRoot().let{it.bottom-it.top}
-                    val full=field("평균저류 시간").getUnclippedBoundsInRoot().let{it.bottom-it.top}
-                    full.value>0f && visible>=full*.95f
-                }
-                field("평균저류 시간").assertTextContains("23")
-                showKeyboard("평균저류 분","Dwell minute $theme")
-                await("Dwell minute fully visible",30000) {
-                    val visible=field("평균저류 분").getBoundsInRoot().let{it.bottom-it.top}
-                    val full=field("평균저류 분").getUnclippedBoundsInRoot().let{it.bottom-it.top}
-                    full.value>0f && visible>=full*.95f
-                }
+                openDuration()
+                show(field("평균저류 시간")).performTextReplacement("23")
+                show(field("평균저류 분")).performTextReplacement("59")
                 field("평균저류 분").assertTextContains("59")
+                node("확인").assertIsDisplayed()
+                screenshot("dwell-input-landscape-$theme.png");click("확인")
                 node("기록 저장").assertIsDisplayed()
-                screenshot("dwell-input-landscape-$theme.png");hideKeyboard()
                 back();node("계속 입력").assertIsDisplayed();node("변경사항 버리고 나가기").assertIsDisplayed()
                 screenshot("treatment-unsaved-landscape-$theme.png");click("계속 입력")
             }

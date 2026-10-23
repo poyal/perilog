@@ -49,7 +49,11 @@ class ReplenishmentFlowTest {
         for(i in parents.fetchSemanticsNodes().indices.reversed())runCatching {parents[i].performScrollTo()}
         runCatching {node.performScrollTo()};return node
     }
-    private fun click(text:String) {show(ui.onNodeWithText(text)).performClick()}
+    private fun click(text:String) {
+        val dialog=ui.onAllNodes(hasText(text) and hasClickAction() and hasAnyAncestor(isDialog()))
+        if(dialog.fetchSemanticsNodes().isNotEmpty())show(dialog[0]).performClick()
+        else show(ui.onNode(hasText(text) and hasClickAction())).performClick()
+    }
     private fun input(label:String,value:String) {show(ui.onNode(hasSetTextAction() and hasContentDescription(label))).performTextReplacement(value)}
     private fun hideKeyboard() {ui.runOnIdle {(ui.activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(ui.activity.window.decorView.windowToken,0)};ui.waitForIdle()}
     private fun back() {hideKeyboard();ui.runOnIdle{ui.activity.onBackPressedDispatcher.onBackPressed()};ui.waitForIdle()}
@@ -58,9 +62,9 @@ class ReplenishmentFlowTest {
         click("입고 요청 계산기")
     }
     private fun selectNextDate(value:LocalDate) {
-        show(ui.onAllNodesWithText("날짜 선택")[1]).performClick()
+        show(ui.onNodeWithContentDescription("다음 방문일 날짜 선택")).performClick()
         val months=ChronoUnit.MONTHS.between(LocalDate.now().withDayOfMonth(1),value.withDayOfMonth(1)).toInt()
-        repeat(months) {show(ui.onNodeWithContentDescription("다음 달")).performClick()}
+        repeat(kotlin.math.abs(months)) {show(ui.onNodeWithContentDescription(if(months>=0)"다음 달"else"이전 달")).performClick()}
         show(ui.onNodeWithContentDescription(value.toString())).performClick()
     }
     private fun savedPlan():ReplenishmentPlan {
@@ -109,11 +113,11 @@ class ReplenishmentFlowTest {
     }
     @Test fun visitDatePickersStackAndKeepAllSevenColumnsReadable() {
         requests();click("새 입고 요청 계산")
-        val first=ui.onAllNodesWithText("날짜 선택")[0].getUnclippedBoundsInRoot()
-        val second=ui.onAllNodesWithText("날짜 선택")[1].getUnclippedBoundsInRoot()
+        val first=ui.onNodeWithContentDescription("이번 방문일 날짜 선택").getUnclippedBoundsInRoot()
+        val second=ui.onNodeWithContentDescription("다음 방문일 날짜 선택").getUnclippedBoundsInRoot()
         assertTrue("방문일 선택은 위아래 두 줄이어야 합니다",second.top>=first.bottom)
         repeat(2) { index ->
-            show(ui.onAllNodesWithText("날짜 선택")[index]).performClick()
+            show(ui.onNodeWithContentDescription("${if(index==0)"이번 방문일"else"다음 방문일"} 날짜 선택")).performClick()
             val weekdays=listOf("일","월","화","수","목","금","토").map {
                 show(ui.onNode(hasText(it) and hasAnyAncestor(hasContentDescription("달력 요일")))).getUnclippedBoundsInRoot()
             }
@@ -127,7 +131,7 @@ class ReplenishmentFlowTest {
                 assertEquals(1,layout.lineCount)
                 assertTrue("두 자리 날짜가 칸 안에 들어가야 합니다",layout.getLineRight(0)-layout.getLineLeft(0)<=layout.size.width+1f)
             }
-            click("날짜 선택 접기")
+            click("취소")
         }
         assertTrue(snapshot().replenishmentPlans.isEmpty())
     }

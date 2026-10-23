@@ -319,22 +319,19 @@ private val actionButtonPadding=PaddingValues(horizontal=18.dp,vertical=15.dp)
 @Composable fun DateControl(date:String,onChange:(String)->Unit,label:String="날짜",showQuickDates:Boolean=false) {
     var open by rememberSaveable{mutableStateOf(false)}
     var month by rememberSaveable{mutableStateOf(date.ifBlank{today()}.take(7))}
+    val parsed=runCatching{LocalDate.parse(date)}.getOrNull()
     Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-        Text(if(date.isBlank())"$label 선택해 주세요"else"$label ${date.replace('-', '.')}",fontWeight=FontWeight.SemiBold)
-        Surface(shape=RoundedCornerShape(18.dp),color=MaterialTheme.colorScheme.surface) {
-            ButtonRow(Modifier.fillMaxWidth().padding(4.dp)) {
-                if(showQuickDates) {
-                    val currentDay=LocalDate.now()
-                    listOf("어제" to 1L,"오늘" to 0L).forEach { (title,daysAgo) ->
-                        val quickDate=currentDay.minusDays(daysAgo).toString()
-                        SmallButton(onClick={onChange(LocalDate.now().minusDays(daysAgo).toString())},modifier=Modifier.semantics{selected=date==quickDate},
-                            emphasized=date==quickDate){Text(title)}
-                    }
-                }
-                SmallButton(onClick={month=date.ifBlank{today()}.take(7);open=!open}){Icon(Icons.Outlined.CalendarMonth,null,Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(if(open)"날짜 선택 접기"else"날짜 선택")}
+        SelectionFieldRow(label,parsed?.format(DateTimeFormatter.ofPattern("yyyy. MM. dd (E)",Locale.KOREAN)) ?: date.ifBlank{"날짜 선택"},
+            Icons.Outlined.CalendarMonth,{month=(parsed ?: LocalDate.now()).toString().take(7);open=true},description="$label 날짜 선택",
+            errorText=if(date.isNotBlank() && parsed==null)"올바른 날짜를 다시 선택해 주세요."else null)
+        if(showQuickDates)ButtonRow {
+            listOf("어제" to 1L,"오늘" to 0L).forEach { (title,daysAgo) ->
+                val quickDate=LocalDate.now().minusDays(daysAgo).toString()
+                SmallButton(onClick={onChange(LocalDate.now().minusDays(daysAgo).toString())},
+                    modifier=Modifier.semantics{selected=date==quickDate},emphasized=date==quickDate){Text(title)}
             }
         }
-        if(open)Paper(contentPadding=8.dp) {
+        if(open)SelectionDialog("$label 선택",{open=false}) {
             val ym=YearMonth.parse(month)
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween) {
                 IconButton(onClick={month=ym.minusMonths(1).toString()}){Icon(Icons.Outlined.ChevronLeft,"이전 달")}

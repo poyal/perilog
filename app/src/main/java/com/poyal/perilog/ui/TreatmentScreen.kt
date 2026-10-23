@@ -119,7 +119,7 @@ import com.poyal.perilog.domain.*
         Paper {
             SmallButton(onClick={options=!options}){Icon(Icons.Outlined.Notes,null);Spacer(Modifier.width(8.dp));Text(if(current.kind=="MACHINE")"평균저류시간 · 메모 ${if(options)"접기"else"추가"}"else"메모 ${if(options)"접기"else"추가"}")}
             if(options) {
-                if(current.kind=="MACHINE")DwellTimeInput(current.dwellMinutes){update(current.copy(dwellMinutes=it))}
+                if(current.kind=="MACHINE")DurationControl(current.dwellMinutes){update(current.copy(dwellMinutes=it))}
                 Row(verticalAlignment=Alignment.CenterVertically){Checkbox(current.interrupted,{update(current.copy(interrupted=it))});Text("중단·재시작 등 특이사항이 있었어요",Modifier.weight(1f))}
                 OutlinedTextField(current.memo,{update(current.copy(memo=it))},label={Text("메모")},modifier=Modifier.fillMaxWidth(),minLines=2)
             }

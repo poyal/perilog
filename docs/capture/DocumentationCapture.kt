@@ -65,7 +65,11 @@ class DocumentationCapture {
         for(index in parents.fetchSemanticsNodes().indices.reversed())runCatching{parents[index].performScrollTo()}
         runCatching{node.performScrollTo()}
         return node}
-    private fun click(text:String) {show(ui.onNodeWithText(text)).performClick()}
+    private fun click(text:String) {
+        val dialog=ui.onAllNodes(hasText(text) and hasClickAction() and hasAnyAncestor(isDialog()))
+        if(dialog.fetchSemanticsNodes().isNotEmpty())show(dialog[0]).performClick()
+        else show(ui.onNode(hasText(text) and hasClickAction())).performClick()
+    }
     private fun tab(text:String) {
         ui.runOnIdle { (ui.activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(ui.activity.window.decorView.windowToken,0) }
         val matcher=hasText(text) and SemanticsMatcher.keyIsDefined(SemanticsProperties.Selected)
@@ -80,6 +84,15 @@ class DocumentationCapture {
         val directory=File(app.filesDir,"manual-screenshots").apply{mkdirs()}
         val image=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
         File(directory,"$name.png").outputStream().use{image.compress(Bitmap.CompressFormat.PNG,100,it)}
+    }
+    @Test fun captureTemporalSettings() {
+        seed()
+        ui.waitUntil(15000){ui.onAllNodesWithContentDescription("설정").fetchSemanticsNodes().isNotEmpty()}
+        ui.onNodeWithContentDescription("설정").performClick()
+        click("알림");shot("78-notification-settings")
+        show(ui.onNodeWithContentDescription("알림 시각 선택")).performClick();shot("95-time-input");click("취소");back()
+        click("투석 계산 기준");shot("83-settings-basis");back();back()
+        show(ui.onNodeWithContentDescription("병원 일정 추가")).performClick();shot("96-appointment-empty")
     }
     @Test fun captureSettingsNavigation() {
         seed()
@@ -110,7 +123,7 @@ class DocumentationCapture {
         click("알림");shot("78-notification-settings");back();back()
         click("기록하기");show(ui.onNodeWithText("이번 기록만 수량 조정"));shot("03-usage-template");back()
         click("D-7");show(ui.onNodeWithTag("appointment-menu-next-visit")).performClick();click("일정 수정")
-        show(ui.onAllNodesWithText("시간 지정")[0]).performClick();click("확인")
+        show(ui.onNodeWithContentDescription("피검사 시간 선택")).performClick();click("확인")
         show(ui.onNodeWithText("치료 항목 · 여러 개 선택"));shot("32-appointment-editor")
     }
     @Test fun captureReleaseInformation() {
@@ -224,8 +237,8 @@ class DocumentationCapture {
         click("병원 일정");shot("39-appointment-list")
         show(ui.onNodeWithTag("appointment-menu-next-visit")).performClick()
         show(ui.onNodeWithContentDescription("next-visit 일정 수정")).performClick()
-        click("날짜 선택");show(ui.onNodeWithText("예약일 ",substring=true));shot("40-appointment-calendar");click("날짜 선택 접기")
-        show(ui.onNode(hasSetTextAction() and hasText("신장내과 예약시간 · HH:mm")));shot("32-appointment-editor");back();back()
+        show(ui.onNodeWithContentDescription("예약일 날짜 선택")).performClick();shot("40-appointment-calendar");click("취소")
+        show(ui.onNodeWithContentDescription("신장내과 예약시간 선택"));shot("32-appointment-editor");back();back()
         click("검사·치료 항목");shot("33-treatment-items");back()
         click("연락처");show(ui.onNodeWithContentDescription("투석실 더보기")).performClick();click("수정");shot("34-contact-editor");back();back()
         click("화면·표시");shot("30-settings-toggles");back();back()

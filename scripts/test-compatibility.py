@@ -16,7 +16,7 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = "com.poyal.perilog.debug"
-FULL = ["AppFlowTest", "AppointmentFlowTest", "CalendarFlowTest", "UiComponentsTest",
+FULL = ["AppFlowTest", "AppointmentFlowTest", "CalendarFlowTest", "UiComponentsTest", "TemporalControlsTest",
         "TopSnackbarHostTest", "ReplenishmentFlowTest", "StockForecastFlowTest", "WidgetFlowTest",
         "SettingsFlowTest", "PrivacyFlowTest", "UpdatesFlowTest", "UsabilityFlowTest"]
 CORE = [
@@ -38,7 +38,7 @@ CORE = [
     "WidgetFlowTest#realAppointmentWidgetShowsEachTimeAndRemovedAppointmentOpensList",
     "UpdatesFlowTest",
 ]
-LAYOUT = ["UiComponentsTest", "AppFlowTest#newRecordsStartEmptyAndDateChangesKeepDraftInputs",
+LAYOUT = ["UiComponentsTest", "TemporalControlsTest", "AppFlowTest#newRecordsStartEmptyAndDateChangesKeepDraftInputs",
           "SettingsFlowTest#allSettingsOpenDirectlyAndBackRestoresTheListWithoutChangingData",
           "WidgetFlowTest#adaptiveHostSizesKeepAllContentAndTallVisitsUseSingleColumn"]
 API30_REGRESSION = ["CalendarFlowTest#providerPreservesUnrelatedEventsAndReminders",

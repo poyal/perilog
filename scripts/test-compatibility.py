@@ -31,7 +31,7 @@ CORE = [
     "AppointmentFlowTest#newDataFullFileBackupRestoresAfterReset",
     "CalendarFlowTest", "PrivacyFlowTest",
     "SettingsFlowTest#osSettingsAndCancelledFilePickersReturnWithoutChangingAppData",
-    "SettingsFlowTest#feedbackStaysAboveKeyboardWithoutMovingLandscapeSaveButtons",
+    "SettingsFlowTest#timeDialogConfirmationAndSaveRemainReachableInBothOrientations",
     "SettingsFlowTest#settingsSaveIndependentlyAndInvalidInputSurvives",
     "WidgetFlowTest#resizingSameRecordWidgetImmediatelyReflowsWithoutRefresh",
     "WidgetFlowTest#realRecordWidgetShowsOnlyThreeStagesRefreshesAndOpensDisplayedYesterday",
@@ -153,7 +153,7 @@ def main():
                "os-transitions": OS_TRANSITIONS,
                "privacy-lock": ["PrivacyFlowTest#lockOnlyAuthenticatesOnReturnAndCancelNeverExposesContent"],
                "keyboard": ["AppFlowTest#typedDraftSurvivesActivityRecreationRotationAndDoesNotConsumeStock",
-                            "SettingsFlowTest#feedbackStaysAboveKeyboardWithoutMovingLandscapeSaveButtons"],
+                            "SettingsFlowTest#timeDialogConfirmationAndSaveRemainReachableInBothOrientations"],
                "widgets": ["WidgetFlowTest"],
                "widget-landscape": ["WidgetFlowTest#landscapeHostsKeepEveryStageAndCareVisible"]}[args.suite]
     expected = expected_tests(targets)

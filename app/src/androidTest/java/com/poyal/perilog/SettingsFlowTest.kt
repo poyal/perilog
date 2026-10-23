@@ -139,6 +139,17 @@ class SettingsFlowTest {
                 waitFor{ui.activity.resources.configuration.orientation==expected && ui.activity.hasWindowFocus()}
                 ui.openTime("알림 시각");ui.setClock("18","35")
                 ui.onNodeWithText("확인").assertIsDisplayed().performClick()
+                // Dialog dismissal and the platform IME animation settle
+                // independently of Compose. Compare feedback against the
+                // restored page, not its temporary landscape keyboard layout.
+                waitFor {
+                    val insets=ViewCompat.getRootWindowInsets(ui.activity.window.decorView)
+                    ui.activity.hasWindowFocus() && insets!=null &&
+                        !insets.isVisible(WindowInsetsCompat.Type.ime()) &&
+                        insets.getInsets(WindowInsetsCompat.Type.ime()).bottom==0
+                }
+                InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(500,10000)
+                ui.waitForIdle()
                 val before=ui.onNodeWithText("알림 시각 저장").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
                 click("알림 시각 저장")
                 waitFor{ui.onAllNodesWithText("알림 시각을 저장했어요").fetchSemanticsNodes().isNotEmpty()}

@@ -383,52 +383,186 @@ class AppFlowTest {
         click("기록 열기");back()
         selectedValue("통계 기간","30D");selectedValue("표시 방식","항목별 도표")
     }
-    @Test fun newRecordsStartEmptyAndDateChangesKeepDraftInputs() {
+    private fun editingRecord()=ViewModelProvider(compose.activity)[JournalViewModel::class.java].editor.value!!
+    private fun awaitRecord(id:String) {await("Selected treatment $id"){editingRecord().id==id}}
+    private fun assertDatabaseUnchanged(expected:Snapshot) {assertEquals(expected,snapshot().copy(exportedAt=expected.exportedAt))}
+    @Test fun newRecordsStartEmptyAndDateChangesLoadSelectedRecords() {
         runBlocking {
             app.repository.preferences(snapshot().preferences.copy(basis=listOf(Basis("1970-01-01",2100),Basis(today(),2000))))
             app.repository.save(Treatment(id="previous",date=yesterday,weightGrams=61000,systolic=110,diastolic=75,
                 initialDrain=2300,machineUf=600,basisMl=1900,items=listOf(Item(p.id,p.name,2)),
-                usageTemplateId="night",usageTemplateName="밤 구성",usageTemplateColor=0xFF2167B8),true)
+                usageTemplateId="night",usageTemplateName="밤 구성",usageTemplateColor=0xFF2167B8,
+                memo="어제 메모",dwellMinutes=95,interrupted=true),true)
             app.repository.save(Treatment(id="previous-manual",kind="MANUAL",manualDrain=2150,drainUnit="kg",
                 items=listOf(Item(p.id,p.name,2)),usageTemplateId="night"),true)
         }
+        val original=snapshot()
         click("오늘 기록 시작")
         listOf("몸무게","수축기 혈압","이완기 혈압","초기배액량","기계 제수량").forEach{label->
             field(label).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
         }
         node("사용한 품목을 선택해 주세요.").assertExists()
-        click("어제")
-        field("몸무게").assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
-        node("사용한 품목을 선택해 주세요.").assertExists()
-        click("오늘");beforeAndTemplate();input("초기배액량","2300");input("기계 제수량","600")
-        click("어제")
-        field("몸무게").assertTextContains("62.3");field("수축기 혈압").assertTextContains("120")
-        field("이완기 혈압").assertTextContains("80");field("초기배액량").assertTextContains("2300")
-        field("기계 제수량").assertTextContains("600")
-        val draft=ViewModelProvider(compose.activity)[JournalViewModel::class.java].editor.value!!
-        assertEquals(yesterday,draft.date);assertEquals(2100,draft.basisMl);assertEquals(2,draft.items.single().quantity)
-        assertTrue(snapshot().drafts.isEmpty())
-        assertEquals("night",draft.usageTemplateId);assertEquals("밤 구성",draft.usageTemplateName)
-        assertNull(draft.sourceDate);stock(6)
+        val emptyId=editingRecord().id
+        click("오늘");assertEquals(emptyId,editingRecord().id)
+        show(node("어제")).performTouchInput{doubleClick()};awaitRecord("previous")
+        node("61.0 kg").assertExists();node("110 / 75").assertExists()
+        field("초기배액량").assertTextContains("2300");field("기계 제수량").assertTextContains("600")
+        assertEquals(original.treatments.first{it.id=="previous"},editingRecord())
+        click("평균저류시간 · 메모 추가");field("메모").assertTextContains("어제 메모")
         compose.activityRule.scenario.recreate()
-        await {compose.onAllNodes(hasSetTextAction() and hasText("62.3")).fetchSemanticsNodes().isNotEmpty()}
-        back();click("계속 입력")
-        field("몸무게").assertTextContains("62.3");field("초기배액량").assertTextContains("2300")
-        field("기계 제수량").assertTextContains("600");node("밤 구성").assertExists()
-        back();click("변경사항 버리고 나가기");assertTrue(snapshot().drafts.isEmpty())
+        field("메모").assertTextContains("어제 메모");awaitRecord("previous")
+        click("오늘");await{editingRecord().date==today()}
+        assertNotEquals(emptyId,editingRecord().id);assertEquals("MACHINE",editingRecord().kind)
+        assertEquals(2000,editingRecord().basisMl);assertNull(editingRecord().dwellMinutes)
+        listOf("몸무게","수축기 혈압","이완기 혈압","초기배액량","기계 제수량").forEach{label->
+            field(label).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
+        }
+        node("사용한 품목을 선택해 주세요.").assertExists();field("메모").assertDoesNotExist()
+        show(compose.onNodeWithContentDescription("날짜 날짜 선택")).performClick()
+        if(LocalDate.now().monthValue!=LocalDate.parse(yesterday).monthValue)compose.onNodeWithContentDescription("이전 달").performClick()
+        show(compose.onNodeWithContentDescription(yesterday)).performClick();awaitRecord("previous")
+        assertDatabaseUnchanged(original);stock(6)
+        back();node("저장하지 않은 변경사항이 있어요").assertDoesNotExist()
         tab("기록");compose.onNodeWithContentDescription("기록 추가").performClick();click("추가투석 기록 추가")
         await("New additional treatment editor"){compose.onAllNodesWithText("이번 기록만 수량 조정").fetchSemanticsNodes().isNotEmpty()}
         node("사용한 품목을 선택해 주세요.").assertExists()
         field("배액무게").assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
-        back();tab("기록");click("표")
-        show(compose.onNodeWithTag("record-cell-previous-0")).performClick();click("기록 열기")
-        show(compose.onNodeWithContentDescription("활력 상태 수정")).performClick();field("몸무게").assertTextContains("61")
-        show(compose.onNodeWithContentDescription("제수량 도움말")).performClick()
-        field("이 기록의 이전 주입 기준").assertTextContains("1900");click("닫기")
-        click("오늘")
-        show(compose.onNodeWithContentDescription("제수량 도움말")).performClick()
-        field("이 기록의 이전 주입 기준").assertTextContains("1900");click("닫기")
-        stock(6)
+        assertNotEquals("previous-manual",editingRecord().id);stock(6)
+    }
+    @Test fun dateSwitchSaveDiscardAndContinueKeepEachRecordAndStockSeparate() {
+        runBlocking {
+            app.repository.save(Treatment(id="yesterday",date=yesterday,systolic=110,items=listOf(Item(p.id,p.name,1))),true)
+            app.repository.save(Treatment(id="today",systolic=120,items=listOf(Item(p.id,p.name,2))),true)
+        }
+        await{compose.onAllNodesWithText("이어서 입력하기").fetchSemanticsNodes().isNotEmpty()}
+        val yesterdayOriginal=snapshot().treatments.first{it.id=="yesterday"}
+        click("이어서 입력하기");input("수축기 혈압","125")
+        click("이번 기록만 수량 조정");input("${p.name} 수량","3");click("수량 조정 마치기")
+        click("어제");node("저장하고 이동").assertIsEnabled()
+        compose.activityRule.scenario.recreate();click("계속 입력")
+        assertEquals(today(),editingRecord().date);field("수축기 혈압").assertTextContains("125")
+        click("어제");click("저장하고 이동");awaitRecord("yesterday")
+        assertEquals(yesterdayOriginal,snapshot().treatments.first{it.id=="yesterday"})
+        val savedToday=snapshot().treatments.first{it.id=="today"}
+        assertEquals(today(),savedToday.date);assertEquals(125,savedToday.systolic)
+        assertEquals(3,savedToday.items.single().quantity)
+        assertEquals(2,snapshot().usages.size);stock(6)
+        input("수축기 혈압","115");click("오늘");click("버리고 이동");awaitRecord("today")
+        field("수축기 혈압").assertTextContains("125")
+        assertEquals(yesterdayOriginal,snapshot().treatments.first{it.id=="yesterday"});stock(6)
+        input("수축기 혈압","130");input("수축기 혈압","125")
+        click("어제");awaitRecord("yesterday");node("저장하지 않은 변경사항이 있어요").assertDoesNotExist()
+        click("오늘");awaitRecord("today")
+        field("수축기 혈압").assertTextContains("125")
+        assertEquals(2,snapshot().treatments.size);assertTrue(snapshot().drafts.isEmpty());stock(6)
+    }
+    @Test fun dateSwitchRejectsInvalidSaveAndClearsOnlyDiscardedInputErrors() {
+        click("오늘 기록 시작");input("수축기 혈압","1.5")
+        val id=editingRecord().id
+        click("오늘");assertEquals(id,editingRecord().id);field("수축기 혈압").assertTextContains("1.5")
+        click("어제");node("저장하고 이동").assertIsNotEnabled()
+        compose.activityRule.scenario.recreate();node("저장하고 이동").assertIsNotEnabled()
+        click("계속 입력");field("수축기 혈압").assertTextContains("1.5")
+        click("어제");click("버리고 이동");await{editingRecord().date==yesterday}
+        field("수축기 혈압").assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,AnnotatedString("")))
+        node("기록 저장").assertIsEnabled();assertTrue(snapshot().treatments.isEmpty());stock(10)
+    }
+    @Test fun dateSwitchSaveFailureKeepsOriginalDateInputAndDestination() {
+        click("오늘 기록 시작");input("수축기 혈압","125")
+        compose.runOnIdle {
+            val vm=ViewModelProvider(compose.activity)[JournalViewModel::class.java]
+            vm.change(vm.editor.value!!.copy(items=listOf(Item("missing","삭제된 물품",1))))
+        }
+        val original=editingRecord()
+        click("어제");click("저장하고 이동")
+        await{compose.onAllNodesWithText("품목 또는 수량이 올바르지 않습니다.").fetchSemanticsNodes().isNotEmpty()}
+        assertEquals(original,editingRecord());node("저장하고 이동").assertIsEnabled()
+        click("계속 입력");field("수축기 혈압").assertTextContains("125")
+        click("어제");click("버리고 이동");await{editingRecord().date==yesterday}
+        assertTrue(snapshot().treatments.isEmpty());assertTrue(snapshot().usages.isEmpty());stock(10)
+    }
+    @Test fun dateSwitchLoadsLegacyDraftButPrefersSavedRecordWithSameId() {
+        val legacy=Treatment(id="legacy-date",date=yesterday,systolic=115,items=listOf(Item(p.id,p.name,2)))
+        runBlocking {app.repository.draft(legacy)}
+        click("오늘 기록 시작");click("어제");awaitRecord(legacy.id)
+        field("수축기 혈압").assertTextContains("115");assertFalse(editingRecord().saved)
+        input("수축기 혈압","116");click("오늘");click("버리고 이동")
+        await{editingRecord().date==today()};assertEquals(legacy,snapshot().drafts.single().treatment)
+        click("어제");awaitRecord(legacy.id);input("수축기 혈압","117")
+        click("오늘");click("저장하고 이동");await{editingRecord().date==today()}
+        assertTrue(snapshot().drafts.isEmpty());stock(8)
+        runBlocking {app.repository.draft(legacy.copy(systolic=90))}
+        click("어제");awaitRecord(legacy.id);field("수축기 혈압").assertTextContains("117")
+        assertTrue(editingRecord().saved);assertEquals(1,snapshot().treatments.size);stock(8)
+    }
+    @Test fun dateSwitchMissingDestinationDoesNotSaveCurrentEdits() {
+        runBlocking {app.repository.save(Treatment(id="removed-target",date=yesterday,systolic=110),false)}
+        click("오늘 기록 시작");input("수축기 혈압","125");val current=editingRecord()
+        click("어제");node("저장하고 이동").assertIsEnabled()
+        runBlocking {app.repository.deleteTreatment("removed-target")}
+        val afterDeletion=snapshot()
+        click("저장하고 이동")
+        await{compose.onAllNodesWithText("기록이 바뀌었어요. 날짜를 다시 선택해 주세요.").fetchSemanticsNodes().isNotEmpty()}
+        assertEquals(current,editingRecord());assertDatabaseUnchanged(afterDeletion)
+        click("계속 입력");field("수축기 혈압").assertTextContains("125")
+    }
+    @Test fun manualDateSwitchChoosesAmongRecordsAndRestoresCancelledSelection() {
+        runBlocking {
+            app.repository.save(Treatment(id="machine-other",date=yesterday,systolic=110),false)
+            app.repository.save(Treatment(id="manual-old",date=yesterday,kind="MANUAL",manualDrain=1800,drainUnit="mL",createdAt=1,
+                items=listOf(Item(p.id,p.name,1))),true)
+            app.repository.save(Treatment(id="manual-new",date=yesterday,kind="MANUAL",manualDrain=2150,drainUnit="kg",createdAt=2,
+                items=listOf(Item(p.id,p.name,2))),true)
+        }
+        val original=snapshot()
+        tab("기록");compose.onNodeWithContentDescription("기록 추가").performClick();click("추가투석 기록 추가")
+        input("배액무게","2.5");val current=editingRecord()
+        click("어제");compose.onNodeWithTag("date-record-machine-other").assertDoesNotExist()
+        compose.onNodeWithTag("date-record-manual-new").assertExists()
+        compose.activityRule.scenario.recreate();click("취소")
+        assertEquals(current,editingRecord());assertDatabaseUnchanged(original)
+        click("어제");show(compose.onNodeWithTag("date-record-manual-new")).performClick()
+        click("계속 입력");assertEquals(current,editingRecord())
+        click("어제");show(compose.onNodeWithTag("date-record-manual-old")).performClick()
+        click("버리고 이동");awaitRecord("manual-old")
+        field("배액량").assertTextContains("1800");assertEquals("MANUAL",editingRecord().kind)
+        click("오늘");await{editingRecord().date==today()}
+        click("어제");show(compose.onNodeWithTag("date-record-manual-new")).performClick();awaitRecord("manual-new")
+        field("배액무게").assertTextContains("2.15")
+        assertDatabaseUnchanged(original);stock(7)
+    }
+    @Test fun dateSwitchDialogsFitThemesLargeTextAndPreserveCancelledInput() {
+        runBlocking {
+            for(i in 1..3)app.repository.save(Treatment(id="choice-$i",date=yesterday,systolic=110+i,createdAt=i.toLong()),false)
+        }
+        click("오늘 기록 시작");input("몸무게","62.3");hideKeyboard()
+        for(theme in listOf("LIGHT","DARK")) {
+            runBlocking {app.repository.preferences(snapshot().preferences.copy(darkMode=theme))}
+            click("어제");node("$yesterday 기록 선택").assertIsDisplayed()
+            show(compose.onNodeWithTag("date-record-choice-3")).assertIsDisplayed()
+            node("취소").assertIsDisplayed()
+            InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(500,5000)
+            screenshot("date-record-choice-$theme.png")
+            show(compose.onNodeWithTag("date-record-choice-3")).performClick()
+            listOf("계속 입력","버리고 이동","저장하고 이동").forEach{node(it).assertIsDisplayed()}
+            InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(500,5000)
+            screenshot("date-unsaved-$theme.png");click("계속 입력")
+            field("몸무게").assertTextContains("62.3");assertEquals(today(),editingRecord().date)
+        }
+        assertEquals(3,snapshot().treatments.size);stock(10)
+    }
+    @Test fun manualDateSwitchSavesOriginalIdentityAndUsesSavedUnitForEmptyDay() {
+        tab("기록");compose.onNodeWithContentDescription("기록 추가").performClick();click("추가투석 기록 추가")
+        click("mL");input("배액량","2000");click("밤 구성")
+        val original=editingRecord()
+        click("어제");click("저장하고 이동");await{editingRecord().date==yesterday}
+        assertEquals("MANUAL",editingRecord().kind);assertEquals("mL",editingRecord().drainUnit)
+        assertNotEquals(original.id,editingRecord().id);assertNull(editingRecord().manualDrain)
+        assertTrue(editingRecord().items.isEmpty());stock(8)
+        val saved=snapshot().treatments.single()
+        assertEquals(original.id,saved.id);assertEquals(today(),saved.date);assertEquals(2000,saved.manualDrain)
+        click("오늘");awaitRecord(original.id);field("배액량").assertTextContains("2000")
+        assertEquals(1,snapshot().usages.size);stock(8)
     }
     @Test fun statisticsUseTotalUfAndExcludeMissingValuesFromAverage() {
         runBlocking {

@@ -11,13 +11,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.poyal.perilog.data.*
 import com.poyal.perilog.domain.*
 
-@Composable fun TreatmentScreen(s:Snapshot,vm:JournalViewModel,back:()->Unit,onSaved:()->Unit) {
+@Composable fun TreatmentScreen(s:Snapshot,vm:JournalViewModel,back:()->Unit,onDateChange:(String)->Unit,onSaved:()->Unit) {
     val t by vm.editor.collectAsStateWithLifecycle()
     val current=t ?: return
     val focus=LocalFocusManager.current
@@ -35,7 +36,7 @@ import com.poyal.perilog.domain.*
     Page(if(current.kind=="MACHINE")"치료 기록"else"추가투석",back=back,
         footer={Action("기록 저장",{vm.save(current.items.isNotEmpty() || current.usageConfirmed,onSaved)},
             !vm.busy.collectAsState().value && inputErrors.isEmpty() && current.validDwellTime())}) {
-        DateControl(current.date,{if(it<=today()){vm.changeDate(it);error=""}else error="미래 날짜에는 치료 기록을 등록할 수 없어요."},showQuickDates=true)
+        DateControl(current.date,{if(it<=today()){onDateChange(it);error=""}else error="미래 날짜에는 치료 기록을 등록할 수 없어요."},showQuickDates=true)
         if(error.isNotEmpty())Text(error,color=MaterialTheme.colorScheme.error)
         if(current.kind=="MACHINE") {
             Paper {
@@ -135,6 +136,22 @@ import com.poyal.perilog.domain.*
             Hint("초기배액량, 기계 제수량, 이전 주입 기준이 모두 있어야 제수량을 계산해요.")
         }},containerColor=MaterialTheme.colorScheme.surface,confirmButton={SmallButton(onClick={calculation=false}){Text("닫기")}})
     if(discard)Confirm("초안을 버릴까요?","기존에 저장한 기록과 사용 내역은 유지됩니다.",{discard=false}){vm.discard(current.id){discard=false;onSaved()}}
+}
+@Composable internal fun TreatmentDateDialog(s:Snapshot,date:String,records:List<Treatment>,onDismiss:()->Unit,onSelect:(String)->Unit) {
+    SelectionDialog("$date 기록 선택",onDismiss) {
+        Hint("열 기록을 선택해 주세요. 최근에 작성한 기록부터 표시해요.")
+        records.forEachIndexed { index,t ->
+            Column(Modifier.fillMaxWidth().clickable{onSelect(t.id)}.testTag("date-record-${t.id}").padding(vertical=12.dp),
+                verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                Section("${records.size-index}번째 ${if(t.kind=="MACHINE")"기계투석"else"추가투석"} · ${if(t.complete())"완료"else"미완료"}${if(!t.saved)" · 초안"else""}")
+                Text(t.compositionName(s),style=MaterialTheme.typography.bodyMedium)
+                Text(if(t.kind=="MACHINE")"몸무게 ${t.weightGrams?.let{"${it/1000.0} kg"} ?: "—"} · 혈압 ${t.systolic ?: "—"}/${t.diastolic ?: "—"} · 제수량 ${t.totalUf()?.let{"$it mL"} ?: "—"}"
+                    else "배액 ${t.manualDrain?.let{if(t.drainUnit=="kg")(it/1000.0).toString()else it.toString()} ?: "—"} ${t.drainUnit}",
+                    style=MaterialTheme.typography.bodyMedium)
+            }
+            if(index<records.lastIndex)HorizontalDivider()
+        }
+    }
 }
 @Composable private fun MeasurementSummary(value:String,label:String) {
     Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)){

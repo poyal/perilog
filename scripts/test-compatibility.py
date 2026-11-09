@@ -26,7 +26,7 @@ CORE = [
     "AppFlowTest#backupRoundTripAndBrokenFilePreserveData",
     "AppFlowTest#typedDraftSurvivesActivityRecreationRotationAndDoesNotConsumeStock",
     "AppFlowTest#aboutWorksOfflineAndDarkThemeSurvivesRecreation",
-    "AppFlowTest#newRecordsStartEmptyAndDateChangesKeepDraftInputs",
+    "AppFlowTest#newRecordsStartEmptyAndDateChangesLoadSelectedRecords",
     "AppointmentFlowTest#registerMultipleDepartmentsCareAndContactThenShowOnHome",
     "AppointmentFlowTest#newDataFullFileBackupRestoresAfterReset",
     "CalendarFlowTest", "PrivacyFlowTest",
@@ -38,16 +38,16 @@ CORE = [
     "WidgetFlowTest#realAppointmentWidgetShowsEachTimeAndRemovedAppointmentOpensList",
     "UpdatesFlowTest",
 ]
-LAYOUT = ["UiComponentsTest", "TemporalControlsTest", "AppFlowTest#newRecordsStartEmptyAndDateChangesKeepDraftInputs",
+LAYOUT = ["UiComponentsTest", "TemporalControlsTest", "AppFlowTest#newRecordsStartEmptyAndDateChangesLoadSelectedRecords",
           "SettingsFlowTest#allSettingsOpenDirectlyAndBackRestoresTheListWithoutChangingData",
           "WidgetFlowTest#adaptiveHostSizesKeepAllContentAndTallVisitsUseSingleColumn"]
 API30_REGRESSION = ["CalendarFlowTest#providerPreservesUnrelatedEventsAndReminders",
                     "WidgetFlowTest#resizingSameRecordWidgetImmediatelyReflowsWithoutRefresh",
                     "SettingsFlowTest#osSettingsAndCancelledFilePickersReturnWithoutChangingAppData",
                     "PrivacyFlowTest#lockOnlyAuthenticatesOnReturnAndCancelNeverExposesContent"]
-STARTUP_INPUT = ["AppFlowTest#newRecordsStartEmptyAndDateChangesKeepDraftInputs",
+STARTUP_INPUT = ["AppFlowTest#newRecordsStartEmptyAndDateChangesLoadSelectedRecords",
                  "AppFlowTest#invalidWholeQuantityCannotSaveThenCanBeCorrected"]
-OS_TRANSITIONS = ["AppFlowTest#newRecordsStartEmptyAndDateChangesKeepDraftInputs",
+OS_TRANSITIONS = ["AppFlowTest#newRecordsStartEmptyAndDateChangesLoadSelectedRecords",
                   "PrivacyFlowTest#lockOnlyAuthenticatesOnReturnAndCancelNeverExposesContent",
                   "PrivacyFlowTest#allFourCombinationsControlScreenshotsRecordingsAndDialogProtection",
                   "SettingsFlowTest#osSettingsAndCancelledFilePickersReturnWithoutChangingAppData"]

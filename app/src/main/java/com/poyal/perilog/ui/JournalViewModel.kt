@@ -43,24 +43,30 @@ class JournalViewModel(application: Application,private val savedState:SavedStat
         viewModelScope.launch { while(isActive) { refreshClock();delay(30000) } }
     }
     fun refreshClock() { localNow.value=java.time.LocalDateTime.now();calendarDay.value=localNow.value.toLocalDate().toString() }
-    fun act(success: String?=null, checkInputs:Boolean=true, block: suspend () -> Unit) {
+    fun act(success: String?=null, checkInputs:Boolean=true,onSuccess:()->Unit={}, block: suspend () -> Unit) {
         // Claim the operation synchronously so double taps cannot queue duplicate writes.
         if(busy.value)return
         busy.value=true
         viewModelScope.launch {
+            var completed=false
             try { serial.withLock {
                 if(checkInputs && inputErrors.isNotEmpty()) { message.emit("입력 형식을 확인해 주세요: ${inputErrors.values.joinToString()}");return@withLock }
-                block(); if(success!=null) message.emit(success)
+                block();completed=true; if(success!=null) message.emit(success)
             } }
             catch(e: Exception) { if(e is CancellationException) throw e; message.emit(e.message ?: "저장하지 못했습니다. 다시 시도해 주세요.") }
             finally { busy.value=false }
+            if(completed)onSuccess()
         }
     }
     fun edit(id: String?=null,kind: String="MACHINE",date: String=today(),source:Snapshot=state.value) {
         val s=source
-        editor.value=(s.drafts.find{it.id==id}?.treatment ?: s.treatments.find{it.id==id} ?: newTreatment(s,kind,date)).withUsageTemplate(s)
-        editorOriginal=editor.value
+        beginEditing((s.visibleRecords().find{it.id==id} ?: newTreatment(s,kind,date)).withUsageTemplate(s))
+    }
+    private fun beginEditing(t:Treatment) {
+        editor.value=t
+        editorOriginal=t
         editorHiddenErrors=false
+        inputErrors.clear()
         savedState["editor"]=codec.encodeToString(editor.value!!)
         savedState["editorOriginal"]=codec.encodeToString(editorOriginal!!)
     }
@@ -78,10 +84,34 @@ class JournalViewModel(application: Application,private val savedState:SavedStat
         savedState.remove<String>("editor")
         savedState.remove<String>("editorOriginal")
     }
-    fun changeDate(date: String) {
-        val t=editor.value ?: return
-        if(t.saved) { change(t.copy(date=date)); return }
-        change(t.copy(date=date,basisMl=if(t.kind=="MACHINE")state.value.preferences.basisOn(date)else null))
+    fun recordsForDate(date:String,onLoaded:(List<Treatment>)->Unit) {
+        val current=editor.value ?: return
+        if(date==current.date)return
+        var records=emptyList<Treatment>()
+        act(checkInputs=false,onSuccess={onLoaded(records)}) {
+            require(date<=today()) { "미래 날짜에는 치료 기록을 등록할 수 없어요." }
+            records=repository.snapshot().treatmentsOnDate(date,current.kind)
+        }
+    }
+    fun openDate(date:String,id:String?,saveChanges:Boolean,onOpened:()->Unit) {
+        val current=editor.value ?: return
+        if(date==current.date)return
+        act(if(saveChanges)"기록을 저장했어요"else null,checkInputs=saveChanges,onSuccess=onOpened) {
+            require(date<=today()) { "미래 날짜에는 치료 기록을 등록할 수 없어요." }
+            // Resolve before saving or replacing the editor, so failed reads retain all input.
+            val source=repository.snapshot()
+            val records=source.treatmentsOnDate(date,current.kind)
+            val target=if(id==null) {
+                require(records.isEmpty()) { "기록이 바뀌었어요. 날짜를 다시 선택해 주세요." }
+                newTreatment(source,current.kind,date).let {
+                    // Saving a manual record also updates the default unit for the next record.
+                    if(saveChanges && current.kind=="MANUAL")it.copy(drainUnit=current.drainUnit)else it
+                }
+            } else requireNotNull(records.find{it.id==id}) { "기록이 바뀌었어요. 날짜를 다시 선택해 주세요." }
+            val next=target.withUsageTemplate(source)
+            if(saveChanges)repository.save(current,current.items.isNotEmpty() || current.usageConfirmed)
+            beginEditing(next)
+        }
     }
     fun discard(id: String,done: ()->Unit) = act(checkInputs=false) { repository.discardDraft(id);endEditing();done() }
     fun save(confirm: Boolean,onSaved: () -> Unit) {

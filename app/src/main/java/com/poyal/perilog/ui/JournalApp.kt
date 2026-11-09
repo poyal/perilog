@@ -24,10 +24,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.poyal.perilog.widget.WidgetOpenRequest
 import com.poyal.perilog.widget.WidgetTarget
 import com.poyal.perilog.data.Snapshot
+import com.poyal.perilog.data.Treatment
 import com.poyal.perilog.domain.dailyProgress
+import com.poyal.perilog.domain.validDwellTime
 
 @Serializable
-private data class TreatmentExit(val kind:String="",val route:String="",val widget:WidgetTarget?=null)
+private data class TreatmentExit(val kind:String="",val route:String="",val widget:WidgetTarget?=null,
+    val date:String="",val recordId:String?=null)
+
+@Serializable
+private data class TreatmentDateChoice(val date:String="",val records:List<Treatment> = emptyList())
 
 @Composable fun JournalApp(vm:JournalViewModel=viewModel(), unlocked:Boolean=true,
     widgetRequest:WidgetOpenRequest?=null,onWidgetHandled:()->Unit={}) {
@@ -37,6 +43,7 @@ private data class TreatmentExit(val kind:String="",val route:String="",val widg
     val s by vm.state.collectAsStateWithLifecycle()
     val ready by vm.ready.collectAsStateWithLifecycle()
     val busy by vm.busy.collectAsStateWithLifecycle()
+    val currentEditor by vm.editor.collectAsStateWithLifecycle()
     val date by vm.calendarDay.collectAsStateWithLifecycle()
     val now by vm.localNow.collectAsStateWithLifecycle()
     val screenState=rememberSaveableStateHolder()
@@ -46,6 +53,7 @@ private data class TreatmentExit(val kind:String="",val route:String="",val widg
     var tab by rememberSaveable{mutableStateOf("home")}
     var editingId by rememberSaveable{mutableStateOf<String?>(null)}
     var pendingExit by rememberJsonState("treatment-exit"){TreatmentExit()}
+    var dateChoice by rememberJsonState("treatment-date-choice"){TreatmentDateChoice()}
     val scope=rememberCoroutineScope()
     LaunchedEffect(ready, unlocked) { if (ready && unlocked) updates.startSession() }
     DisposableEffect(lifecycle) {
@@ -101,7 +109,16 @@ private data class TreatmentExit(val kind:String="",val route:String="",val widg
             else -> rawNavigate("home")
         }
     }
+    fun openDate(destination:TreatmentExit,saveChanges:Boolean=false) {
+        vm.openDate(destination.date,destination.recordId,saveChanges) {
+            focus.clearFocus();keyboard?.hide()
+            editingId=vm.editor.value?.id
+            pendingExit=TreatmentExit()
+            dateChoice=TreatmentDateChoice()
+        }
+    }
     fun finishExit(destination:TreatmentExit) {
+        if(destination.kind=="date") {openDate(destination);return}
         val index=stack.indexOf("edit")
         if(index>=0) {
             vm.endEditing()
@@ -110,6 +127,7 @@ private data class TreatmentExit(val kind:String="",val route:String="",val widg
             editingId=null
         }
         pendingExit=TreatmentExit()
+        dateChoice=TreatmentDateChoice()
         when(destination.kind) {
             "back" -> if(index<0)rawBack()
             "route" -> rawNavigate(destination.route)
@@ -124,11 +142,20 @@ private data class TreatmentExit(val kind:String="",val route:String="",val widg
     }
     fun requestExit(destination:TreatmentExit) {
         if(vm.busy.value)return
+        dateChoice=TreatmentDateChoice()
         val hasEditor="edit" in stack && vm.editor.value!=null
         val invalid=vm.inputErrors.isNotEmpty() || (route!="edit" && vm.editorHiddenErrors)
         if(hasEditor && (vm.editorChanged || invalid)) {
             focus.clearFocus();keyboard?.hide();pendingExit=destination
         } else finishExit(destination)
+    }
+    fun requestDate(day:String) {
+        if(vm.busy.value || pendingExit.kind.isNotEmpty() || dateChoice.date.isNotEmpty())return
+        vm.recordsForDate(day) {records->
+            focus.clearFocus();keyboard?.hide()
+            if(records.size>1)dateChoice=TreatmentDateChoice(day,records)
+            else requestExit(TreatmentExit("date",date=day,recordId=records.singleOrNull()?.id))
+        }
     }
     fun navigate(to:String) {
         if("edit" in stack && to.startsWith("guide")) {
@@ -149,6 +176,7 @@ private data class TreatmentExit(val kind:String="",val route:String="",val widg
         val current=vm.editor.value
         if("edit" in stack && current!=null && request.target.screen=="record" && request.target.value==current.date) {
             pendingExit=TreatmentExit()
+            dateChoice=TreatmentDateChoice()
             val index=stack.indexOf("edit")
             stack.drop(index+1).forEach{screenState.removeState(it)}
             stack=stack.take(index+1)
@@ -200,7 +228,7 @@ private data class TreatmentExit(val kind:String="",val route:String="",val widg
                     route in listOf("settings/transfer","settings/protection","settings/reset")->DataSettingsScreen(s,vm,route.substringAfter('/'),::back)
                     route=="settings/palette"->PaletteSettingsScreen(s,vm,::back)
                     route=="widgets"->WidgetSettingsScreen(::back)
-                    route=="edit"->key(editingId){TreatmentScreen(s,vm,::back){finishExit(TreatmentExit("back"))}}
+                    route=="edit"->key(currentEditor?.id){TreatmentScreen(s,vm,::back,::requestDate){finishExit(TreatmentExit("back"))}}
                     route=="appointments"->AppointmentsScreen(s,vm,now,::navigate,::back)
                     route=="departments"->DepartmentsScreen(s,vm,::navigate,::back)
                     route=="careTemplates"->CareTemplatesScreen(s,vm,::navigate,::back)
@@ -225,14 +253,20 @@ private data class TreatmentExit(val kind:String="",val route:String="",val widg
         TopSnackbarHost(snackbar,Modifier.align(Alignment.TopCenter)
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
             .padding(top=8.dp,start=16.dp,end=16.dp))
+        if(dateChoice.date.isNotEmpty())TreatmentDateDialog(s,dateChoice.date,dateChoice.records,
+            onDismiss={dateChoice=TreatmentDateChoice()},
+            onSelect={id->requestExit(TreatmentExit("date",date=dateChoice.date,recordId=id))})
         if(pendingExit.kind.isNotEmpty())AlertDialog(
             onDismissRequest={if(!busy)pendingExit=TreatmentExit()},
             title={Text("저장하지 않은 변경사항이 있어요")},
-            text={Text("변경사항을 버리고 나갈까요? 기존 기록과 재고는 그대로 유지돼요.")},
+            text={Text(if(pendingExit.kind=="date")"${pendingExit.date} 기록으로 이동하기 전에 현재 날짜의 변경사항을 저장할까요?"
+                else "변경사항을 버리고 나갈까요? 기존 기록과 재고는 그대로 유지돼요.")},
             containerColor=colors.surface,
             confirmButton={ButtonRow {
                 SmallButton(onClick={pendingExit=TreatmentExit()},enabled=!busy){Text("계속 입력")}
-                SmallButton(onClick={finishExit(pendingExit)},enabled=!busy,contentColor=colors.error){Text("변경사항 버리고 나가기")}
+                SmallButton(onClick={finishExit(pendingExit)},enabled=!busy,contentColor=colors.error){Text(if(pendingExit.kind=="date")"버리고 이동"else"변경사항 버리고 나가기")}
+                if(pendingExit.kind=="date")SmallButton(onClick={openDate(pendingExit,true)},
+                    enabled=!busy && vm.inputErrors.isEmpty() && currentEditor?.validDwellTime()==true,emphasized=true){Text("저장하고 이동")}
             }})
         }
     }}

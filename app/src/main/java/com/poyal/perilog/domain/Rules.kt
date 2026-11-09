@@ -36,6 +36,10 @@ fun Treatment.compositionColor(s:Snapshot):Long? = s.templates.find{it.id==usage
 fun Snapshot.visibleRecords()=treatments + drafts.filter { draft -> treatments.none{it.id==draft.id} }
     .map { it.treatment.copy(saved=false,usageConfirmed=false) }
 
+fun Snapshot.treatmentsOnDate(date:String,kind:String):List<Treatment> = visibleRecords()
+    .filter { it.date==date && it.kind==kind }
+    .sortedWith(compareByDescending<Treatment>{it.createdAt}.thenBy{it.id})
+
 fun List<Treatment>.dayComplete(date: String): Boolean {
     val entries = filter { it.date == date }
     return entries.any { it.kind == "MACHINE" && it.complete() } && entries.all { it.complete() }

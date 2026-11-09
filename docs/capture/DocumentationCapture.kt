@@ -134,6 +134,22 @@ class DocumentationCapture {
         runBlocking { app.repository.preferences(app.repository.snapshot().preferences.copy(darkMode="DARK")) }
         SystemClock.sleep(800);shot("26-about-dark");back();click("업데이트");shot("29-about-update")
     }
+    @Test fun captureTreatmentDateSwitching() {
+        seed()
+        ui.waitUntil(10000){ui.onAllNodesWithText("기록하기").fetchSemanticsNodes().isNotEmpty()}
+        click("기록하기");click("어제")
+        ui.onNodeWithText("62.1 kg").assertExists();shot("97-treatment-date-record")
+        click("오늘");show(ui.onNodeWithContentDescription("활력 상태 수정")).performClick()
+        input("몸무게","62.5");click("어제")
+        ui.onNodeWithText("저장하고 이동").assertExists();shot("98-treatment-date-unsaved")
+        click("계속 입력");back();click("변경사항 버리고 나가기")
+        runBlocking {
+            for(i in 1..2)app.repository.save(Treatment(id="manual-date-$i",kind="MANUAL",date=today.minusDays(1).toString(),
+                manualDrain=1800+i*100,drainUnit="mL",items=listOf(Item("d15","투석액 1.5%",i),Item("line","손투석 라인",1)),createdAt=2000L+i),true)
+        }
+        tab("기록");ui.onNodeWithContentDescription("기록 추가").performClick();click("추가투석 기록 추가")
+        click("어제");ui.onNodeWithTag("date-record-manual-date-2").assertExists();shot("99-treatment-date-choice")
+    }
     @Test fun captureChartsAndTable() {
         seed(completeToday=true)
         ui.waitUntil(10000){ui.onAllNodesWithText("오늘 기록 확인").fetchSemanticsNodes().isNotEmpty()}

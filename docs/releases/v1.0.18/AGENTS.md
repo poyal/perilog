@@ -2,13 +2,15 @@
 
 ## 판정과 출처
 
-**로컬 필수 검증 완료.** 서명 APK·화면 ZIP·체크섬을 고정했으며 공개 게시와 재다운로드 결과는 게시 확인 후 이 문서에 추가합니다.
+**게시 검증 완료.** [v1.0.18 릴리즈](https://github.com/poyal/perilog/releases/tag/v1.0.18)를 공개했고 APK·화면 ZIP·체크섬 세 파일을 공개 URL에서 다시 내려받아 검증한 원본과 바이트·해시·서명이 일치함을 확인했습니다.
 
 버전 **1.0.18 · 코드 19 · 앱 ID `com.poyal.perilog` · 최소 API 30 · 대상 API 36 · DB 스키마 9**입니다. 어제·오늘·날짜 선택 시 해당 종류의 저장 기록/기존 초안을 조회하고, 미저장 변경의 저장·버리기·계속 입력과 같은 날 복수 기록 선택을 포함한 후보를 검증했습니다.
 
 - `buildCommit`: `d84cc7f5a84837fa7212b99eed26dfef3f33ea0e`. 빌드 시작 시 깨끗한 작업 트리.
 - 최종 소스에서 허용하는 후속 변경은 `docs/releases/v1.0.18/AGENTS.md`의 검증 결과뿐입니다. 앱·Gradle·검사·게시 스크립트·캡처 Kotlin은 빌드 이후 수정하지 않았습니다.
-- `sourceCommit`·`releaseCommit`·태그의 실제 관계는 태그 생성 후 로컬 기록으로 확인하고 게시 완료 절에 적습니다. 자기 커밋 해시를 문서에 넣기 위해 릴리즈 태그를 이동하지 않습니다.
+- `sourceCommit`: `d06904aa3f7ed6233afb3f59afd19cee243a7d3c`. 빌드 이후 차이는 위 검증 문서 1개뿐입니다.
+- `releaseCommit`: `3354cfd6019e0c68147f15f47853b1eb8cd40d0b`. 단일 부모는 위 sourceCommit이며 `.release/`의 해당 버전 세 파일 추가만 포함합니다.
+- annotated `v1.0.18`의 역참조와 원격 태그가 위 releaseCommit과 일치합니다. 게시 확인만 main 후속 문서 커밋에 남기며 태그·배포 파일은 이동하거나 교체하지 않습니다.
 
 실행 ID `20261109T010911Z-v1.0.18-d84cc7f`, 작업 폴더 `/Users/poyal/Workspace/personal/perilog`, 게시 담당은 이번 Codex 세션입니다. 검증 시작 `2026-11-09T01:09:11.638309+00:00`, 완료 `2026-11-09T01:58:54.601808+00:00`, 전체 경과 2982.96초입니다. 사용자 자료 대신 검사 전용 AVD와 가상 자료만 사용했습니다.
 
@@ -88,6 +90,16 @@ DB는 앱을 멈추고 WAL과 함께 수집하여 행 수뿐 아니라 ID와 기
 빌드 직후 고정한 `dist/perilog-1.0.18.apk`를 신규 설치·업데이트·배포에 사용합니다. [직전 공개 APK](https://github.com/poyal/perilog/releases/download/v1.0.17/perilog-1.0.17.apk)는 20,032,083바이트, SHA-256 `b396460850b323bd84863535370781765f91214b0560d889d454acf1aab8719e`이며 공개 체크섬·GitHub digest와 일치했습니다. 두 버전 인증서 SHA-256은 `79adbeead4f7fbc2a5bf99219ee2fdd909f14eb18817c2b4f6139edbce0937dd`로 같습니다. 배포 파일에 키·비밀번호·키 백업·검사 DB는 포함하지 않았습니다.
 
 ZIP은 현재 사용자 매뉴얼·화면 안내에서 참조한 95개 번호 PNG만 포함합니다. 참조되지 않는 과거 화면 `11-statistics-table`, `57-record-widget`, `58-appointments-widget`, `61-dark-widget`은 제외했습니다. 체크섬은 APK와 ZIP 두 줄입니다. 변경 화면 97·98·99와 버전 화면 25·26·29는 이번 API 35 준비 빌드로 촬영했으며 촬영 조건·기존 화면 재사용은 [화면 안내](../../화면-안내.md)에 적었습니다.
+
+## 공개 게시 확인
+
+[게시 Actions](https://github.com/poyal/perilog/actions/runs/42548512456)는 `2026-11-09T02:00:26Z`에 시작해 `2026-11-09T02:00:48Z`에 성공으로 끝났습니다(22초). APK 재빌드 없이 고정한 세 파일만 게시했습니다. 태그 푸시 시작부터 공개 파일 재검증 완료까지 81.58초입니다. `main`과 `v1.0.18`만 atomic push했으며 `release/v1.0.18` 브랜치는 중복 푸시하지 않았습니다.
+
+공개 시각 `2026-11-09T02:00:44Z`, 공개 파일 확인 시각 `2026-11-09T02:01:35.621095+00:00`입니다. 최신 안정 릴리즈이며 초안/사전 공개가 아니고 첨부 파일은 정확히 세 개입니다. 세 파일의 GitHub digest·공개 다운로드·로컬 원본이 같고, 공개 APK의 기존 인증서·앱 ID·버전 1.0.18/코드 19·최소/대상 API 30/36 및 ZIP 95장의 원본 바이트·CRC를 다시 확인했습니다. GitHub가 생성한 릴리즈 본문(Full Changelog 연결)을 검토했으며 패치노트 파일은 저장소에 추가하지 않았습니다.
+
+원격 main·동일 버전 태그·공개 릴리즈·진행 중인 게시 실행을 확인했습니다. 공개 API에서 보이지 않는 초안/기존 자산은 인증된 게시 스크립트가 해시·다운로드 바이트를 대조합니다. 해당 배포 커밋에는 게시 실행 1개만 생성됐고, main·태그 푸시로 무거운 Android 검증이 자동 실행되지 않았음을 확인했습니다. `.github/workflows/test.yml`은 수동 진단 전용으로 유지됩니다.
+
+게시 근거는 `publication-preflight.json`, `commit-relationship.json`, `publish-push-command.json`, `publication-run.json`, `public-release.json`, `public-verification.json`, 공개 APK 서명·매니페스트 출력입니다. 공개 파일 검증 JSON의 SHA-256은 `d8211f51440f8e68c3d2f3f3aaf66e14342c37e14bdcab62f6ac28b1b06a01c1`입니다.
 
 ## 실행 근거와 별도 확인 범위
 
